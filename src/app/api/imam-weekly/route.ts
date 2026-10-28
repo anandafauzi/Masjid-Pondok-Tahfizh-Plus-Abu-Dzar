@@ -54,3 +54,4 @@ export async function POST(request: NextRequest) {
     return serverError("Gagal menyimpan jadwal imam pekanan");
   }
 }
+

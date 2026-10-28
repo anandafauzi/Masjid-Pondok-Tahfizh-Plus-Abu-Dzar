@@ -22,6 +22,8 @@ import {
   UserCheck,
 } from "lucide-react";
 
+import { PetugasItem } from "@/types/petugas";
+
 interface Rolling {
   id: string;
   khatibName: string;
@@ -47,9 +49,12 @@ const todayYmd = () =>
 export default function AdminKhatibPage() {
   const [rolling, setRolling] = useState<Rolling[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [petugas, setPetugas] = useState<PetugasItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ordering, setOrdering] = useState(false);
+
+  const khatibOptions = petugas.filter((p) => p.roles.includes("KHATIB") && p.isActive).map((p) => p.name);
 
   const [rollName, setRollName] = useState("");
   const [rollFrom, setRollFrom] = useState(todayYmd());
@@ -62,12 +67,14 @@ export default function AdminKhatibPage() {
 
   async function load() {
     try {
-      const [r, s] = await Promise.all([
+      const [r, s, p] = await Promise.all([
         fetch("/api/khatib-rolling", { cache: "no-store" }),
         fetch("/api/khatib-schedules", { cache: "no-store" }),
+        fetch("/api/petugas", { cache: "no-store" }),
       ]);
       if (r.ok) setRolling(await r.json());
       if (s.ok) setSchedules(await s.json());
+      if (p.ok) setPetugas(await p.json());
     } catch {
       toast.error("Gagal memuat data");
     } finally {
@@ -206,9 +213,10 @@ export default function AdminKhatibPage() {
               <Label htmlFor="rollName">Nama Khatib</Label>
               <Input
                 id="rollName"
+                list="khatib-names"
                 value={rollName}
                 onChange={(e) => setRollName(e.target.value)}
-                placeholder="Nama ustadz"
+                placeholder="Pilih atau ketik nama ustadz"
               />
             </div>
             <div>
@@ -310,8 +318,10 @@ export default function AdminKhatibPage() {
               <Label htmlFor="khatib">Nama Khatib</Label>
               <Input
                 id="khatib"
+                list="khatib-names"
                 value={khatib}
                 onChange={(e) => setKhatib(e.target.value)}
+                placeholder="Pilih atau ketik nama ustadz"
               />
             </div>
             <div>
@@ -327,6 +337,7 @@ export default function AdminKhatibPage() {
               <Label htmlFor="backup">Khatib Cadangan</Label>
               <Input
                 id="backup"
+                list="khatib-names"
                 value={backup}
                 onChange={(e) => setBackup(e.target.value)}
                 placeholder="Opsional"
@@ -410,6 +421,12 @@ export default function AdminKhatibPage() {
           </div>
         </Card>
       </div>
+      {/* Datalist for quick khatib selection */}
+      <datalist id="khatib-names">
+        {khatibOptions.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
     </div>
   );
 }

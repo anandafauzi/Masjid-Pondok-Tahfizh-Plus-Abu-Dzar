@@ -36,6 +36,25 @@ export const PRAYER_ORDER: Exclude<PrayerKey, "imsak" | "sunrise">[] = [
 
 function getCalculationMethod(method: string) {
   switch (method) {
+    case "KEMENAG":
+    case "Kemenag":
+    case "Indonesia":
+    case "SIHAT": {
+      // Standar Resmi Kementerian Agama Republik Indonesia (Kemenag RI):
+      // Sudut Subuh 20°, Sudut Isya 18°, dengan standar pengaman waktu (ihtiyat) +2 menit.
+      const params = CalculationMethod.Singapore();
+      params.methodAdjustments = {
+        dhuhr: 2,
+        fajr: 2,
+        sunrise: 0,
+        asr: 2,
+        maghrib: 2,
+        isha: 2,
+      };
+      return params;
+    }
+    case "Singapore":
+      return CalculationMethod.Singapore();
     case "ISNA":
       return CalculationMethod.NorthAmerica();
     case "Egypt":
@@ -48,12 +67,23 @@ function getCalculationMethod(method: string) {
       return CalculationMethod.Tehran();
     case "Dubai":
       return CalculationMethod.Dubai();
-    case "Singapore":
-      return CalculationMethod.Singapore();
     case "Turkey":
       return CalculationMethod.Turkey();
-    default:
+    case "MWL":
       return CalculationMethod.MuslimWorldLeague();
+    default: {
+      // Default untuk masjid di Indonesia adalah standar Kemenag RI
+      const params = CalculationMethod.Singapore();
+      params.methodAdjustments = {
+        dhuhr: 2,
+        fajr: 2,
+        sunrise: 0,
+        asr: 2,
+        maghrib: 2,
+        isha: 2,
+      };
+      return params;
+    }
   }
 }
 

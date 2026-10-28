@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Button,
@@ -18,6 +18,8 @@ import {
   Clock3,
   MapPin,
   Save,
+  Trash2,
+  Upload,
 } from "lucide-react";
 
 interface MosqueSettings {
@@ -34,13 +36,14 @@ interface MosqueSettings {
 }
 
 const METHODS = [
+  ["KEMENAG", "Kemenag RI (Standar Resmi Indonesia)"],
+  ["Singapore", "MUIS Singapore"],
   ["MWL", "Muslim World League"],
-  ["ISNA", "Islamic Society of North America"],
-  ["Egypt", "Egyptian General Authority"],
   ["Makkah", "Umm Al-Qura (Makkah)"],
+  ["Egypt", "Egyptian General Authority"],
+  ["ISNA", "Islamic Society of North America"],
   ["Karachi", "University of Islamic Sciences, Karachi"],
   ["Dubai", "Dubai"],
-  ["Singapore", "Singapore"],
   ["Turkey", "Turkey"],
   ["Tehran", "Tehran"],
 ];
@@ -60,6 +63,54 @@ export default function AdminMasjidPage() {
   const [adjustments, setAdjustments] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Format berkas harus berupa gambar (PNG, JPG, SVG, WebP)");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const src = event.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxDim = 512;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/webp", 0.88);
+          update("logoUrl", dataUrl);
+          toast.success("Foto logo berhasil dimuat dari perangkat!");
+        } else {
+          update("logoUrl", src);
+          toast.success("Foto logo berhasil dimuat!");
+        }
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  }
 
   useEffect(() => {
     (async () => {
@@ -131,14 +182,81 @@ export default function AdminMasjidPage() {
                     onChange={(e) => update("mosqueName", e.target.value)}
                   />
                 </div>
-                <div className="sm:col-span-2">
-                  <Label htmlFor="logoUrl">URL Logo Masjid</Label>
-                  <Input
-                    id="logoUrl"
-                    value={form.logoUrl ?? ""}
-                    onChange={(e) => update("logoUrl", e.target.value)}
-                    placeholder="https://.../logo.png"
-                  />
+                {/* Logo Masjid from Device */}
+                <div className="sm:col-span-2 rounded-2xl border border-[#ded5c4] bg-[#fdfbf7] p-4 sm:p-5">
+                  <Label>Logo Masjid</Label>
+                  <p className="text-xs text-[#5c6e63] mb-4">
+                    Pilih foto atau gambar logo masjid dari komputer/HP Anda. Logo akan tampil di navbar, beranda, dan layar TV digital.
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-5">
+                    {/* Preview Box */}
+                    <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#2d946e]/40 bg-white shadow-sm ring-4 ring-[#2d946e]/10">
+                      {form.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={form.logoUrl}
+                          alt="Logo Preview"
+                          className="h-full w-full object-contain p-1"
+                        />
+                      ) : (
+                        <div className="text-center p-2">
+                          <span className="text-3xl block">🕌</span>
+                          <span className="text-[9px] font-semibold text-[#8e9f94] block mt-1">Belum Ada</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex-1 space-y-2 text-center sm:text-left">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="bg-[#2d946e] hover:bg-[#237858] text-white text-xs py-2 px-3.5 shadow-sm"
+                        >
+                          <Upload className="h-4 w-4 mr-1.5" />
+                          <span>Pilih Foto dari Perangkat</span>
+                        </Button>
+                        {form.logoUrl && (
+                          <Button
+                            type="button"
+                            variant="danger"
+                            onClick={() => update("logoUrl", null)}
+                            className="text-xs py-2 px-3"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            <span>Hapus Logo</span>
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#78887e]">
+                        Format yang didukung: PNG, JPG, JPEG, SVG, WebP (Maks. 5 MB).
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Fallback Text Input URL */}
+                  <div className="mt-4 pt-4 border-t border-[#ded5c4]/60">
+                    <Label htmlFor="logoUrl" className="text-[11px] text-[#78887e]">
+                      Atau Masukkan Tautan URL Logo (Opsional):
+                    </Label>
+                    <Input
+                      id="logoUrl"
+                      value={form.logoUrl?.startsWith("data:") ? "(Gambar dari perangkat terpasang)" : (form.logoUrl ?? "")}
+                      disabled={form.logoUrl?.startsWith("data:")}
+                      onChange={(e) => update("logoUrl", e.target.value)}
+                      placeholder="https://.../logo.png"
+                      className="text-xs bg-white"
+                    />
+                  </div>
                 </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="address">Alamat</Label>

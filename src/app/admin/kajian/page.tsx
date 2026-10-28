@@ -24,6 +24,8 @@ import {
   User,
 } from "lucide-react";
 
+import { PetugasItem } from "@/types/petugas";
+
 interface Kajian {
   id: string;
   title: string;
@@ -46,8 +48,11 @@ function toLocalInput(iso: string) {
 
 export default function AdminKajianPage() {
   const [items, setItems] = useState<Kajian[]>([]);
+  const [petugas, setPetugas] = useState<PetugasItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const pemateriOptions = petugas.filter((p) => p.roles.includes("PEMATERI") && p.isActive).map((p) => p.name);
 
   const [title, setTitle] = useState("");
   const [speaker, setSpeaker] = useState("");
@@ -60,9 +65,13 @@ export default function AdminKajianPage() {
 
   async function load() {
     try {
-      const res = await fetch("/api/kajian", { cache: "no-store" });
+      const [res, pRes] = await Promise.all([
+        fetch("/api/kajian", { cache: "no-store" }),
+        fetch("/api/petugas", { cache: "no-store" }),
+      ]);
       const data = await res.json();
       if (res.ok) setItems(data);
+      if (pRes.ok) setPetugas(await pRes.json());
     } catch {
       toast.error("Gagal memuat kajian");
     } finally {
@@ -188,8 +197,10 @@ export default function AdminKajianPage() {
             <Label htmlFor="speaker">Pemateri</Label>
             <Input
               id="speaker"
+              list="pemateri-names"
               value={speaker}
               onChange={(e) => setSpeaker(e.target.value)}
+              placeholder="Pilih atau ketik nama ustadz"
             />
           </div>
           <div>
@@ -331,6 +342,12 @@ export default function AdminKajianPage() {
           ))
         )}
       </div>
+      {/* Datalist for quick speaker selection */}
+      <datalist id="pemateri-names">
+        {pemateriOptions.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
     </div>
   );
 }

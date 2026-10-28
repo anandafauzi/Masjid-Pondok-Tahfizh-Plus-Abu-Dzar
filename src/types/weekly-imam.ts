@@ -22,3 +22,4 @@ export const DAYS_OF_WEEK = [
   { value: 6, name: "Sabtu", short: "Sab" },
   { value: 0, name: "Ahad", short: "Ahd" },
 ];
+

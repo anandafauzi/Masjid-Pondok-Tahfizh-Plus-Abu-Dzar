@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { DAYS_OF_WEEK, PRAYERS, WeeklyImamItem } from "@/types/weekly-imam";
 
+import { PetugasItem } from "@/types/petugas";
+
 interface Rolling {
   id: string;
   imamName: string;
@@ -60,9 +62,13 @@ export default function AdminImamPage() {
   const [selectedDay, setSelectedDay] = useState<number>(1); // 1 = Senin
   const [rolling, setRolling] = useState<Rolling[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [petugas, setPetugas] = useState<PetugasItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ordering, setOrdering] = useState(false);
+
+  const imamOptions = petugas.filter((p) => p.roles.includes("IMAM") && p.isActive).map((p) => p.name);
+  const muadzinOptions = petugas.filter((p) => p.roles.includes("MUADZIN") && p.isActive).map((p) => p.name);
 
   // Rolling form state
   const [rollName, setRollName] = useState("");
@@ -80,14 +86,16 @@ export default function AdminImamPage() {
 
   async function load() {
     try {
-      const [w, r, s] = await Promise.all([
+      const [w, r, s, p] = await Promise.all([
         fetch("/api/imam-weekly", { cache: "no-store" }),
         fetch("/api/imam-rolling", { cache: "no-store" }),
         fetch("/api/imam-schedules", { cache: "no-store" }),
+        fetch("/api/petugas", { cache: "no-store" }),
       ]);
       if (w.ok) setWeeklyItems(await w.json());
       if (r.ok) setRolling(await r.json());
       if (s.ok) setSchedules(await s.json());
+      if (p.ok) setPetugas(await p.json());
     } catch {
       toast.error("Gagal memuat data imam");
     } finally {
@@ -502,6 +510,7 @@ export default function AdminImamPage() {
                             Nama Imam
                           </Label>
                           <Input
+                            list="imam-names"
                             value={item.imamName}
                             onChange={(e) =>
                               updateWeeklyField(
@@ -511,7 +520,7 @@ export default function AdminImamPage() {
                                 e.target.value
                               )
                             }
-                            placeholder="Contoh: Ust. Abdullah Mundzir"
+                            placeholder="Pilih atau ketik nama imam"
                             className="text-xs sm:text-sm bg-white"
                           />
                         </div>
@@ -522,6 +531,7 @@ export default function AdminImamPage() {
                             Nama Muadzin
                           </Label>
                           <Input
+                            list="muadzin-names"
                             value={item.muadzinName}
                             onChange={(e) =>
                               updateWeeklyField(
@@ -531,7 +541,7 @@ export default function AdminImamPage() {
                                 e.target.value
                               )
                             }
-                            placeholder="Contoh: Fatih / Hiraki"
+                            placeholder="Pilih atau ketik nama muadzin"
                             className="text-xs sm:text-sm bg-white"
                           />
                         </div>
@@ -646,9 +656,10 @@ export default function AdminImamPage() {
                 <Label htmlFor="rollName">Nama Imam</Label>
                 <Input
                   id="rollName"
+                  list="imam-names"
                   value={rollName}
                   onChange={(e) => setRollName(e.target.value)}
-                  placeholder="Contoh: Ust. Nadzful Zuliano Manaf"
+                  placeholder="Pilih atau ketik nama ustadz"
                   className="bg-[#fcfaf6]"
                 />
               </div>
@@ -812,9 +823,10 @@ export default function AdminImamPage() {
                 <Label htmlFor="imam">Nama Imam</Label>
                 <Input
                   id="imam"
+                  list="imam-names"
                   value={imam}
                   onChange={(e) => setImam(e.target.value)}
-                  placeholder="Contoh: Ust. Abdullah Mundzir"
+                  placeholder="Pilih atau ketik nama imam"
                   className="bg-[#fcfaf6]"
                 />
               </div>
@@ -822,9 +834,10 @@ export default function AdminImamPage() {
                 <Label htmlFor="muadzin">Nama Muadzin</Label>
                 <Input
                   id="muadzin"
+                  list="muadzin-names"
                   value={muadzin}
                   onChange={(e) => setMuadzin(e.target.value)}
-                  placeholder="Contoh: Fatih / Hiraki"
+                  placeholder="Pilih atau ketik nama muadzin"
                   className="bg-[#fcfaf6]"
                 />
               </div>
@@ -928,6 +941,17 @@ export default function AdminImamPage() {
           </div>
         </Card>
       )}
+      {/* Datalists for quick name selection */}
+      <datalist id="imam-names">
+        {imamOptions.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
+      <datalist id="muadzin-names">
+        {muadzinOptions.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
     </div>
   );
 }
