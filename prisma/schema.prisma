@@ -1,0 +1,293 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User/Admin management
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          UserRole  @default(ADMIN)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  auditLogs     AuditLog[]
+  khutbahStarted KhutbahSession[] @relation("KhutbahStartedBy")
+  khutbahEnded   KhutbahSession[] @relation("KhutbahEndedBy")
+  
+  @@map("users")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+// Mosque settings
+model MosqueSettings {
+  id                      String   @id @default(cuid())
+  mosqueName              String   @default("Masjid Pondok Tahfizh Plus Abu Dzar")
+  logoUrl                 String?
+  address                 String?
+  latitude                Float    @default(-6.442126)
+  longitude               Float    @default(106.640654)
+  timezone                String   @default("Asia/Jakarta")
+  mapUrl                  String   @default("https://maps.app.goo.gl/aLWZpi1UhasHeHEP7")
+  prayerCalculationMethod String   @default("MWL") // Muslim World League
+  asrMethod               String   @default("STANDARD") // STANDARD or HANAFI
+  prayerAdjustments       Json?    // {fajr: 0, dhuhr: 0, ...}
+  updatedAt               DateTime @updatedAt
+  
+  @@map("mosque_settings")
+}
+
+// Prayer times cache
+model PrayerTime {
+  id          String   @id @default(cuid())
+  prayerDate  DateTime @db.Date
+  imsak       String
+  fajr        String
+  sunrise     String
+  dhuhr       String
+  asr         String
+  maghrib     String
+  isha        String
+  source      String   @default("calculated")
+  lastSyncedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([prayerDate])
+  @@map("prayer_times")
+}
+
+// Recurrence rules for repeating schedules
+model RecurrenceRule {
+  id                 String   @id @default(cuid())
+  ruleType           RecurrenceType
+  weekday            Int?     // 0-6 for Sunday-Saturday
+  prayerName         String?
+  effectiveFrom      DateTime @db.Date
+  effectiveUntil     DateTime? @db.Date
+  recurrenceInterval Int      @default(1) // every N weeks
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  imamMuadzinSchedules ImamMuadzinSchedule[]
+  khatibSchedules     KhatibSchedule[]
+  kajianSchedules     KajianSchedule[]
+  
+  @@map("recurrence_rules")
+}
+
+enum RecurrenceType {
+  WEEKLY
+  DAILY
+}
+
+// Imam and Muadzin schedules
+model ImamMuadzinSchedule {
+  id               String    @id @default(cuid())
+  scheduleDate     DateTime  @db.Date
+  prayerName       String    // Subuh, Zuhur, Asar, Magrib, Isya
+  imamName         String
+  muadzinName      String
+  recurrenceRuleId String?
+  notes            String?
+  createdBy        String?
+  updatedAt        DateTime  @updatedAt
+  
+  recurrenceRule   RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id])
+  
+  @@unique([scheduleDate, prayerName])
+  @@index([scheduleDate])
+  @@map("imam_muadzin_schedules")
+}
+
+// Imam rolling settings for Subuh Jumat
+model ImamRollingSetting {
+  id             String    @id @default(cuid())
+  imamName       String
+  sequenceNumber Int
+  effectiveFrom  DateTime  @db.Date
+  effectiveUntil DateTime? @db.Date
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  @@map("imam_rolling_settings")
+}
+
+// Khatib rolling settings
+model KhatibRollingSetting {
+  id             String    @id @default(cuid())
+  khatibName     String
+  sequenceNumber Int
+  effectiveFrom  DateTime  @db.Date
+  effectiveUntil DateTime? @db.Date
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  @@map("khatib_rolling_settings")
+}
+
+// Khatib schedules for Friday
+model KhatibSchedule {
+  id               String    @id @default(cuid())
+  fridayDate       DateTime  @db.Date
+  khatibName       String
+  sermonTopic      String?
+  backupKhatibName String?
+  recurrenceRuleId String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  recurrenceRule   RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id])
+  
+  @@unique([fridayDate])
+  @@map("khatib_schedules")
+}
+
+// Kajian schedules
+model KajianSchedule {
+  id               String    @id @default(cuid())
+  title            String
+  speakerName      String
+  bookOrTopic      String?
+  startDateTime    DateTime
+  endDateTime      DateTime?
+  location         String    @default("Masjid")
+  description      String?
+  recurrenceRuleId String?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  recurrenceRule   RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id])
+  
+  @@index([startDateTime])
+  @@map("kajian_schedules")
+}
+
+// Iqamah settings
+model IqamahSetting {
+  id                String   @id @default(cuid())
+  prayerName        String   @unique // Subuh, Zuhur, Asar, Magrib, Isya
+  mode              IqamahMode @default(DELAY_MINUTES)
+  delayMinutes      Int      @default(15)
+  fixedIqamahTime   String?  // HH:mm format
+  updatedAt         DateTime @updatedAt
+  
+  @@map("iqamah_settings")
+}
+
+enum IqamahMode {
+  DELAY_MINUTES
+  FIXED_TIME
+}
+
+// Islamic advice
+model IslamicAdvice {
+  id                String   @id @default(cuid())
+  content           String   @db.Text
+  sourceReference   String?
+  authorOrSource    String?
+  verificationStatus String   @default("UNVERIFIED")
+  displayOrder      Int      @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("islamic_advice")
+}
+
+// Running text
+model RunningText {
+  id           String   @id @default(cuid())
+  content      String   @db.Text
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("running_texts")
+}
+
+// Display settings
+model DisplaySetting {
+  id                  String   @id @default(cuid())
+  slideIntervalSeconds Int      @default(10)
+  autoRotateEnabled   Boolean  @default(true)
+  tickerSpeed         Int      @default(50) // pixels per second
+  tickerEnabled       Boolean  @default(true)
+  showHijriDate       Boolean  @default(true)
+  themeSettings       Json?
+  updatedAt           DateTime @updatedAt
+  
+  @@map("display_settings")
+}
+
+// Khutbah sessions - CRITICAL
+model KhutbahSession {
+  id               String        @id @default(cuid())
+  fridayDate       DateTime      @db.Date
+  khatibName       String
+  sermonTopic      String?
+  status           KhutbahStatus @default(ACTIVE)
+  startMode        KhutbahStartMode @default(MANUAL)
+  startedAt        DateTime      @default(now())
+  durationMinutes  Int           @default(40)
+  scheduledStartAt DateTime?
+  endsAt           DateTime
+  startedById      String?
+  endedById        String?
+  endedAt          DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  
+  startedBy        User?         @relation("KhutbahStartedBy", fields: [startedById], references: [id])
+  endedBy          User?         @relation("KhutbahEndedBy", fields: [endedById], references: [id])
+  
+  @@index([status])
+  @@map("khutbah_sessions")
+}
+
+enum KhutbahStatus {
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum KhutbahStartMode {
+  MANUAL
+  AUTO
+}
+
+// Audit logs
+model AuditLog {
+  id            String   @id @default(cuid())
+  adminId       String?
+  action        String
+  entityType    String
+  entityId      String?
+  changeSummary String   @db.Text
+  createdAt     DateTime @default(now())
+  
+  admin         User?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  
+  @@index([createdAt])
+  @@index([adminId])
+  @@map("audit_logs")
+}
