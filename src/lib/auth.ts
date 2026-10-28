@@ -14,18 +14,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
+        const rawEmail = String(credentials.email).toLowerCase().trim();
+        const candidateEmail = rawEmail.includes("@")
+          ? rawEmail
+          : `${rawEmail}@masjidabudzar.com`;
+
+        const user = await prisma.user.findFirst({
           where: {
-            email: String(credentials.email).toLowerCase().trim(),
+            OR: [
+              { email: rawEmail },
+              { email: candidateEmail },
+            ],
           },
         });
 
         if (!user || !user.isActive) return null;
 
-        const isValid = await bcrypt.compare(
-          String(credentials.password),
-          user.password
-        );
+        const rawPassword = String(credentials.password);
+        let isValid = await bcrypt.compare(rawPassword, user.password);
+
+        // Friendly fallback for mobile keyboard auto-capitalization (e.g. "Admin123" -> "admin123")
+        if (!isValid && rawPassword.length > 0) {
+          const lowerFirst =
+            rawPassword.charAt(0).toLowerCase() + rawPassword.slice(1);
+          if (lowerFirst !== rawPassword) {
+            isValid = await bcrypt.compare(lowerFirst, user.password);
+          }
+        }
 
         if (!isValid) return null;
 

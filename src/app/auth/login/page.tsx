@@ -5,11 +5,12 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { Lock, Mail, ArrowLeft, KeyRound } from "lucide-react";
+import { Lock, Mail, ArrowLeft, KeyRound, Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,15 +20,18 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
 
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+
     try {
       const result = await signIn("credentials", {
-        email,
-        password,
+        email: cleanEmail,
+        password: cleanPassword,
         redirect: false,
       });
 
       if (result?.error) {
-        toast.error("Email atau password tidak sesuai");
+        toast.error("Email atau password tidak sesuai. Pastikan menggunakan akun yang tertera.");
       } else {
         toast.success("Login berhasil! Mengalihkan ke dashboard...");
         router.push(callbackUrl);
@@ -43,6 +47,7 @@ function LoginForm() {
   const autofillDemo = () => {
     setEmail("admin@masjidabudzar.com");
     setPassword("admin123");
+    toast.success("Akun admin berhasil diisikan ke formulir!");
   };
 
   return (
@@ -52,7 +57,7 @@ function LoginForm() {
       <div className="pointer-events-none absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-[#c5a059]/15 blur-3xl" />
 
       <div suppressHydrationWarning className="relative z-10 w-full max-w-md rounded-3xl border border-[#ded5c4] bg-white/95 p-8 shadow-2xl backdrop-blur-xl sm:p-10">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#3eb489] to-[#206f52] text-3xl shadow-md ring-2 ring-[#bde5d2]">
             🕌
           </div>
@@ -67,24 +72,50 @@ function LoginForm() {
           </p>
         </div>
 
+        {/* Info Box Akun Administrator */}
+        <div className="mb-6 rounded-2xl border border-[#bde5d2] bg-[#f0f9f4] p-3.5 text-xs">
+          <div className="flex items-center gap-1.5 font-bold text-[#1e6149] mb-1.5">
+            <ShieldCheck className="h-4 w-4 text-[#2d946e]" />
+            <span>Kredensial Administrator Resmi:</span>
+          </div>
+          <div className="space-y-1 text-[#3f5045] font-mono text-[11px] bg-white/80 rounded-xl p-2.5 border border-[#cbe8d9]">
+            <div className="flex justify-between items-center">
+              <span className="font-sans text-[#5c6e63]">Email / User:</span>
+              <span className="font-bold text-[#19261f]">admin@masjidabudzar.com</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="font-sans text-[#5c6e63]">Kata Sandi:</span>
+              <span className="font-bold text-[#19261f]">admin123</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={autofillDemo}
+            className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl border border-[#2d946e]/30 bg-white py-1.5 px-3 text-xs font-bold text-[#1e6149] hover:bg-[#d8f0e4] transition-all shadow-xs"
+          >
+            <KeyRound className="h-3.5 w-3.5 text-[#2d946e]" />
+            <span>Klik di Sini untuk Mengisi Otomatis</span>
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label
               htmlFor="email"
               className="block text-xs font-bold uppercase tracking-wider text-[#3f5045] mb-1.5"
             >
-              Email Administrator
+              Email / Username
             </label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-3 h-4 w-4 text-[#2d946e]" />
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="email"
-                placeholder="admin@masjidabudzar.com"
+                autoComplete="username"
+                placeholder="admin@masjidabudzar.com atau admin"
                 className="w-full rounded-xl border border-[#ded5c4] bg-[#faf7f2] pl-10 pr-4 py-2.5 text-sm text-[#19261f] placeholder-[#8e9f94] focus:border-[#2d946e] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2d946e] transition-all"
               />
             </div>
@@ -101,40 +132,38 @@ function LoginForm() {
               <Lock className="absolute left-3.5 top-3 h-4 w-4 text-[#2d946e]" />
               <input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                placeholder="••••••••"
-                className="w-full rounded-xl border border-[#ded5c4] bg-[#faf7f2] pl-10 pr-4 py-2.5 text-sm text-[#19261f] placeholder-[#8e9f94] focus:border-[#2d946e] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2d946e] transition-all"
+                placeholder="admin123"
+                className="w-full rounded-xl border border-[#ded5c4] bg-[#faf7f2] pl-10 pr-10 py-2.5 text-sm text-[#19261f] placeholder-[#8e9f94] focus:border-[#2d946e] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2d946e] transition-all"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-[#5c6e63] hover:text-[#19261f] transition-colors"
+                title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-[#5c6e63]" />
+                ) : (
+                  <Eye className="h-4 w-4 text-[#5c6e63]" />
+                )}
+              </button>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 rounded-xl bg-gradient-to-r from-[#2d946e] to-[#206f52] py-3 px-4 font-bold text-white shadow-md hover:from-[#35a87e] hover:to-[#267f5e] active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full mt-2 rounded-xl bg-gradient-to-r from-[#2d946e] to-[#206f52] py-3 px-4 font-bold text-white shadow-md hover:from-[#35a87e] hover:to-[#267f5e] active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Memverifikasi..." : "Masuk ke Panel Admin"}
           </button>
         </form>
-
-        {/* Quick autofill helper for convenience */}
-        <div className="mt-6 rounded-xl border border-[#bde5d2] bg-[#eaf6f0] p-3 text-center">
-          <p className="text-[11px] text-[#3f5045] mb-1.5">
-            Akun bawaan default:
-          </p>
-          <button
-            type="button"
-            onClick={autofillDemo}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#bde5d2] bg-white px-3 py-1 text-xs font-semibold text-[#1e6149] hover:bg-[#d6f0e3] transition-colors shadow-sm"
-          >
-            <KeyRound className="h-3 w-3 text-[#2d946e]" />
-            <span>Isi admin@masjidabudzar.com</span>
-          </button>
-        </div>
 
         <div className="mt-6 text-center">
           <Link
