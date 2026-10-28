@@ -101,11 +101,11 @@ body {
   font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
 }
 
-/* Islamic Geometric Pattern background - Pantone Cypress & Warm Cream + Mint */
+/* Islamic Geometric Pattern background - Pantone Warm Cream with Mint & Champagne Gold Dots */
 .bg-islamic-pattern {
-  background-color: #0a1811;
-  background-image: radial-gradient(rgba(62, 180, 137, 0.16) 1.2px, transparent 1.2px),
-    radial-gradient(rgba(197, 160, 89, 0.13) 1.2px, transparent 1.2px);
+  background-color: #faf7f2;
+  background-image: radial-gradient(rgba(45, 148, 110, 0.12) 1.5px, transparent 1.5px),
+    radial-gradient(rgba(197, 160, 89, 0.10) 1.5px, transparent 1.5px);
   background-size: 32px 32px;
   background-position: 0 0, 16px 16px;
 }
@@ -116,6 +116,14 @@ body {
     radial-gradient(rgba(197, 160, 89, 0.08) 1.5px, transparent 1.5px);
   background-size: 28px 28px;
   background-position: 0 0, 14px 14px;
+}
+
+.bg-islamic-pattern-dark {
+  background-color: #11231a;
+  background-image: radial-gradient(rgba(62, 180, 137, 0.16) 1.2px, transparent 1.2px),
+    radial-gradient(rgba(197, 160, 89, 0.13) 1.2px, transparent 1.2px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
 }
 
 /* Glassmorphism Classes with warm cream and mint tints */

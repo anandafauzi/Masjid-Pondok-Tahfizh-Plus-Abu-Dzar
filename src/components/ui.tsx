@@ -21,26 +21,26 @@ export function PageHeader({
   eyebrow?: string;
 }) {
   return (
-    <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-r from-[#0a1811] via-[#11231a] to-[#152e22] px-6 py-5 text-white shadow-xl ring-1 ring-white/10 sm:px-8 sm:py-6">
-      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#3eb489]/20 blur-3xl" />
+    <div className="relative mb-6 overflow-hidden rounded-3xl border border-[#ded5c4] bg-gradient-to-r from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] px-6 py-5 text-[#19261f] shadow-lg sm:px-8 sm:py-6">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#3eb489]/15 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-[#c5a059]/15 blur-3xl" />
 
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {Icon && (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#3eb489]/30 bg-[#3eb489]/15 text-[#8fd2b5]">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#bde5d2] bg-[#eaf6f0] text-[#2d946e] shadow-sm">
               <Icon className="h-6 w-6" />
             </span>
           )}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8fd2b5]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#2d946e]">
               {eyebrow}
             </p>
-            <h1 className="mt-0.5 text-2xl font-black tracking-tight text-white sm:text-3xl">
+            <h1 className="mt-0.5 text-2xl font-black tracking-tight text-[#19261f] sm:text-3xl">
               {title}
             </h1>
             {description && (
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#c1d1c7] sm:text-sm">
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#5a685e] sm:text-sm">
                 {description}
               </p>
             )}

@@ -292,15 +292,15 @@ export default async function Home() {
       </section>
 
       {/* Inspirational Hadith / Islamic Advice Card */}
-      <section className="mt-14 overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a1811] via-[#11231a] to-[#14291e] p-8 text-white shadow-xl ring-1 ring-white/10 sm:p-12">
+      <section className="mt-14 overflow-hidden rounded-3xl border border-[#ded5c4] bg-gradient-to-br from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-8 text-[#19261f] shadow-lg sm:p-12">
         <div className="mx-auto max-w-3xl text-center">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#c5a059]/20 text-[#eddcb2]">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#faf4e6] border border-[#ecd8a6] text-[#8a6820] shadow-sm">
             <Quote className="h-5 w-5" />
           </div>
-          <p className="mt-4 font-arabic text-xl font-bold leading-relaxed text-[#eddcb2] sm:text-2xl">
+          <p className="mt-4 font-arabic text-xl font-bold leading-relaxed text-[#8a6820] sm:text-2xl">
             {featuredAdvice.content}
           </p>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-[#8fd2b5]">
+          <p className="mt-3 text-xs font-bold uppercase tracking-wider text-[#2d946e]">
             {featuredAdvice.sourceReference ?? "Hadits / Nasihat Islami"}
           </p>
         </div>
