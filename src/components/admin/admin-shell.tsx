@@ -63,17 +63,17 @@ export function AdminShell({
   );
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-gradient-to-b from-[#0a1811] via-[#11231a] to-[#0d1e16] text-white border-r border-[#244534]/40">
+    <div className="flex h-full flex-col bg-[#fdfbf7] text-[#19261f] border-r border-[#ded5c4] shadow-sm">
       {/* Brand Header */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#3eb489] to-[#205e48] text-2xl shadow-lg ring-2 ring-[#8fd2b5]/30">
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-[#ded5c4] bg-[#f8f4eb]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#3eb489] to-[#206f52] text-2xl shadow-sm ring-2 ring-[#bde5d2]">
           🕌
         </div>
         <div>
-          <p className="text-sm font-bold leading-tight text-white">
+          <p className="text-sm font-extrabold leading-tight text-[#19261f]">
             Masjid Abu Dzar
           </p>
-          <p className="text-xs text-[#8fd2b5] font-medium">Panel Administrasi</p>
+          <p className="text-xs text-[#2d946e] font-semibold">Panel Administrasi</p>
         </div>
       </div>
 
@@ -92,11 +92,11 @@ export function AdminShell({
               onClick={() => setOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
                 active
-                  ? "bg-gradient-to-r from-[#2d946e] to-[#205e48] text-white shadow-md shadow-[#0a1711]/50"
-                  : "text-[#c2d3c9] hover:bg-white/5 hover:text-white"
+                  ? "bg-gradient-to-r from-[#2d946e] to-[#206f52] text-white shadow-sm font-bold"
+                  : "text-[#3f5045] hover:bg-[#eaf6f0] hover:text-[#1e6149]"
               }`}
             >
-              <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-[#7c9487]"}`} />
+              <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-[#2d946e]"}`} />
               <span>{item.label}</span>
             </Link>
           );
@@ -104,17 +104,17 @@ export function AdminShell({
       </nav>
 
       {/* Footer Profile & Logout */}
-      <div className="border-t border-white/10 p-3 bg-black/25">
-        <div className="mb-2 px-2.5 py-2 rounded-xl bg-white/5">
-          <p className="truncate text-xs font-bold text-white">{user.name}</p>
-          <p className="truncate text-[11px] text-[#9cb1a5]">{user.email}</p>
-          <span className="mt-1 inline-block rounded-md bg-[#3eb489]/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#a5e4cb] border border-[#3eb489]/30">
+      <div className="border-t border-[#ded5c4] p-3 bg-[#f8f4eb]">
+        <div className="mb-2 px-2.5 py-2 rounded-xl bg-white border border-[#ded5c4] shadow-sm">
+          <p className="truncate text-xs font-bold text-[#19261f]">{user.name}</p>
+          <p className="truncate text-[11px] text-[#607066]">{user.email}</p>
+          <span className="mt-1 inline-block rounded-md bg-[#eaf6f0] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#1e6149] border border-[#bde5d2]">
             {user.role}
           </span>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/auth/login" })}
-          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/10 hover:text-rose-200 transition-colors"
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors"
         >
           <LogOut className="h-4 w-4" /> Keluar dari Admin
         </button>

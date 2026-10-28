@@ -79,24 +79,24 @@ export default async function JadwalJumatPage() {
       }}
     >
       {/* Header Banner */}
-      <div className="mb-8 rounded-3xl bg-gradient-to-r from-[#0a1811] via-[#11231a] to-[#152e22] p-8 text-white shadow-xl ring-1 ring-white/10 sm:p-10">
+      <div className="mb-8 rounded-3xl border border-[#ded5c4] bg-gradient-to-r from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-8 text-[#19261f] shadow-lg sm:p-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#c5a059]/20 px-3.5 py-1 text-xs font-semibold text-[#eddcb2] border border-[#c5a059]/30 mb-3">
-              <BookOpen className="h-3.5 w-3.5 text-[#eddcb2]" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#faf4e6] px-3.5 py-1 text-xs font-semibold text-[#7c6630] border border-[#ecd8a6] mb-3">
+              <BookOpen className="h-3.5 w-3.5 text-[#8a6820]" />
               <span>Khutbah &amp; Shalat Jumat Berjamaah</span>
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-black tracking-tight text-[#19261f] sm:text-4xl">
               Jadwal Khatib Jumat
             </h1>
-            <p className="mt-2 text-xs text-[#b8ccc0] sm:text-sm">
+            <p className="mt-2 text-xs text-[#5c6e63] sm:text-sm">
               Daftar asatidzah penceramah khutbah dan imam Subuh Jumat berbasis rotasi berkala di {mosque.mosqueName}.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur text-right">
-            <span className="text-xs text-[#9db3a6] block">Jumat Terdekat</span>
-            <span className="text-sm font-bold text-[#eddcb2]">
+          <div className="rounded-2xl border border-[#ded5c4] bg-white p-4 shadow-sm text-right">
+            <span className="text-xs text-[#7c6630] font-semibold block">Jumat Terdekat</span>
+            <span className="text-sm font-bold text-[#8a6820]">
               {formatDateOnlyLong(firstFriday)}
             </span>
           </div>

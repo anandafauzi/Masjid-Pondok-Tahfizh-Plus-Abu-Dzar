@@ -88,7 +88,7 @@ export default async function AdminPrayerTimesPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
-              <tr className="bg-slate-900 text-xs font-semibold text-white">
+              <tr className="border-b border-[#ded5c4] bg-[#f4eee2] text-xs font-bold text-[#19261f]">
                 <th className="rounded-l-xl px-4 py-3">Tanggal</th>
                 {ROWS.map((key) => (
                   <th key={key} className="px-3 py-3 text-center">

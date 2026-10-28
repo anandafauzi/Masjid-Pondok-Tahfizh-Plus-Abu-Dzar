@@ -231,7 +231,7 @@ export default function AdminUsersPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
-                <tr className="bg-slate-900 text-[11px] font-semibold uppercase tracking-wider text-white">
+                <tr className="border-b border-[#ded5c4] bg-[#f4eee2] text-[11px] font-bold uppercase tracking-wider text-[#19261f]">
                   <th className="rounded-l-xl px-4 py-3">Pengguna</th>
                   <th className="px-4 py-3">Peran</th>
                   <th className="px-4 py-3">Status</th>

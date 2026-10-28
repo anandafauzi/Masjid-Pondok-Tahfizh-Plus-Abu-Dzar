@@ -66,7 +66,7 @@ export default function AdminAuditPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-left text-sm">
               <thead>
-                <tr className="bg-slate-900 text-[11px] font-semibold uppercase tracking-wider text-white">
+                <tr className="border-b border-[#ded5c4] bg-[#f4eee2] text-[11px] font-bold uppercase tracking-wider text-[#19261f]">
                   <th className="rounded-l-xl px-4 py-3">Waktu</th>
                   <th className="px-4 py-3">Admin</th>
                   <th className="px-4 py-3">Aksi</th>

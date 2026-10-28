@@ -58,24 +58,24 @@ export default async function JadwalImamPage() {
       }}
     >
       {/* Page Header */}
-      <div className="mb-8 rounded-3xl bg-gradient-to-r from-[#0a1811] via-[#11231a] to-[#152e22] p-8 text-white shadow-xl ring-1 ring-white/10 sm:p-10">
+      <div className="mb-8 rounded-3xl border border-[#ded5c4] bg-gradient-to-r from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-8 text-[#19261f] shadow-lg sm:p-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#3eb489]/20 px-3.5 py-1 text-xs font-semibold text-[#a5e4cb] border border-[#3eb489]/30 mb-3">
-              <Users className="h-3.5 w-3.5 text-[#eddcb2]" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#2d946e]/10 px-3.5 py-1 text-xs font-semibold text-[#1e6149] border border-[#2d946e]/25 mb-3">
+              <Users className="h-3.5 w-3.5 text-[#8a6820]" />
               <span>Petugas Ibadah Shalat Fardhu</span>
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-black tracking-tight text-[#19261f] sm:text-4xl">
               Jadwal Imam &amp; Muadzin
             </h1>
-            <p className="mt-2 text-xs text-[#b8ccc0] sm:text-sm">
+            <p className="mt-2 text-xs text-[#5c6e63] sm:text-sm">
               Jadwal penugasan para asatidzah dan santri tahfizh untuk memimpin shalat 5 waktu di {mosque.mosqueName}.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur text-right">
-            <span className="text-xs text-[#9db3a6] block">Periode Penugasan</span>
-            <span className="text-sm font-bold text-[#eddcb2]">
+          <div className="rounded-2xl border border-[#ded5c4] bg-white p-4 shadow-sm text-right">
+            <span className="text-xs text-[#7c6630] font-semibold block">Periode Penugasan</span>
+            <span className="text-sm font-bold text-[#8a6820]">
               14 Hari Ke Depan
             </span>
           </div>

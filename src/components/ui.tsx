@@ -142,15 +142,17 @@ export function Button({
 
 export function Label({
   htmlFor,
+  className = "",
   children,
 }: {
   htmlFor?: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
     <label
       htmlFor={htmlFor}
-      className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-[#4e5e54]"
+      className={`mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-[#4e5e54] ${className}`}
     >
       {children}
     </label>

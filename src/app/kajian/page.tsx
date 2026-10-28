@@ -32,24 +32,24 @@ export default async function KajianPage() {
       }}
     >
       {/* Header Banner */}
-      <div className="mb-8 rounded-3xl bg-gradient-to-r from-[#0a1811] via-[#11231a] to-[#152e22] p-8 text-white shadow-xl ring-1 ring-white/10 sm:p-10">
+      <div className="mb-8 rounded-3xl border border-[#ded5c4] bg-gradient-to-r from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-8 text-[#19261f] shadow-lg sm:p-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#3eb489]/20 px-3.5 py-1 text-xs font-semibold text-[#a5e4cb] border border-[#3eb489]/30 mb-3">
-              <BookMarked className="h-3.5 w-3.5 text-[#eddcb2]" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#2d946e]/10 px-3.5 py-1 text-xs font-semibold text-[#1e6149] border border-[#2d946e]/25 mb-3">
+              <BookMarked className="h-3.5 w-3.5 text-[#8a6820]" />
               <span>Majelis Ilmu &amp; Pembahasan Kitab</span>
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            <h1 className="text-3xl font-black tracking-tight text-[#19261f] sm:text-4xl">
               Agenda Kajian Islam
             </h1>
-            <p className="mt-2 text-xs text-[#b8ccc0] sm:text-sm">
+            <p className="mt-2 text-xs text-[#5c6e63] sm:text-sm">
               Program kajian rutin tafsir, hadits, dan akidah terbuka untuk seluruh jamaah ikhwan &amp; akhwat di {mosque.mosqueName}.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur text-right">
-            <span className="text-xs text-[#9db3a6] block">Status Acara</span>
-            <span className="text-sm font-bold text-[#8fd2b5]">
+          <div className="rounded-2xl border border-[#ded5c4] bg-white p-4 shadow-sm text-right">
+            <span className="text-xs text-[#7c6630] font-semibold block">Status Acara</span>
+            <span className="text-sm font-bold text-[#2d946e]">
               Terbuka Untuk Umum
             </span>
           </div>
