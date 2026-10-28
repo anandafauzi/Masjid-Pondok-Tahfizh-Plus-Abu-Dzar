@@ -79,24 +79,24 @@ export default async function JadwalJumatPage() {
       }}
     >
       {/* Header Banner */}
-      <div className="mb-8 rounded-3xl bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 p-8 text-white shadow-xl ring-1 ring-white/10 sm:p-10">
+      <div className="mb-8 rounded-3xl bg-gradient-to-r from-[#0a1811] via-[#11231a] to-[#152e22] p-8 text-white shadow-xl ring-1 ring-white/10 sm:p-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/20 px-3.5 py-1 text-xs font-semibold text-amber-300 border border-amber-500/30 mb-3">
-              <BookOpen className="h-3.5 w-3.5" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#c5a059]/20 px-3.5 py-1 text-xs font-semibold text-[#eddcb2] border border-[#c5a059]/30 mb-3">
+              <BookOpen className="h-3.5 w-3.5 text-[#eddcb2]" />
               <span>Khutbah &amp; Shalat Jumat Berjamaah</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
               Jadwal Khatib Jumat
             </h1>
-            <p className="mt-2 text-xs text-slate-300 sm:text-sm">
+            <p className="mt-2 text-xs text-[#b8ccc0] sm:text-sm">
               Daftar asatidzah penceramah khutbah dan imam Subuh Jumat berbasis rotasi berkala di {mosque.mosqueName}.
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur text-right">
-            <span className="text-xs text-slate-400 block">Jumat Terdekat</span>
-            <span className="text-sm font-bold text-amber-300">
+            <span className="text-xs text-[#9db3a6] block">Jumat Terdekat</span>
+            <span className="text-sm font-bold text-[#eddcb2]">
               {formatDateOnlyLong(firstFriday)}
             </span>
           </div>
@@ -113,49 +113,49 @@ export default async function JadwalJumatPage() {
               key={index}
               className={`relative overflow-hidden rounded-2xl border p-6 shadow-sm transition-all duration-300 hover:shadow-md ${
                 isClosest
-                  ? "border-amber-300 bg-gradient-to-br from-amber-50/90 via-white to-amber-50/40 ring-2 ring-amber-400/20"
-                  : "border-slate-200 bg-white"
+                  ? "border-[#ded3be] bg-gradient-to-br from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] ring-2 ring-[#c5a059]/30"
+                  : "border-[#ded5c4] bg-white"
               }`}
             >
               <div className="flex items-center justify-between mb-4">
                 <span
                   className={`rounded-full px-3 py-0.5 text-xs font-bold uppercase tracking-wider ${
                     isClosest
-                      ? "bg-amber-500 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600"
+                      ? "bg-[#c5a059] text-white shadow-sm"
+                      : "bg-[#f4efe4] text-[#4d5950]"
                   }`}
                 >
                   {isClosest ? "Jumat Pekan Ini" : `Jumat Ke-${index + 1}`}
                 </span>
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-medium text-[#6d7c71]">
                   {formatDateOnlyLong(row.friday)}
                 </span>
               </div>
 
               <div>
-                <span className="text-xs uppercase font-bold text-slate-400">
+                <span className="text-xs uppercase font-bold text-[#8a6820]">
                   Khatib Jumat
                 </span>
-                <h3 className="mt-0.5 text-2xl font-bold text-slate-900">
+                <h3 className="mt-0.5 text-2xl font-bold text-[#19261f]">
                   {row.khatibName}
                 </h3>
 
                 {row.sermonTopic ? (
-                  <p className="mt-2 rounded-xl bg-slate-50 border border-slate-100 p-3 text-xs leading-relaxed text-slate-700">
-                    <span className="font-semibold text-slate-900">Tema Khutbah: </span>
+                  <p className="mt-2 rounded-xl bg-[#f8f5ee] border border-[#ded5c4] p-3 text-xs leading-relaxed text-[#3c4a41]">
+                    <span className="font-semibold text-[#19261f]">Tema Khutbah: </span>
                     “{row.sermonTopic}”
                   </p>
                 ) : (
-                  <p className="mt-2 text-xs italic text-slate-400">
+                  <p className="mt-2 text-xs italic text-[#748479]">
                     Tema khutbah akan ditentukan oleh khatib bersangkutan.
                   </p>
                 )}
               </div>
 
-              <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-                <span className="text-slate-500">Imam Subuh Jumat:</span>
-                <div className="flex items-center gap-1.5 font-bold text-emerald-800">
-                  <UserCheck className="h-4 w-4 text-emerald-600" />
+              <div className="mt-6 flex items-center justify-between border-t border-[#ded5c4] pt-3 text-xs">
+                <span className="text-[#6d7c71]">Imam Subuh Jumat:</span>
+                <div className="flex items-center gap-1.5 font-bold text-[#1e6149]">
+                  <UserCheck className="h-4 w-4 text-[#2d946e]" />
                   <span>{row.imamSubuh}</span>
                 </div>
               </div>

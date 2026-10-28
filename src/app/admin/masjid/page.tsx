@@ -22,6 +22,7 @@ import {
 
 interface MosqueSettings {
   mosqueName: string;
+  logoUrl: string | null;
   address: string | null;
   latitude: number;
   longitude: number;
@@ -128,6 +129,15 @@ export default function AdminMasjidPage() {
                     id="mosqueName"
                     value={form.mosqueName}
                     onChange={(e) => update("mosqueName", e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="logoUrl">URL Logo Masjid</Label>
+                  <Input
+                    id="logoUrl"
+                    value={form.logoUrl ?? ""}
+                    onChange={(e) => update("logoUrl", e.target.value)}
+                    placeholder="https://.../logo.png"
                   />
                 </div>
                 <div className="sm:col-span-2">

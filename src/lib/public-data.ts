@@ -24,6 +24,7 @@ export interface TvData {
   serverTime: string;
   mosque: {
     name: string;
+    logoUrl: string | null;
     address: string | null;
     mapUrl: string;
     calculationMethod: string;
@@ -182,6 +183,7 @@ export async function buildTvData(): Promise<TvData> {
     serverTime: now.toISOString(),
     mosque: {
       name: mosque.mosqueName,
+      logoUrl: (mosque as { logoUrl?: string | null }).logoUrl ?? null,
       address: mosque.address,
       mapUrl: mosque.mapUrl,
       calculationMethod: mosque.prayerCalculationMethod,

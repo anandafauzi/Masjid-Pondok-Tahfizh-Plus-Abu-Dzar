@@ -102,6 +102,7 @@ export async function PUT(request: NextRequest) {
 
     const data = {
       mosqueName,
+      logoUrl: body.logoUrl ?? undefined,
       address: body.address ?? undefined,
       latitude,
       longitude,

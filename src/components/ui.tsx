@@ -21,26 +21,26 @@ export function PageHeader({
   eyebrow?: string;
 }) {
   return (
-    <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-emerald-950 to-slate-900 px-6 py-5 text-white shadow-xl ring-1 ring-white/10 sm:px-8 sm:py-6">
-      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-amber-500/10 blur-3xl" />
+    <div className="relative mb-6 overflow-hidden rounded-3xl bg-gradient-to-r from-[#0a1811] via-[#11231a] to-[#152e22] px-6 py-5 text-white shadow-xl ring-1 ring-white/10 sm:px-8 sm:py-6">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[#3eb489]/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-[#c5a059]/15 blur-3xl" />
 
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {Icon && (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15 text-emerald-300">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#3eb489]/30 bg-[#3eb489]/15 text-[#8fd2b5]">
               <Icon className="h-6 w-6" />
             </span>
           )}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-400">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8fd2b5]">
               {eyebrow}
             </p>
             <h1 className="mt-0.5 text-2xl font-black tracking-tight text-white sm:text-3xl">
               {title}
             </h1>
             {description && (
-              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300 sm:text-sm">
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#c1d1c7] sm:text-sm">
                 {description}
               </p>
             )}
@@ -73,16 +73,16 @@ export function SectionHeading({
     >
       <div className="flex items-start gap-2.5">
         {Icon && (
-          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eaf6f0] text-[#2d946e] ring-1 ring-[#bde5d2]">
             <Icon className="h-4 w-4" />
           </span>
         )}
         <div>
-          <h2 className="text-base font-bold tracking-tight text-slate-900">
+          <h2 className="text-base font-bold tracking-tight text-[#19261f]">
             {title}
           </h2>
           {description && (
-            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+            <p className="mt-0.5 text-xs leading-relaxed text-[#5a685e]">
               {description}
             </p>
           )}
@@ -102,7 +102,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 ${className}`}
+      className={`rounded-2xl border border-[#e4dcce] bg-white p-5 shadow-sm sm:p-6 ${className}`}
     >
       {children}
     </div>
@@ -113,15 +113,15 @@ type ButtonVariant = "primary" | "secondary" | "danger" | "success" | "ghost";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-sm shadow-emerald-950/20 hover:from-emerald-500 hover:to-emerald-600 active:scale-[0.98]",
+    "bg-gradient-to-r from-[#2d946e] to-[#205e48] text-white shadow-sm shadow-[#0a1711]/25 hover:from-[#35a87e] hover:to-[#266d54] active:scale-[0.98]",
   secondary:
-    "border border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50/50 hover:text-emerald-800 active:scale-[0.98]",
+    "border border-[#ded5c4] bg-[#fdfbf7] text-[#2c3b31] hover:border-[#3eb489]/50 hover:bg-[#eef8f3] hover:text-[#1b5b44] active:scale-[0.98]",
   danger:
     "bg-rose-600 text-white shadow-sm hover:bg-rose-500 active:scale-[0.98]",
   success:
-    "bg-emerald-600 text-white shadow-sm hover:bg-emerald-500 active:scale-[0.98]",
+    "bg-[#2d946e] text-white shadow-sm hover:bg-[#257659] active:scale-[0.98]",
   ghost:
-    "bg-transparent text-slate-600 hover:bg-slate-100 active:scale-[0.98]",
+    "bg-transparent text-[#4e5e54] hover:bg-[#f2ece2] active:scale-[0.98]",
 };
 
 export function Button({
@@ -150,7 +150,7 @@ export function Label({
   return (
     <label
       htmlFor={htmlFor}
-      className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-600"
+      className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-[#4e5e54]"
     >
       {children}
     </label>
@@ -158,7 +158,7 @@ export function Label({
 }
 
 const FIELD =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20";
+  "w-full rounded-xl border border-[#ded5c4] bg-white px-3.5 py-2.5 text-sm text-[#19261f] transition-all placeholder:text-[#9aa79e] focus:border-[#2d946e] focus:outline-none focus:ring-2 focus:ring-[#2d946e]/20";
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${FIELD} ${props.className ?? ""}`} />;
@@ -186,20 +186,20 @@ export function Toggle({
   description?: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 transition-colors hover:border-emerald-200 hover:bg-emerald-50/40">
+    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[#e4dcce] bg-[#faf7f2]/80 px-4 py-3 transition-colors hover:border-[#3eb489]/40 hover:bg-[#eef8f3]/60">
       <span>
-        <span className="block text-sm font-semibold text-slate-800">
+        <span className="block text-sm font-semibold text-[#19261f]">
           {label}
         </span>
         {description && (
-          <span className="mt-0.5 block text-xs text-slate-500">
+          <span className="mt-0.5 block text-xs text-[#5a685e]">
             {description}
           </span>
         )}
       </span>
       <span
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-          checked ? "bg-emerald-600" : "bg-slate-300"
+          checked ? "bg-[#2d946e]" : "bg-[#dcd4c3]"
         }`}
       >
         <input
@@ -226,11 +226,11 @@ export function Badge({
   color?: "slate" | "green" | "red" | "blue" | "amber";
 }) {
   const colors = {
-    slate: "bg-slate-100 text-slate-700 border-slate-200",
-    green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    red: "bg-rose-50 text-rose-700 border-rose-200",
-    blue: "bg-sky-50 text-sky-700 border-sky-200",
-    amber: "bg-amber-50 text-amber-800 border-amber-200",
+    slate: "bg-[#f4efe4] text-[#4d5950] border-[#ded7c8]",
+    green: "bg-[#eaf6f0] text-[#1e6149] border-[#bde5d2]",
+    red: "bg-[#fcf0ee] text-[#93392e] border-[#f2ccc7]",
+    blue: "bg-[#edf4f7] text-[#2d5f73] border-[#cbe1ea]",
+    amber: "bg-[#faf4e6] text-[#85631e] border-[#ecdcb4]",
   };
   return (
     <span
@@ -251,22 +251,22 @@ export function EmptyState({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 px-6 py-12 text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-emerald-500 ring-1 ring-slate-200">
+    <div className="rounded-2xl border border-dashed border-[#ded5c4] bg-[#faf7f2]/70 px-6 py-12 text-center">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#2d946e] ring-1 ring-[#ded5c4]">
         {Icon ? <Icon className="h-6 w-6" /> : <span className="text-xl">📋</span>}
       </div>
       {title && (
-        <p className="text-sm font-bold text-slate-800">{title}</p>
+        <p className="text-sm font-bold text-[#19261f]">{title}</p>
       )}
-      <p className="mt-1 text-xs text-slate-500">{message}</p>
+      <p className="mt-1 text-xs text-[#6e7d73]">{message}</p>
     </div>
   );
 }
 
 export function LoadingState({ label = "Memuat data..." }: { label?: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-8 text-sm text-slate-500">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-500 border-r-transparent" />
+    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-[#ded5c4] bg-[#faf7f2]/70 px-5 py-8 text-sm text-[#5a685e]">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#2d946e] border-r-transparent" />
       {label}
     </div>
   );

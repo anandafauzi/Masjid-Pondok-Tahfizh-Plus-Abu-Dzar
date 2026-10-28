@@ -32,7 +32,7 @@ const CARDS = [
     desc: "Jadwal waktu shalat 7 hari ke depan beserta estimasi waktu iqamah harian.",
     icon: CalendarClock,
     badge: "Otomatis WIB",
-    accent: "from-emerald-500 to-teal-600",
+    accent: "from-[#2d946e] to-[#1c5240]",
   },
   {
     href: "/jadwal-imam",
@@ -41,7 +41,7 @@ const CARDS = [
     desc: "Daftar ustadz dan santri yang bertugas memimpin shalat berjamaah 5 waktu.",
     icon: Users,
     badge: "5 Waktu",
-    accent: "from-blue-600 to-indigo-600",
+    accent: "from-[#457c6b] to-[#244f43]",
   },
   {
     href: "/jadwal-jumat",
@@ -50,7 +50,7 @@ const CARDS = [
     desc: "Informasi khatib, imam shalat Jumat, serta tema khutbah setiap pekan.",
     icon: BookOpen,
     badge: "Pekan Ini",
-    accent: "from-amber-500 to-orange-600",
+    accent: "from-[#c5a059] to-[#997633]",
   },
   {
     href: "/kajian",
@@ -59,7 +59,7 @@ const CARDS = [
     desc: "Agenda kajian rutin tafsir, hadits, fikih, dan majelis ta'lim terbuka untuk umum.",
     icon: BookMarked,
     badge: "Terbuka",
-    accent: "from-purple-600 to-pink-600",
+    accent: "from-[#577a88] to-[#34515c]",
   },
   {
     href: "/adzan-iqamah",
@@ -68,7 +68,7 @@ const CARDS = [
     desc: "Hitung mundur presisi jeda waktu antara berkumandangnya adzan menuju iqamah.",
     icon: Timer,
     badge: "Live Timer",
-    accent: "from-rose-500 to-red-600",
+    accent: "from-[#a86557] to-[#7f4236]",
   },
   {
     href: "/tv",
@@ -77,7 +77,7 @@ const CARDS = [
     desc: "Tampilan layar TV masjid beresolusi tinggi dengan slide otomatis dan mode khutbah.",
     icon: MonitorPlay,
     badge: "Full Screen",
-    accent: "from-slate-700 to-slate-900",
+    accent: "from-[#1c3629] to-[#0c1a13]",
   },
 ];
 
@@ -139,13 +139,13 @@ export default async function Home() {
       {/* Information Highlight Cards (Friday + Kajian) */}
       <section className="mt-10 grid gap-6 md:grid-cols-2">
         {/* Friday Khatib Spotlight */}
-        <div className="relative overflow-hidden rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-white to-amber-50/50 p-6 shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-[#ded3be] bg-gradient-to-br from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-800 border border-amber-500/20">
-              <Sparkles className="h-3 w-3 text-amber-600" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#c5a059]/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#82621c] border border-[#c5a059]/30">
+              <Sparkles className="h-3 w-3 text-[#c5a059]" />
               Khutbah Jumat Terdekat
             </span>
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-xs font-semibold text-[#6d7c71]">
               {new Intl.DateTimeFormat("id-ID", {
                 weekday: "long",
                 day: "numeric",
@@ -156,21 +156,21 @@ export default async function Home() {
           </div>
 
           <div className="mt-4">
-            <p className="text-xs text-amber-900/70 font-medium">Khatib Jumat</p>
-            <h3 className="text-xl font-bold text-slate-900">
+            <p className="text-xs text-[#8a6820] font-medium">Khatib Jumat</p>
+            <h3 className="text-xl font-bold text-[#19261f]">
               {fridayKhatib?.khatibName ?? "Ust. Dr. Hasan Basri, Lc., M.A."}
             </h3>
             {fridayKhatib?.sermonTopic && (
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-                Tema: <span className="font-semibold text-slate-800">“{fridayKhatib.sermonTopic}”</span>
+              <p className="mt-2 text-sm text-[#4d5c52] leading-relaxed">
+                Tema: <span className="font-semibold text-[#19261f]">“{fridayKhatib.sermonTopic}”</span>
               </p>
             )}
           </div>
 
-          <div className="mt-6 flex items-center justify-between border-t border-amber-200/60 pt-4">
+          <div className="mt-6 flex items-center justify-between border-t border-[#ded3be]/70 pt-4">
             <Link
               href="/jadwal-jumat"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 hover:text-amber-950 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8a6820] hover:text-[#5a4211] transition-colors"
             >
               <span>Lihat Jadwal Khatib Lengkap</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -179,25 +179,25 @@ export default async function Home() {
         </div>
 
         {/* Upcoming Kajian Spotlight */}
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/50 p-6 shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-[#bde5d2] bg-gradient-to-br from-[#f8fdfb] via-[#edf7f3] to-[#e4f3ec] p-6 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800 border border-emerald-500/20">
-              <BookMarked className="h-3 w-3 text-emerald-600" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#3eb489]/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#1a5a43] border border-[#3eb489]/30">
+              <BookMarked className="h-3 w-3 text-[#2d946e]" />
               Kajian Mendatang
             </span>
-            <span className="text-xs font-semibold text-slate-500">Terbuka Untuk Umum</span>
+            <span className="text-xs font-semibold text-[#6d7c71]">Terbuka Untuk Umum</span>
           </div>
 
           <div className="mt-4">
             {upcomingKajian.length > 0 ? (
               <div>
-                <h3 className="text-xl font-bold text-slate-900">
+                <h3 className="text-xl font-bold text-[#19261f]">
                   {upcomingKajian[0].title}
                 </h3>
-                <p className="mt-1 text-xs font-semibold text-emerald-700">
+                <p className="mt-1 text-xs font-semibold text-[#257659]">
                   Bersama: {upcomingKajian[0].speakerName}
                 </p>
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-[#596a5f]">
                   {new Intl.DateTimeFormat("id-ID", {
                     dateStyle: "full",
                     timeStyle: "short",
@@ -208,23 +208,23 @@ export default async function Home() {
               </div>
             ) : (
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-lg font-bold text-[#19261f]">
                   Kajian Rutin Tafsir Al-Qur&apos;an
                 </h3>
-                <p className="mt-1 text-xs font-semibold text-emerald-700">
+                <p className="mt-1 text-xs font-semibold text-[#257659]">
                   Bersama Asatidzah Pondok Tahfizh Plus Abu Dzar
                 </p>
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-[#596a5f]">
                   Setiap Ba&apos;da Magrib di Ruang Utama Masjid Abu Dzar
                 </p>
               </div>
             )}
           </div>
 
-          <div className="mt-6 flex items-center justify-between border-t border-emerald-200/60 pt-4">
+          <div className="mt-6 flex items-center justify-between border-t border-[#bde5d2]/70 pt-4">
             <Link
               href="/kajian"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#205e48] hover:text-[#12392b] transition-colors"
             >
               <span>Lihat Semua Jadwal Kajian</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -236,13 +236,13 @@ export default async function Home() {
       {/* Feature Showcase Grid */}
       <section className="mt-12">
         <div className="flex flex-col items-center text-center">
-          <span className="rounded-full bg-slate-200/70 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-700">
+          <span className="rounded-full bg-[#eee7db] px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#4a584e]">
             Fasilitas &amp; Layanan
           </span>
-          <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[#19261f] sm:text-3xl">
             Sistem Informasi Terpadu
           </h2>
-          <p className="mt-1 max-w-xl text-xs text-slate-500 sm:text-sm">
+          <p className="mt-1 max-w-xl text-xs text-[#5a685e] sm:text-sm">
             Akses informasi jadwal ibadah, kegiatan taklim, dan tata tertib masjid secara transparan &amp; akurat.
           </p>
         </div>
@@ -254,7 +254,7 @@ export default async function Home() {
               <Link
                 key={card.href}
                 href={card.href}
-                className="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-950/5"
+                className="group relative flex flex-col justify-between rounded-2xl border border-[#e4dcce] bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#3eb489]/60 hover:shadow-xl hover:shadow-[#11231a]/6"
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -263,25 +263,25 @@ export default async function Home() {
                     >
                       <Icon className="h-6 w-6" />
                     </div>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 transition-colors group-hover:bg-emerald-50 group-hover:text-emerald-700">
+                    <span className="rounded-full bg-[#f4efe4] px-2.5 py-0.5 text-[10px] font-bold text-[#4d5b51] transition-colors group-hover:bg-[#eaf6f0] group-hover:text-[#1e6149]">
                       {card.badge}
                     </span>
                   </div>
 
                   <div className="mt-4">
-                    <span className="font-arabic text-xs text-slate-400 group-hover:text-emerald-600 transition-colors">
+                    <span className="font-arabic text-xs text-[#8c7e6c] group-hover:text-[#2d946e] transition-colors">
                       {card.arabic}
                     </span>
-                    <h3 className="mt-0.5 text-lg font-bold text-slate-900 group-hover:text-emerald-800 transition-colors">
+                    <h3 className="mt-0.5 text-lg font-bold text-[#19261f] group-hover:text-[#205e48] transition-colors">
                       {card.title}
                     </h3>
-                    <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                    <p className="mt-2 text-xs leading-relaxed text-[#5a685e]">
                       {card.desc}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-6 flex items-center gap-1 text-xs font-bold text-emerald-600 group-hover:gap-2 transition-all">
+                <div className="mt-6 flex items-center gap-1 text-xs font-bold text-[#2d946e] group-hover:gap-2 transition-all">
                   <span>Buka Halaman</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </div>
@@ -292,15 +292,15 @@ export default async function Home() {
       </section>
 
       {/* Inspirational Hadith / Islamic Advice Card */}
-      <section className="mt-14 overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-950 p-8 text-white shadow-xl ring-1 ring-white/10 sm:p-12">
+      <section className="mt-14 overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a1811] via-[#11231a] to-[#14291e] p-8 text-white shadow-xl ring-1 ring-white/10 sm:p-12">
         <div className="mx-auto max-w-3xl text-center">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-amber-400/20 text-amber-300">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#c5a059]/20 text-[#eddcb2]">
             <Quote className="h-5 w-5" />
           </div>
-          <p className="mt-4 font-arabic text-xl font-bold leading-relaxed text-amber-200/90 sm:text-2xl">
+          <p className="mt-4 font-arabic text-xl font-bold leading-relaxed text-[#eddcb2] sm:text-2xl">
             {featuredAdvice.content}
           </p>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-[#8fd2b5]">
             {featuredAdvice.sourceReference ?? "Hadits / Nasihat Islami"}
           </p>
         </div>

@@ -63,17 +63,17 @@ export function AdminShell({
   );
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-gradient-to-b from-slate-950 via-slate-900 to-emerald-950 text-white border-r border-white/10">
+    <div className="flex h-full flex-col bg-gradient-to-b from-[#0a1811] via-[#11231a] to-[#0d1e16] text-white border-r border-[#244534]/40">
       {/* Brand Header */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-2xl shadow-lg ring-2 ring-emerald-400/20">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#3eb489] to-[#205e48] text-2xl shadow-lg ring-2 ring-[#8fd2b5]/30">
           🕌
         </div>
         <div>
           <p className="text-sm font-bold leading-tight text-white">
             Masjid Abu Dzar
           </p>
-          <p className="text-xs text-emerald-400 font-medium">Panel Administrasi</p>
+          <p className="text-xs text-[#8fd2b5] font-medium">Panel Administrasi</p>
         </div>
       </div>
 
@@ -92,11 +92,11 @@ export function AdminShell({
               onClick={() => setOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
                 active
-                  ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-950/40"
-                  : "text-slate-300 hover:bg-white/5 hover:text-white"
+                  ? "bg-gradient-to-r from-[#2d946e] to-[#205e48] text-white shadow-md shadow-[#0a1711]/50"
+                  : "text-[#c2d3c9] hover:bg-white/5 hover:text-white"
               }`}
             >
-              <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
+              <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-[#7c9487]"}`} />
               <span>{item.label}</span>
             </Link>
           );
@@ -104,11 +104,11 @@ export function AdminShell({
       </nav>
 
       {/* Footer Profile & Logout */}
-      <div className="border-t border-white/10 p-3 bg-black/20">
+      <div className="border-t border-white/10 p-3 bg-black/25">
         <div className="mb-2 px-2.5 py-2 rounded-xl bg-white/5">
           <p className="truncate text-xs font-bold text-white">{user.name}</p>
-          <p className="truncate text-[11px] text-slate-400">{user.email}</p>
-          <span className="mt-1 inline-block rounded-md bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300 border border-emerald-500/30">
+          <p className="truncate text-[11px] text-[#9cb1a5]">{user.email}</p>
+          <span className="mt-1 inline-block rounded-md bg-[#3eb489]/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#a5e4cb] border border-[#3eb489]/30">
             {user.role}
           </span>
         </div>
@@ -123,7 +123,7 @@ export function AdminShell({
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-[#faf7f2] text-[#19261f]">
       <div className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:w-64 md:flex-col">
         {sidebar}
       </div>
@@ -147,16 +147,16 @@ export function AdminShell({
       )}
 
       <div className="md:pl-64">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur-md md:px-6">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#ded5c4] bg-[#faf7f2]/90 px-4 py-3 backdrop-blur-md md:px-6">
           <button
-            className="rounded-lg p-2 text-slate-700 hover:bg-slate-100 md:hidden"
+            className="rounded-lg p-2 text-[#2c3b31] hover:bg-[#ede6d8] md:hidden"
             onClick={() => setOpen(true)}
           >
             <Menu className="h-5 w-5" />
           </button>
 
-          <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+          <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-[#1e6149] bg-[#eaf6f0] px-3 py-1.5 rounded-lg border border-[#bde5d2]">
+            <Sparkles className="h-3.5 w-3.5 text-[#2d946e]" />
             <span>Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
           </div>
 
@@ -165,19 +165,19 @@ export function AdminShell({
               href="/"
               target="_blank"
               aria-label="Buka web publik"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors sm:px-3"
+              className="flex items-center gap-1.5 rounded-lg border border-[#ded5c4] bg-white px-2.5 py-1.5 text-xs font-medium text-[#2c3b31] hover:bg-[#f6f2e9] transition-colors sm:px-3"
             >
               <span className="hidden sm:inline">Web Publik</span>
-              <ExternalLink className="h-3 w-3 text-slate-400" />
+              <ExternalLink className="h-3 w-3 text-[#7c9487]" />
             </Link>
 
             <Link
               href="/tv"
               target="_blank"
               aria-label="Buka layar TV"
-              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-emerald-400 hover:to-emerald-500 active:scale-95 transition-all sm:px-3.5"
+              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#2d946e] to-[#205e48] px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-[#35a87e] hover:to-[#266d54] active:scale-95 transition-all sm:px-3.5"
             >
-              <MonitorPlay className="h-3.5 w-3.5" />
+              <MonitorPlay className="h-3.5 w-3.5 text-[#a5e4cb]" />
               <span className="hidden sm:inline">Buka Layar TV</span>
             </Link>
           </div>
