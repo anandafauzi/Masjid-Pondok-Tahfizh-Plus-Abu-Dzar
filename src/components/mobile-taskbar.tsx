@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import Link from "next/link";
 import type { TvData } from "@/lib/public-data";
 import {
   MUADZIN_OPTIONS,
@@ -35,6 +36,7 @@ import {
   Download,
   Smartphone,
   Share2,
+  Compass,
 } from "lucide-react";
 
 function formatCountdown(targetMs: number, nowMs: number) {
@@ -665,6 +667,26 @@ export function MobilePrayerTaskbar() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* SECTION: SHORTCUT ARAH KIBLAT DIGITAL */}
+              <div className="flex items-center justify-between rounded-2xl border border-[#3eb489]/30 bg-[#163a2a] p-3.5 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2d946e]/25 text-[#3eb489] ring-1 ring-[#3eb489]/40">
+                    <Compass className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-white">Kompas Arah Kiblat Digital</p>
+                    <p className="text-[10px] text-[#9db3a6]">295.28° Barat Laut (Ka&apos;bah Makkah)</p>
+                  </div>
+                </div>
+                <Link
+                  href="/kiblat"
+                  onClick={() => setExpanded(false)}
+                  className="rounded-xl bg-[#2d946e] hover:bg-[#35a87e] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all active:scale-95"
+                >
+                  Buka Kompas
+                </Link>
               </div>
 
               {/* SECTION: PENGATURAN NOTIFIKASI & PILIHAN MUADZIN */}

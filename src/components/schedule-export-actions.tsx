@@ -221,11 +221,10 @@ export function ScheduleExportActions({
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className={`inline-flex items-center gap-1.5 rounded-xl border font-bold shadow-sm transition-all active:scale-95 text-xs sm:text-sm px-3.5 py-2 ${
-            variant === "admin"
+          className={`inline-flex items-center gap-1.5 rounded-xl border font-bold shadow-sm transition-all active:scale-95 text-xs sm:text-sm px-3.5 py-2 ${variant === "admin"
               ? "border-[#25d366]/40 bg-[#25d366]/10 text-[#128c7e] hover:bg-[#25d366]/20"
               : "border-[#25d366]/50 bg-[#25d366] text-white hover:bg-[#20ba59]"
-          }`}
+            }`}
           title="Bagikan jadwal ke WhatsApp grup takmir, pengurus & jamaah"
         >
           <MessageCircle className="h-4 w-4" />
@@ -300,11 +299,10 @@ export function ScheduleExportActions({
                 <button
                   type="button"
                   onClick={() => setSharePeriod("week")}
-                  className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    sharePeriod === "week"
+                  className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${sharePeriod === "week"
                       ? "bg-white text-[#19261f] shadow-sm"
                       : "text-[#5a685e] hover:text-[#19261f]"
-                  }`}
+                    }`}
                 >
                   <Calendar className="h-3.5 w-3.5 text-[#2d946e]" />
                   <span>Jadwal Sepekan (7 Hari)</span>
@@ -312,11 +310,10 @@ export function ScheduleExportActions({
                 <button
                   type="button"
                   onClick={() => setSharePeriod("today")}
-                  className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    sharePeriod === "today"
+                  className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${sharePeriod === "today"
                       ? "bg-white text-[#19261f] shadow-sm"
                       : "text-[#5a685e] hover:text-[#19261f]"
-                  }`}
+                    }`}
                 >
                   <Sparkles className="h-3.5 w-3.5 text-[#8a6820]" />
                   <span>Jadwal Hari Ini</span>

@@ -3,6 +3,7 @@ import { MASJID_INFO } from "@/utils/constants";
 import { MobilePrayerTaskbar } from "@/components/mobile-taskbar";
 import {
   Compass,
+  Home,
   Tv,
   LogIn,
   MapPin,
@@ -15,9 +16,10 @@ import {
 } from "lucide-react";
 
 const LINKS = [
-  { href: "/", label: "Beranda", icon: Compass },
+  { href: "/", label: "Beranda", icon: Home },
   { href: "/jadwal-shalat", label: "Jadwal Shalat", icon: Calendar },
   { href: "/jadwal-imam", label: "Imam & Muadzin", icon: Users },
+  { href: "/kiblat", label: "Arah Kiblat", icon: Compass },
   { href: "/jadwal-jumat", label: "Khatib Jumat", icon: BookOpen },
   { href: "/kajian", label: "Kajian", icon: BookMarked },
   { href: "/adzan-iqamah", label: "Adzan–Iqamah", icon: Timer },
@@ -176,6 +178,11 @@ export function PublicShell({
                 <li>
                   <Link href="/jadwal-imam" className="hover:text-[#257659] transition-colors">
                     • Jadwal Imam &amp; Muadzin Harian
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/kiblat" className="hover:text-[#257659] transition-colors">
+                    • Kompas Arah Kiblat Digital
                   </Link>
                 </li>
                 <li>
