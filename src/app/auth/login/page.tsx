@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { Lock, Mail, ArrowLeft, Eye, EyeOff } from "lucide-react";
 
 function LoginForm() {
+  const { status } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +16,12 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/admin";
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace(callbackUrl);
+    }
+  }, [status, router, callbackUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +50,20 @@ function LoginForm() {
       setLoading(false);
     }
   };
+
+  if (status === "authenticated") {
+    return (
+      <div suppressHydrationWarning className="relative flex min-h-dvh items-center justify-center bg-[#faf7f2] p-4 text-center">
+        <div className="rounded-3xl border border-[#ded5c4] bg-white/95 p-8 shadow-xl">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#3eb489] to-[#206f52] text-2xl shadow-md">
+            🕌
+          </div>
+          <p className="text-sm font-bold text-[#19261f]">Sesi Anda Masih Aktif</p>
+          <p className="mt-1 text-xs text-[#2d946e]">Mengalihkan langsung ke Panel Admin...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div suppressHydrationWarning className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#faf7f2] px-4 py-12 text-[#19261f] bg-islamic-pattern">

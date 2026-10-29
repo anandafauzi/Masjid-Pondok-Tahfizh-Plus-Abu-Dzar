@@ -156,7 +156,7 @@ export default function TVDisplayPage() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
       if (wakeLockSentinel) {
-        wakeLockSentinel.release().catch(() => {});
+        wakeLockSentinel.release().catch(() => { });
       }
     };
   }, []);
@@ -196,9 +196,9 @@ export default function TVDisplayPage() {
   const toggleFullscreen = () => {
     unlockTvAudio();
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     }
   };
 
@@ -406,15 +406,14 @@ export default function TVDisplayPage() {
     }
 
     return null;
-  }, [data, serverNow, manualExitShalatKey, isFriday, khutbahVisible]);
+  }, [data, serverNow, manualExitShalatKey]);
 
   // Floating Controls for TV Screen (WakeLock & Fullscreen)
   const renderFloatingControls = () => (
     <aside
       aria-label="Kontrol Layar TV"
-      className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0c1f16]/90 p-1.5 text-white backdrop-blur-md shadow-2xl transition-opacity duration-300 ${
-        isMouseIdle ? "opacity-0 pointer-events-none" : "opacity-100"
-      }`}
+      className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0c1f16]/90 p-1.5 text-white backdrop-blur-md shadow-2xl transition-opacity duration-300 ${isMouseIdle ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
     >
       {/* WakeLock Anti-Sleep Status */}
       <div
@@ -426,9 +425,8 @@ export default function TVDisplayPage() {
         }
       >
         <span
-          className={`h-2 w-2 rounded-full ${
-            wakeLockActive ? "bg-emerald-400 animate-pulse" : "bg-slate-500"
-          }`}
+          className={`h-2 w-2 rounded-full ${wakeLockActive ? "bg-emerald-400 animate-pulse" : "bg-slate-500"
+            }`}
         />
         <span className="hidden sm:inline">
           {wakeLockActive ? "Layar TV Anti-Mati" : "Layar Normal"}
@@ -442,11 +440,10 @@ export default function TVDisplayPage() {
           unlockTvAudio();
           setAudioMuted(!audioMuted);
         }}
-        className={`rounded-xl p-2 transition-colors ${
-          audioMuted
+        className={`rounded-xl p-2 transition-colors ${audioMuted
             ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
             : "bg-white/10 text-white hover:bg-white/20"
-        }`}
+          }`}
         title={audioMuted ? "Aktifkan Nada Beep Iqamah" : "Senyapkan Nada Beep"}
       >
         {audioMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -577,9 +574,8 @@ export default function TVDisplayPage() {
     return (
       <div
         suppressHydrationWarning
-        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#08130e] text-white p-6 sm:p-12 text-center select-none animate-fade-in ${
-          isMouseIdle ? "cursor-none" : ""
-        }`}
+        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#08130e] text-white p-6 sm:p-12 text-center select-none animate-fade-in ${isMouseIdle ? "cursor-none" : ""
+          }`}
       >
         <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/20 via-transparent to-transparent" />
 
@@ -622,9 +618,8 @@ export default function TVDisplayPage() {
     return (
       <div
         suppressHydrationWarning
-        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#030705] text-[#1e3428] p-6 text-center select-none transition-colors duration-1000 ${
-          isMouseIdle ? "cursor-none" : ""
-        }`}
+        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#030705] text-[#1e3428] p-6 text-center select-none transition-colors duration-1000 ${isMouseIdle ? "cursor-none" : ""
+          }`}
       >
         <div className="relative z-10 flex flex-col items-center opacity-40 hover:opacity-90 transition-opacity duration-500">
           <div className="text-3xl sm:text-4xl mb-3">🕌</div>
@@ -658,9 +653,8 @@ export default function TVDisplayPage() {
   return (
     <div
       suppressHydrationWarning
-      className={`relative flex h-screen h-dvh max-h-screen w-screen max-w-full flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none ${
-        isMouseIdle ? "cursor-none" : ""
-      }`}
+      className={`relative flex h-screen h-dvh max-h-screen w-screen max-w-full flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none ${isMouseIdle ? "cursor-none" : ""
+        }`}
     >
       {/* Background ambient lighting */}
       <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-[#3eb489]/15 blur-[120px]" />
@@ -703,16 +697,14 @@ export default function TVDisplayPage() {
               key={s.id}
               type="button"
               onClick={() => setSlide(s.id)}
-              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition-all ${
-                slide === s.id
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition-all ${slide === s.id
                   ? "bg-[#2d946e] text-white shadow-sm scale-105"
                   : "text-[#5a685e] hover:text-[#19261f] hover:bg-white/60"
-              }`}
+                }`}
             >
               <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  slide === s.id ? "bg-white" : "bg-[#c5a059]"
-                }`}
+                className={`h-1.5 w-1.5 rounded-full ${slide === s.id ? "bg-white" : "bg-[#c5a059]"
+                  }`}
               />
               <span>{s.label}</span>
             </button>
@@ -764,11 +756,10 @@ export default function TVDisplayPage() {
           return (
             <div suppressHydrationWarning className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#11231a]/98 p-4 text-center animate-fade-in backdrop-blur-2xl sm:p-8">
               <div
-                className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${
-                  isFinalCountdown
+                className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${isFinalCountdown
                     ? "bg-amber-400 text-slate-950 ring-4 ring-amber-400/50 animate-pulse font-black"
                     : "bg-[#c5a059]/20 text-[#eddcb2] border border-[#c5a059]/30"
-                }`}
+                  }`}
               >
                 {isFinalCountdown
                   ? `PERSIAPAN IQAMAH • ${secLeft} DETIK LAGI`
@@ -786,20 +777,18 @@ export default function TVDisplayPage() {
               </p>
 
               <div
-                className={`my-4 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:my-8 sm:px-12 sm:py-6 ${
-                  isFinalCountdown
+                className={`my-4 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:my-8 sm:px-12 sm:py-6 ${isFinalCountdown
                     ? "border-amber-400 bg-amber-500/20 ring-4 ring-amber-400/60 animate-bounce"
                     : "border-[#c5a059]/40 bg-[#0a1811]/70 ring-2 ring-[#c5a059]/30"
-                }`}
+                  }`}
               >
                 <span className="mb-2 block text-[10px] uppercase tracking-widest text-[#9db3a6] sm:text-xs">
                   Sisa Waktu Menuju Iqamah
                 </span>
                 <span
                   suppressHydrationWarning
-                  className={`font-mono text-6xl font-black md:text-9xl sm:text-8xl tracking-tight ${
-                    isFinalCountdown ? "text-amber-300" : "text-[#eddcb2]"
-                  }`}
+                  className={`font-mono text-6xl font-black md:text-9xl sm:text-8xl tracking-tight ${isFinalCountdown ? "text-amber-300" : "text-[#eddcb2]"
+                    }`}
                 >
                   {countdown(iqTarget, serverNow)}
                 </span>
@@ -827,11 +816,10 @@ export default function TVDisplayPage() {
                     return (
                       <div
                         key={key}
-                        className={`flex items-center justify-between gap-3 rounded-xl sm:rounded-2xl px-3 py-1.5 sm:px-5 sm:py-2.5 transition-all flex-1 min-h-0 ${
-                          isNext
+                        className={`flex items-center justify-between gap-3 rounded-xl sm:rounded-2xl px-3 py-1.5 sm:px-5 sm:py-2.5 transition-all flex-1 min-h-0 ${isNext
                             ? "border border-[#3eb489] bg-gradient-to-r from-[#eef8f3] to-white shadow-md ring-2 ring-[#3eb489]/30"
                             : "border border-[#ded5c4]/60 bg-[#fbf9f4] hover:bg-white"
-                        }`}
+                          }`}
                       >
                         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                           <span className="w-10 shrink-0 font-arabic text-base sm:text-xl text-[#8a6820]">

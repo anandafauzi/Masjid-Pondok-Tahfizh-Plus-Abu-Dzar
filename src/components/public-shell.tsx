@@ -5,7 +5,6 @@ import {
   Compass,
   Home,
   Tv,
-  LogIn,
   MapPin,
   Calendar,
   Users,
@@ -108,14 +107,6 @@ export function PublicShell({
             >
               <Tv className="h-3.5 w-3.5 text-white" />
               <span className="hidden sm:inline">TV Display</span>
-            </Link>
-
-            <Link
-              href="/auth/login"
-              className="flex items-center gap-1.5 rounded-lg border border-[#ecd8a6] bg-[#faf4e6] px-3 py-1.5 text-xs font-semibold text-[#7c6630] backdrop-blur hover:bg-[#f4ebd0] hover:border-[#dfc488] active:scale-95 transition-all"
-            >
-              <LogIn className="h-3.5 w-3.5 text-[#8a6820]" />
-              <span className="hidden sm:inline">Admin</span>
             </Link>
           </div>
         </div>
@@ -232,7 +223,13 @@ export function PublicShell({
             <p className="flex items-center gap-1 font-mono text-[11px] text-[#596a60]">
               <span>WIB (UTC+7)</span>
               <span>•</span>
-              <span className="text-[#257659] font-bold">Aktif</span>
+              <Link
+                href="/admin"
+                className="text-[#257659] font-bold hover:underline"
+                title="Status Sistem Aktif"
+              >
+                Aktif
+              </Link>
             </p>
           </div>
         </div>

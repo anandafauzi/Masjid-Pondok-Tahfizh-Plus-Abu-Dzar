@@ -71,7 +71,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 365 * 24 * 60 * 60, // Sesi login bertahan 365 hari (1 tahun penuh)
+    updateAge: 24 * 60 * 60, // Perbarui usia token setiap 24 jam
+  },
+  jwt: {
+    maxAge: 365 * 24 * 60 * 60, // Token JWT berlaku 365 hari
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
