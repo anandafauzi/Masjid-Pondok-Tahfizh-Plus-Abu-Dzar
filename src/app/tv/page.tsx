@@ -842,21 +842,23 @@ export default function TVDisplayPage() {
                   </div>
                 </div>
 
-                {/* Imam & Muadzin Today Snippet */}
-                <div className="rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-4 shadow-xl flex flex-col justify-between text-[#19261f] shrink-0 overflow-hidden">
-                  <div className="flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-1.5">
+                {/* Imam & Muadzin Today Snippet (5 Waktu Shalat Fardhu Lengkap) */}
+                <div className="rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-2.5 sm:p-3.5 shadow-xl flex flex-col justify-between text-[#19261f] shrink-0 overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#19261f] sm:text-sm">
-                      <Users className="h-4 w-4 text-[#2d946e]" />
+                      <Users className="h-3.5 w-3.5 text-[#2d946e]" />
                       <span>Petugas Shalat Hari Ini</span>
                     </div>
-                    <span className="text-[10px] text-[#5a685e]">Imam &amp; Muadzin</span>
+                    <span className="text-[9px] font-semibold text-[#1e6149] bg-[#eaf6f0] px-2 py-0.5 rounded-full border border-[#bde5d2]">
+                      5 Waktu Fardhu
+                    </span>
                   </div>
 
-                  <div className="mt-2 space-y-1 sm:space-y-1.5">
-                    {displayImamList.slice(0, 4).map((s) => (
+                  <div className="mt-1.5 space-y-0.5 sm:space-y-1">
+                    {displayImamList.map((s) => (
                       <div
                         key={s.id}
-                        className="flex items-center justify-between gap-2 rounded-xl bg-[#fbf9f4] border border-[#ded5c4]/60 px-3 py-1 text-xs sm:text-sm"
+                        className="flex items-center justify-between gap-2 rounded-lg bg-[#fbf9f4] border border-[#ded5c4]/60 px-2.5 py-0.5 sm:py-1 text-xs"
                       >
                         <span className="w-14 shrink-0 font-bold text-[#8a6820]">
                           {s.prayerName}
@@ -865,7 +867,7 @@ export default function TVDisplayPage() {
                           <span className="font-bold text-[#19261f]">
                             {s.imamName}
                           </span>
-                          <span className="text-[11px] text-[#5a685e]">
+                          <span className="text-[10px] text-[#5a685e]">
                             ({s.muadzinName})
                           </span>
                         </div>
