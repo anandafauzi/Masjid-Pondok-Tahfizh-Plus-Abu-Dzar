@@ -7,7 +7,7 @@ import {
 } from "@/lib/settings";
 import { getActiveKhutbah } from "@/lib/khutbah";
 import { resolveRolling } from "@/lib/rolling";
-import { dateOnlyToString, todayDateOnly } from "@/lib/datetime";
+import { combineDateTime, dateOnlyToString, todayDateOnly } from "@/lib/datetime";
 import {
   getAdviceSafe,
   getImamRollingActive,
@@ -30,6 +30,7 @@ export interface TvData {
     calculationMethod: string;
   };
   today: string;
+  isFriday: boolean;
   prayerTimes: PrayerTimesStrings;
   nextPrayer: {
     key: string;
@@ -179,6 +180,28 @@ export async function buildTvData(): Promise<TvData> {
     friday
   );
 
+  const isFridayToday = today.getUTCDay() === 5;
+  const dhuhrStart = combineDateTime(today, prayerTimes.dhuhr);
+  const dhuhrEnd = new Date(dhuhrStart.getTime() + 40 * 60 * 1000); // 40 menit durasi Khutbah Jumat
+
+  // Otomatis aktifkan mode Khutbah Jumat selama 40 menit di waktu sholat Jumat
+  let resolvedKhutbah = khutbah;
+  if (!resolvedKhutbah && isFridayToday && now >= dhuhrStart && now < dhuhrEnd) {
+    resolvedKhutbah = {
+      id: `friday-auto-${dateOnlyToString(today)}`,
+      khatibName: fridaySchedule?.khatibName ?? rollingKhatib?.name ?? "Khatib Jumat",
+      sermonTopic: fridaySchedule?.sermonTopic ?? null,
+      startedAt: dhuhrStart,
+      endsAt: dhuhrEnd,
+    } as typeof khutbah;
+  }
+
+  // Pada hari Jumat waktu Zuhur, sembunyikan countdown iqamah agar tidak tumpang tindih
+  let resolvedNextIqamah = nextIqamah;
+  if (isFridayToday && resolvedNextIqamah?.label?.toLowerCase().includes("zuhur")) {
+    resolvedNextIqamah = null;
+  }
+
   return {
     serverTime: now.toISOString(),
     mosque: {
@@ -189,6 +212,7 @@ export async function buildTvData(): Promise<TvData> {
       calculationMethod: mosque.prayerCalculationMethod,
     },
     today: dateOnlyToString(today),
+    isFriday: isFridayToday,
     prayerTimes,
     nextPrayer: {
       key: nextPrayer.key,
@@ -206,14 +230,14 @@ export async function buildTvData(): Promise<TvData> {
       iqamahTarget: e.iqamahTarget.toISOString(),
       mode: e.mode,
     })),
-    nextIqamah: nextIqamah
+    nextIqamah: resolvedNextIqamah
       ? {
-          label: nextIqamah.label,
-          adhanTime: nextIqamah.adhanTime,
-          iqamahTime: nextIqamah.iqamahTime,
-          adhanTarget: nextIqamah.adhanTarget.toISOString(),
-          iqamahTarget: nextIqamah.iqamahTarget.toISOString(),
-          isBetweenAdhanAndIqamah: nextIqamah.isBetweenAdhanAndIqamah,
+          label: resolvedNextIqamah.label,
+          adhanTime: resolvedNextIqamah.adhanTime,
+          iqamahTime: resolvedNextIqamah.iqamahTime,
+          adhanTarget: resolvedNextIqamah.adhanTarget.toISOString(),
+          iqamahTarget: resolvedNextIqamah.iqamahTarget.toISOString(),
+          isBetweenAdhanAndIqamah: resolvedNextIqamah.isBetweenAdhanAndIqamah,
         }
       : null,
     imamToday: imamToday.map((s) => ({
@@ -250,13 +274,13 @@ export async function buildTvData(): Promise<TvData> {
     })),
     runningTexts: runningTexts.map((r) => ({ id: r.id, content: r.content })),
     display,
-    khutbah: khutbah
+    khutbah: resolvedKhutbah
       ? {
-          id: khutbah.id,
-          khatibName: khutbah.khatibName,
-          sermonTopic: khutbah.sermonTopic,
-          endsAt: khutbah.endsAt.toISOString(),
-          startedAt: khutbah.startedAt.toISOString(),
+          id: resolvedKhutbah.id,
+          khatibName: resolvedKhutbah.khatibName,
+          sermonTopic: resolvedKhutbah.sermonTopic,
+          endsAt: resolvedKhutbah.endsAt.toISOString(),
+          startedAt: resolvedKhutbah.startedAt.toISOString(),
         }
       : null,
   };

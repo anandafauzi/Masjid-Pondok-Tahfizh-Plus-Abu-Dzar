@@ -204,10 +204,63 @@ export default function TVDisplayPage() {
 
   const serverNow = now + offset;
 
-  const khutbahVisible = useMemo(() => {
-    if (!data?.khutbah) return false;
-    return new Date(data.khutbah.endsAt).getTime() > serverNow;
-  }, [data, serverNow]);
+  const isFriday = useMemo(() => {
+    if (!data) return false;
+    if (typeof data.isFriday === "boolean") return data.isFriday;
+    return data.today === data.jumat?.fridayDate;
+  }, [data]);
+
+  // Otomatis aktifkan mode Khutbah Jumat 40 menit di TV sesuai jadwal waktu sholat Zuhur Jumat
+  const autoFridayKhutbah = useMemo(() => {
+    if (!data || !isFriday) return null;
+
+    const dhuhrEvent = data.iqamahEvents?.find((e) => e.key === "dhuhr");
+    let dhuhrStartMs: number;
+    if (dhuhrEvent?.adhanTarget) {
+      dhuhrStartMs = new Date(dhuhrEvent.adhanTarget).getTime();
+    } else if (data.prayerTimes?.dhuhr) {
+      const [h, m] = data.prayerTimes.dhuhr.split(":").map((v) => parseInt(v, 10));
+      const d = new Date(serverNow);
+      d.setHours(h, m, 0, 0);
+      dhuhrStartMs = d.getTime();
+    } else {
+      return null;
+    }
+
+    const dhuhrEndMs = dhuhrStartMs + 40 * 60 * 1000; // Tepat 40 menit durasi Khutbah Jumat
+    const isActive = serverNow >= dhuhrStartMs && serverNow < dhuhrEndMs;
+
+    return {
+      isActive,
+      startsAt: dhuhrStartMs,
+      endsAt: dhuhrEndMs,
+      khatibName: data.jumat?.khatibName || "Khatib Jumat",
+      sermonTopic: data.jumat?.sermonTopic || null,
+    };
+  }, [data, isFriday, serverNow]);
+
+  // Sesi Khutbah yang aktif (baik manual dari database maupun otomatis 40 menit di jadwal shalat)
+  const activeKhutbah = useMemo(() => {
+    if (data?.khutbah) {
+      const endsAtMs = new Date(data.khutbah.endsAt).getTime();
+      const startedAtMs = new Date(data.khutbah.startedAt).getTime();
+      if (serverNow >= startedAtMs && serverNow < endsAtMs) {
+        return {
+          khatibName: data.khutbah.khatibName,
+          sermonTopic: data.khutbah.sermonTopic,
+        };
+      }
+    }
+    if (autoFridayKhutbah?.isActive) {
+      return {
+        khatibName: autoFridayKhutbah.khatibName,
+        sermonTopic: autoFridayKhutbah.sermonTopic,
+      };
+    }
+    return null;
+  }, [data, autoFridayKhutbah, serverNow]);
+
+  const khutbahVisible = !!activeKhutbah;
 
   const interval = (data?.display.slideIntervalSeconds ?? 12) * 1000;
 
@@ -259,31 +312,40 @@ export default function TVDisplayPage() {
   }, [data, slide]);
 
   const iqamahActive = useMemo(() => {
+    if (khutbahVisible) return null;
     const next = data?.nextIqamah;
     if (!next) return null;
+    if (isFriday && next.label.toLowerCase().includes("zuhur")) return null;
     const adhan = new Date(next.adhanTarget).getTime();
     const iqamah = new Date(next.iqamahTarget).getTime();
     if (adhan <= serverNow && iqamah > serverNow) return next;
     return null;
-  }, [data, serverNow]);
+  }, [data, serverNow, khutbahVisible, isFriday]);
 
   const prayerTimeReached = useMemo((): { event: NonNullable<TvData["iqamahEvents"]>[number] } | null => {
+    if (khutbahVisible) return null;
     if (!data?.nextPrayer) return null;
+    if (isFriday && data.nextPrayer.key === "dhuhr") return null;
     const target = new Date(data.nextPrayer.target).getTime();
     if (target <= serverNow && !iqamahActive) {
       const ev = data.iqamahEvents?.find((e) => e.key === data.nextPrayer.key);
       if (ev) {
+        if (isFriday && ev.key === "dhuhr") return null;
         const iq = new Date(ev.iqamahTarget).getTime();
         if (iq > serverNow) return { event: ev };
       }
     }
     return null;
-  }, [data, serverNow, iqamahActive]);
+  }, [data, serverNow, iqamahActive, khutbahVisible, isFriday]);
 
-  // 3. Beep Countdown Synthesizer (Last 10 seconds of Iqamah)
+  // 3. Beep Countdown Synthesizer (Hening saat Khutbah Jumat berlangsung)
   useEffect(() => {
+    if (khutbahVisible) {
+      lastBeepSecRef.current = null;
+      return;
+    }
     const activeEv = iqamahActive ?? prayerTimeReached?.event;
-    if (!activeEv) {
+    if (!activeEv || (isFriday && activeEv.label.toLowerCase().includes("zuhur"))) {
       lastBeepSecRef.current = null;
       return;
     }
@@ -307,13 +369,14 @@ export default function TVDisplayPage() {
         }
       }
     }
-  }, [iqamahActive, prayerTimeReached, serverNow, audioMuted]);
+  }, [iqamahActive, prayerTimeReached, serverNow, audioMuted, khutbahVisible, isFriday]);
 
   // 4. Shalat Mode Computation (Fase Rapatkan Shaf 60s + Mode Layar Redup Minimalis 15m)
   const activeShalatMode = useMemo(() => {
-    if (!data?.iqamahEvents) return null;
+    if (khutbahVisible || !data?.iqamahEvents) return null;
 
     for (const ev of data.iqamahEvents) {
+      if (isFriday && ev.key === "dhuhr") continue; // Di hari Jumat, Zuhur digantikan Khutbah Jumat 40 menit
       const iqTarget = new Date(ev.iqamahTarget).getTime();
       const durationMin = PRAYER_SHALAT_DURATIONS[ev.key] ?? 15;
       const endShalatMs = iqTarget + durationMin * 60 * 1000;
@@ -343,7 +406,7 @@ export default function TVDisplayPage() {
     }
 
     return null;
-  }, [data, serverNow, manualExitShalatKey]);
+  }, [data, serverNow, manualExitShalatKey, isFriday, khutbahVisible]);
 
   // Floating Controls for TV Screen (WakeLock & Fullscreen)
   const renderFloatingControls = () => (
@@ -439,8 +502,8 @@ export default function TVDisplayPage() {
     Math.round((tickerContent.length / 4) * (50 / tickerSpeed))
   );
 
-  // KHUTBAH JUMAT FULLSCREEN MODE
-  if (khutbahVisible && data.khutbah) {
+  // KHUTBAH JUMAT FULLSCREEN MODE (Tampil hening dan khusyuk tanpa countdown / hitung mundur)
+  if (khutbahVisible && activeKhutbah) {
     return (
       <div suppressHydrationWarning className="relative flex min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-[#faf7f2] via-[#eaf6f0] to-[#faf7f2] text-[#19261f] bg-islamic-pattern">
         <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#3eb489]/15 via-transparent to-transparent" />
@@ -475,17 +538,17 @@ export default function TVDisplayPage() {
                   Khatib
                 </p>
                 <p className="mt-1 text-2xl font-bold text-[#19261f] sm:text-3xl md:text-4xl">
-                  {data.khutbah.khatibName}
+                  {activeKhutbah.khatibName}
                 </p>
               </div>
 
-              {data.khutbah.sermonTopic && data.khutbah.sermonTopic.trim() !== "" && (
+              {activeKhutbah.sermonTopic && activeKhutbah.sermonTopic.trim() !== "" && (
                 <div className="pt-1 sm:pt-2">
                   <p className="text-xs font-bold uppercase tracking-wider text-[#5c6e63] sm:text-sm">
                     Tema Khutbah
                   </p>
                   <p className="mt-1 text-xl font-bold text-[#8a6820] sm:text-2xl md:text-3xl">
-                    “{data.khutbah.sermonTopic}”
+                    “{activeKhutbah.sermonTopic}”
                   </p>
                 </div>
               )}
@@ -688,8 +751,10 @@ export default function TVDisplayPage() {
       <main className="relative z-10 min-h-0 flex-1 overflow-hidden p-2 sm:p-3 md:p-4 lg:p-5 flex flex-col justify-center">
         {/* IQAMAH OVERLAY COUNTDOWN (When between Adzan and Iqamah) */}
         {(() => {
+          if (khutbahVisible) return null;
           const activeEv = iqamahActive ?? prayerTimeReached?.event;
           if (!activeEv) return null;
+          if (isFriday && activeEv.label.toLowerCase().includes("zuhur")) return null;
           const iqTarget = new Date(activeEv.iqamahTarget).getTime();
           if (iqTarget <= serverNow) return null;
 
