@@ -523,9 +523,16 @@ export default function AdminImamPage() {
 
                         {/* Imam Name */}
                         <div>
-                          <Label className="text-[11px] text-[#5c6e63] mb-1">
-                            Nama Imam
-                          </Label>
+                          <div className="flex items-center justify-between mb-1">
+                            <Label className="text-[11px] text-[#5c6e63]">
+                              Nama Imam
+                            </Label>
+                            {selectedDay === 5 && prayerName === "Subuh" && (
+                              <span className="text-[10px] font-bold text-[#8a6820] bg-[#eddcb2]/40 px-2 py-0.5 rounded-full border border-[#c5a059]/30">
+                                ⭐ Rotasi Otomatis (Tab 2)
+                              </span>
+                            )}
+                          </div>
                           <Input
                             list="imam-names"
                             value={item.imamName}
@@ -537,9 +544,18 @@ export default function AdminImamPage() {
                                 e.target.value
                               )
                             }
-                            placeholder="Pilih atau ketik nama imam"
+                            placeholder={
+                              selectedDay === 5 && prayerName === "Subuh"
+                                ? "Otomatis bergilir sesuai Tab 'Rotasi Subuh Jumat'"
+                                : "Pilih atau ketik nama imam"
+                            }
                             className="text-xs sm:text-sm bg-white"
                           />
+                          {selectedDay === 5 && prayerName === "Subuh" && (
+                            <p className="mt-1 text-[11px] text-[#5c6e63]">
+                              💡 Jadwal shalat Subuh hari Jumat <b>otomatis mengikuti urutan siklus asatidzah</b> di Tab <i>&quot;Rotasi Subuh Jumat&quot;</i> ({rolling.length} imam terdaftar). Anda cukup menentukan petugas Muadzin di sini.
+                            </p>
+                          )}
                         </div>
 
                         {/* Muadzin Name */}

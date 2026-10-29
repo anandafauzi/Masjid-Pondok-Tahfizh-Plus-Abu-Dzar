@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { dateOnlyToString, addDaysUTC } from "@/lib/datetime";
 import { getWeeklyImamSettings, PRAYERS } from "@/lib/weekly-imam";
+import { resolveRolling } from "@/lib/rolling";
 
 export async function getRunningTextsSafe() {
   try {
@@ -34,12 +35,13 @@ const PRAYER_ORDER: Record<string, number> = {
 
 export async function getImamSchedulesBetween(from: Date, to: Date) {
   try {
-    const [dbSchedules, weeklyRules] = await Promise.all([
+    const [dbSchedules, weeklyRules, rollingImams] = await Promise.all([
       prisma.imamMuadzinSchedule.findMany({
         where: { scheduleDate: { gte: from, lte: to } },
         orderBy: [{ scheduleDate: "asc" }, { prayerName: "asc" }],
       }),
       getWeeklyImamSettings().catch(() => []),
+      getImamRollingActive().catch(() => []),
     ]);
 
     // Map existing records by `YYYY-MM-DD_PrayerName`
@@ -55,48 +57,92 @@ export async function getImamSchedulesBetween(from: Date, to: Date) {
     const oneDayMs = 24 * 60 * 60 * 1000;
     const daysDiff = Math.round((toTime - fromTime) / oneDayMs);
 
-    // If weekly rules exist, synthesize missing prayers for each day
-    if (weeklyRules.length > 0) {
-      for (let i = 0; i <= daysDiff; i++) {
-        const currentDate = addDaysUTC(from, i);
-        const dayOfWeek = currentDate.getUTCDay();
-        const ymd = dateOnlyToString(currentDate);
+    for (let i = 0; i <= daysDiff; i++) {
+      const currentDate = addDaysUTC(from, i);
+      const dayOfWeek = currentDate.getUTCDay(); // 0 = Ahad, 5 = Jumat
+      const ymd = dateOnlyToString(currentDate);
 
-        for (const prayer of PRAYERS) {
-          const key = `${ymd}_${prayer}`;
-          if (!existingMap.has(key)) {
-            const rule = weeklyRules.find(
-              (r) =>
-                r.dayOfWeek === dayOfWeek &&
-                r.prayerName.toLowerCase() === prayer.toLowerCase() &&
-                r.isActive &&
-                Boolean(r.imamName)
-            );
+      // Automatic Friday Subuh Rolling Check
+      let fridaySubuhRollingName: string | null = null;
+      if (dayOfWeek === 5 && rollingImams.length > 0) {
+        const resolved = resolveRolling(
+          rollingImams.map((r) => ({
+            id: r.id,
+            imamName: r.imamName,
+            sequenceNumber: r.sequenceNumber,
+            effectiveFrom: r.effectiveFrom,
+            effectiveUntil: r.effectiveUntil,
+            isActive: r.isActive,
+            createdAt: r.createdAt,
+          })),
+          currentDate
+        );
+        if (resolved) {
+          fridaySubuhRollingName = resolved.name;
+        }
+      }
 
-            if (rule) {
-              // Check validity (Tetap Selamanya or within date range)
-              if (rule.effectiveFrom && ymd < rule.effectiveFrom) continue;
-              if (
-                !rule.isPermanent &&
-                rule.effectiveUntil &&
-                ymd > rule.effectiveUntil
-              ) {
-                continue;
+      for (const prayer of PRAYERS) {
+        const key = `${ymd}_${prayer}`;
+        const isFridaySubuh = dayOfWeek === 5 && prayer.toLowerCase() === "subuh";
+
+        if (existingMap.has(key)) {
+          // If Friday Subuh exists in DB from recurring synchronization, but there is an active rolling sequence,
+          // ensure it reflects the rolling sequence unless it is an explicit manual override with custom notes.
+          if (isFridaySubuh && fridaySubuhRollingName) {
+            const existing = existingMap.get(key);
+            if (existing && (!existing.notes || existing.notes.includes("weekly") || existing.notes.includes("Rotasi"))) {
+              const idx = merged.findIndex((m) => m.id === existing.id);
+              if (idx !== -1) {
+                merged[idx] = {
+                  ...merged[idx],
+                  imamName: fridaySubuhRollingName,
+                  notes: "Rotasi Subuh Jumat",
+                };
               }
-
-              merged.push({
-                id: `weekly-${dayOfWeek}-${prayer}-${ymd}`,
-                scheduleDate: currentDate,
-                prayerName: prayer,
-                imamName: rule.imamName,
-                muadzinName: rule.muadzinName,
-                recurrenceRuleId: "weekly-rule",
-                notes: rule.notes ?? null,
-                createdBy: "weekly-recurring",
-                updatedAt: new Date(),
-              });
             }
           }
+          continue;
+        }
+
+        // Synthesize missing prayers from weekly rules or Friday rolling
+        const rule = weeklyRules.find(
+          (r) =>
+            r.dayOfWeek === dayOfWeek &&
+            r.prayerName.toLowerCase() === prayer.toLowerCase() &&
+            r.isActive
+        );
+
+        // For Friday Subuh, if rolling imam exists, it takes precedence over static weekly rule
+        const imamName = isFridaySubuh && fridaySubuhRollingName
+          ? fridaySubuhRollingName
+          : rule?.imamName;
+
+        const muadzinName = rule?.muadzinName || "";
+
+        if (imamName) {
+          // Check validity if rule has dates
+          if (rule && rule.effectiveFrom && ymd < rule.effectiveFrom) continue;
+          if (
+            rule &&
+            !rule.isPermanent &&
+            rule.effectiveUntil &&
+            ymd > rule.effectiveUntil
+          ) {
+            continue;
+          }
+
+          merged.push({
+            id: `weekly-${dayOfWeek}-${prayer}-${ymd}`,
+            scheduleDate: currentDate,
+            prayerName: prayer,
+            imamName,
+            muadzinName,
+            recurrenceRuleId: "weekly-rule",
+            notes: isFridaySubuh && fridaySubuhRollingName ? "Rotasi Subuh Jumat" : rule?.notes ?? null,
+            createdBy: "weekly-recurring",
+            updatedAt: new Date(),
+          });
         }
       }
     }
