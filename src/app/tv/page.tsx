@@ -406,7 +406,7 @@ export default function TVDisplayPage() {
     }
 
     return null;
-  }, [data, serverNow, manualExitShalatKey]);
+  }, [data, serverNow, manualExitShalatKey, isFriday, khutbahVisible]);
 
   // Floating Controls for TV Screen (WakeLock & Fullscreen)
   const renderFloatingControls = () => (

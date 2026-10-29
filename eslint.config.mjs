@@ -17,6 +17,7 @@ const eslintConfig = [
       "next-env.d.ts",
       "prisma/seed.js",
       "scripts/**",
+      "scratch/**",
     ],
   },
 ];
