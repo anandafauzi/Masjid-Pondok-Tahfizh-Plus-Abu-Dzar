@@ -32,6 +32,9 @@ import {
   CheckCircle2,
   X,
   Sliders,
+  Download,
+  Smartphone,
+  Share2,
 } from "lucide-react";
 
 function formatCountdown(targetMs: number, nowMs: number) {
@@ -60,6 +63,11 @@ export function MobilePrayerTaskbar() {
   // Track last played prayer to prevent repeat triggers
   const lastTriggeredKey = useRef<string | null>(null);
 
+  // PWA Install Prompt State
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+
   // 1. Fetch live TV / Prayer data
   const loadData = useCallback(async () => {
     try {
@@ -76,9 +84,6 @@ export function MobilePrayerTaskbar() {
   useEffect(() => {
     setMounted(true);
     setSettings(getStoredAdzanSettings());
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setNotifGranted(Notification.permission === "granted");
-    }
     loadData();
 
     const dataPoll = setInterval(loadData, 30000);
@@ -93,11 +98,30 @@ export function MobilePrayerTaskbar() {
     window.addEventListener("touchstart", handleFirstTouch, { once: true, passive: true });
     window.addEventListener("click", handleFirstTouch, { once: true });
 
+    // PWA Install Prompt & Notification Check
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let handleBeforeInstall: ((e: any) => void) | null = null;
+    if (typeof window !== "undefined") {
+      setNotifGranted("Notification" in window && Notification.permission === "granted");
+      if (window.matchMedia("(display-mode: standalone)").matches) {
+        setIsStandalone(true);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      handleBeforeInstall = (e: any) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+      };
+      window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    }
+
     return () => {
       clearInterval(dataPoll);
       clearInterval(clock);
       window.removeEventListener("touchstart", handleFirstTouch);
       window.removeEventListener("click", handleFirstTouch);
+      if (handleBeforeInstall) {
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      }
     };
   }, [loadData]);
 
@@ -280,8 +304,40 @@ export function MobilePrayerTaskbar() {
     updateSetting("notificationsEnabled", granted);
   };
 
-  if (!mounted || !data || !prayerState) {
-    return null;
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === "accepted") {
+      setDeferredPrompt(null);
+      setIsStandalone(true);
+    }
+  };
+
+  if (!mounted) return null;
+
+  if (!data || !prayerState) {
+    return (
+      <aside
+        aria-label="Panel Pintasan Waktu Sholat dan Jadwal Imam"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#2d946e]/40 bg-[#0c1f16]/95 text-white backdrop-blur-md shadow-2xl transition-all"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)" }}
+      >
+        <div className="mx-auto max-w-7xl px-3 pt-2 pb-1 sm:px-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#2d946e]/20 text-white animate-pulse">
+                🕌
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white">Memuat Waktu Sholat &amp; Jadwal Imam...</p>
+                <p className="text-[10px] text-[#9db3a6]">Pondok Tahfizh Plus Abu Dzar</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    );
   }
 
   const activeMuadzin =
@@ -780,6 +836,56 @@ export function MobilePrayerTaskbar() {
                   </div>
                 </div>
 
+              </div>
+
+              {/* SECTION: PETUNJUK & TOMBOL PASANG KE TASKBAR HP (PWA) */}
+              <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-[#1a382b] to-[#12261d] p-4 text-white">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/20 text-xl border border-amber-400/30">
+                      <Smartphone className="h-5 w-5 text-amber-300" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-white">
+                        Pasang ke Layar Utama &amp; Taskbar HP
+                      </h4>
+                      <p className="text-[11px] text-[#c1d1c7]">
+                        Akses cepat satu ketukan seperti aplikasi bawaan HP
+                      </p>
+                    </div>
+                  </div>
+
+                  {deferredPrompt && (
+                    <button
+                      type="button"
+                      onClick={handleInstallApp}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-3 py-2 text-xs font-black text-slate-950 shadow-md hover:bg-amber-300 active:scale-95 transition-all shrink-0 animate-pulse"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Instal Sekarang</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-3.5 pt-3 border-t border-white/10 space-y-2 text-xs text-[#c1d1c7]">
+                  {isStandalone ? (
+                    <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs bg-emerald-500/20 rounded-xl p-2.5 border border-emerald-500/30">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                      <span>Aplikasi telah terpasang di HP Anda. Ikon dapat disematkan ke bar bawah / taskbar HP!</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2">
+                        <span className="font-bold text-white shrink-0">🤖 Android:</span>
+                        <span>Ketuk menu titik tiga <strong>⋮</strong> di pojok kanan atas browser Chrome → Pilih <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Instal Aplikasi"</strong>.</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="font-bold text-white shrink-0">🍏 iPhone:</span>
+                        <span>Ketuk tombol <strong>Bagikan (Share)</strong> <Share2 className="inline h-3 w-3 text-white" /> di bar bawah Safari → Pilih <strong>"Tambah ke Layar Utama"</strong> (Add to Home Screen).</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
             </div>
