@@ -1,15 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TvData } from "@/lib/public-data";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
+import {
+  playCountdownBeep,
+  playIqamahChime,
+  unlockTvAudio,
+} from "@/lib/tv-audio";
 import {
   Clock,
   Sparkles,
   WifiOff,
   BookOpen,
   Users,
+  Maximize2,
+  Minimize2,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
+
+// Standard Shalat Duration per prayer (in minutes) for screen dimming
+const PRAYER_SHALAT_DURATIONS: Record<string, number> = {
+  fajr: 18,    // 18 menit Subuh
+  dhuhr: 15,   // 15 menit Dzuhur
+  asr: 15,     // 15 menit Ashar
+  maghrib: 12, // 12 menit Maghrib
+  isha: 15,    // 15 menit Isya
+};
 
 function clockString(ms: number) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -71,8 +89,17 @@ export default function TVDisplayPage() {
   const [slide, setSlide] = useState(0);
   const [adviceIndex, setAdviceIndex] = useState(0);
   const [connected, setConnected] = useState(true);
-  const [postIqamahKey, setPostIqamahKey] = useState<string | null>(null);
-  const [postIqamahUntil, setPostIqamahUntil] = useState<number | null>(null);
+
+  // TV Controls & Wake Lock State
+  const [manualExitShalatKey, setManualExitShalatKey] = useState<string | null>(null);
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMouseIdle, setIsMouseIdle] = useState(false);
+  const [audioMuted, setAudioMuted] = useState(false);
+
+  // Audio Beep Tracker Refs
+  const lastBeepSecRef = useRef<number | null>(null);
+  const lastChimeKeyRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -97,6 +124,83 @@ export default function TVDisplayPage() {
     const clock = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(clock);
   }, []);
+
+  // 1. Screen Wake Lock API (Anti-Sleep TV Display)
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let wakeLockSentinel: any = null;
+
+    const requestLock = async () => {
+      if (typeof window === "undefined" || !("wakeLock" in navigator)) return;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        wakeLockSentinel = await (navigator as any).wakeLock.request("screen");
+        setWakeLockActive(true);
+        wakeLockSentinel.addEventListener("release", () => {
+          setWakeLockActive(false);
+        });
+      } catch {
+        setWakeLockActive(false);
+      }
+    };
+
+    requestLock();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        requestLock();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (wakeLockSentinel) {
+        wakeLockSentinel.release().catch(() => {});
+      }
+    };
+  }, []);
+
+  // 2. Mouse Idle Detection & Fullscreen Listener
+  useEffect(() => {
+    let idleTimer: NodeJS.Timeout;
+
+    const handleActivity = () => {
+      unlockTvAudio();
+      setIsMouseIdle(false);
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        setIsMouseIdle(true);
+      }, 4000);
+    };
+
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("touchstart", handleActivity, { passive: true });
+    window.addEventListener("click", handleActivity);
+    idleTimer = setTimeout(() => setIsMouseIdle(true), 4000);
+
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("touchstart", handleActivity);
+      window.removeEventListener("click", handleActivity);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      clearTimeout(idleTimer);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    unlockTvAudio();
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   const serverNow = now + offset;
 
@@ -170,6 +274,137 @@ export default function TVDisplayPage() {
     }
     return null;
   }, [data, serverNow, iqamahActive]);
+
+  // 3. Beep Countdown Synthesizer (Last 10 seconds of Iqamah)
+  useEffect(() => {
+    const activeEv = iqamahActive ?? prayerTimeReached?.event;
+    if (!activeEv) {
+      lastBeepSecRef.current = null;
+      return;
+    }
+
+    const iqTarget = new Date(activeEv.iqamahTarget).getTime();
+    const remainingSec = Math.floor((iqTarget - serverNow) / 1000);
+
+    if (remainingSec <= 10 && remainingSec >= 1) {
+      if (lastBeepSecRef.current !== remainingSec) {
+        lastBeepSecRef.current = remainingSec;
+        if (!audioMuted) {
+          playCountdownBeep(remainingSec === 1 ? 1046 : 880, 0.12, 0.25);
+        }
+      }
+    } else if (remainingSec === 0) {
+      const chimeKey = `${activeEv.label}-${iqTarget}`;
+      if (lastChimeKeyRef.current !== chimeKey) {
+        lastChimeKeyRef.current = chimeKey;
+        if (!audioMuted) {
+          playIqamahChime(0.35);
+        }
+      }
+    }
+  }, [iqamahActive, prayerTimeReached, serverNow, audioMuted]);
+
+  // 4. Shalat Mode Computation (Fase Rapatkan Shaf 60s + Mode Layar Redup Minimalis 15m)
+  const activeShalatMode = useMemo(() => {
+    if (!data?.iqamahEvents) return null;
+
+    for (const ev of data.iqamahEvents) {
+      const iqTarget = new Date(ev.iqamahTarget).getTime();
+      const durationMin = PRAYER_SHALAT_DURATIONS[ev.key] ?? 15;
+      const endShalatMs = iqTarget + durationMin * 60 * 1000;
+
+      if (serverNow >= iqTarget && serverNow < endShalatMs) {
+        const sessionKey = `${ev.key}-${iqTarget}`;
+        if (manualExitShalatKey === sessionKey) {
+          continue;
+        }
+
+        const elapsedMs = serverNow - iqTarget;
+        const imamInfo = data.imamToday.find((s) =>
+          s.prayerName.toLowerCase().includes(ev.label.toLowerCase())
+        );
+
+        return {
+          key: ev.key,
+          label: ev.label,
+          sessionKey,
+          isAligningShaf: elapsedMs < 60000,
+          shafSecondsLeft: Math.max(0, 60 - Math.floor(elapsedMs / 1000)),
+          remainingCountdown: countdown(endShalatMs, serverNow),
+          imamName: imamInfo?.imamName ?? "Asatidz Pondok Tahfizh Abu Dzar",
+          muadzinName: imamInfo?.muadzinName ?? null,
+        };
+      }
+    }
+
+    return null;
+  }, [data, serverNow, manualExitShalatKey]);
+
+  // Floating Controls for TV Screen (WakeLock & Fullscreen)
+  const renderFloatingControls = () => (
+    <aside
+      aria-label="Kontrol Layar TV"
+      className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0c1f16]/90 p-1.5 text-white backdrop-blur-md shadow-2xl transition-opacity duration-300 ${
+        isMouseIdle ? "opacity-0 pointer-events-none" : "opacity-100"
+      }`}
+    >
+      {/* WakeLock Anti-Sleep Status */}
+      <div
+        className="flex items-center gap-1.5 rounded-xl bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-[#c1d1c7]"
+        title={
+          wakeLockActive
+            ? "Screen Wake Lock aktif: Layar TV tidak akan mati/screensaver"
+            : "Layar TV normal"
+        }
+      >
+        <span
+          className={`h-2 w-2 rounded-full ${
+            wakeLockActive ? "bg-emerald-400 animate-pulse" : "bg-slate-500"
+          }`}
+        />
+        <span className="hidden sm:inline">
+          {wakeLockActive ? "Layar TV Anti-Mati" : "Layar Normal"}
+        </span>
+      </div>
+
+      {/* Audio Mute/Unmute Beep */}
+      <button
+        type="button"
+        onClick={() => {
+          unlockTvAudio();
+          setAudioMuted(!audioMuted);
+        }}
+        className={`rounded-xl p-2 transition-colors ${
+          audioMuted
+            ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
+            : "bg-white/10 text-white hover:bg-white/20"
+        }`}
+        title={audioMuted ? "Aktifkan Nada Beep Iqamah" : "Senyapkan Nada Beep"}
+      >
+        {audioMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+      </button>
+
+      {/* Fullscreen Button */}
+      <button
+        type="button"
+        onClick={toggleFullscreen}
+        className="flex items-center gap-1 rounded-xl bg-[#2d946e] px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#35a87e] active:scale-95 transition-all"
+        title={isFullscreen ? "Keluar Layar Penuh (Esc)" : "Layar Penuh (F11)"}
+      >
+        {isFullscreen ? (
+          <>
+            <Minimize2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Normal</span>
+          </>
+        ) : (
+          <>
+            <Maximize2 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Layar Penuh</span>
+          </>
+        )}
+      </button>
+    </aside>
+  );
 
   if (!data) {
     return (
@@ -263,13 +498,102 @@ export default function TVDisplayPage() {
             {clockString(serverNow)} WIB
           </span>
         </footer>
+
+        {renderFloatingControls()}
+      </div>
+    );
+  }
+
+  // 1. FASE RAPATKAN SHAF (0 s/d 60 detik setelah Iqamah)
+  if (activeShalatMode?.isAligningShaf) {
+    return (
+      <div
+        suppressHydrationWarning
+        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#08130e] text-white p-6 sm:p-12 text-center select-none animate-fade-in ${
+          isMouseIdle ? "cursor-none" : ""
+        }`}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/20 via-transparent to-transparent" />
+
+        <div className="relative z-10 max-w-4xl w-full flex flex-col items-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-sm animate-pulse">
+            <span>🕌</span>
+            <span>SHALAT BERJAMAAH SEGERA DIMULAI</span>
+          </div>
+
+          <div className="mb-3 font-arabic text-3xl font-bold text-[#eddcb2] sm:text-5xl leading-relaxed">
+            سَوُّوا صُفُوفَكُمْ فَإِنَّ تَسْوِيَةَ الصُّفُوفِ مِنْ تَمَامِ الصَّلَاةِ
+          </div>
+
+          <h1 className="mt-2 text-4xl font-black tracking-tight text-white sm:text-6xl md:text-7xl">
+            Luruskan &amp; Rapatkan Shaf
+          </h1>
+
+          <p className="mt-3 text-lg font-medium text-[#c1d1c7] sm:text-2xl">
+            Shalat {activeShalatMode.label} Berjamaah • Imam:{" "}
+            <strong className="text-white font-extrabold">{activeShalatMode.imamName}</strong>
+          </p>
+
+          <div className="my-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm font-semibold text-rose-200 sm:text-lg flex items-center gap-3">
+            <span className="text-xl">📴</span>
+            <span>Harap nonaktifkan atau senyapkan nada dering handphone Anda</span>
+          </div>
+
+          <div className="mt-2 text-xs font-mono text-[#9db3a6]">
+            Memulai takbir shalat dalam <span className="text-amber-300 font-bold font-mono text-sm">{activeShalatMode.shafSecondsLeft} detik</span>
+          </div>
+        </div>
+
+        {renderFloatingControls()}
+      </div>
+    );
+  }
+
+  // 2. FASE MODE SHALAT BERLANGSUNG (ULTRA-DIM MODE: Layar Redup Minimalis Anti-Silau 15 Menit)
+  if (activeShalatMode && !activeShalatMode.isAligningShaf) {
+    return (
+      <div
+        suppressHydrationWarning
+        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#030705] text-[#1e3428] p-6 text-center select-none transition-colors duration-1000 ${
+          isMouseIdle ? "cursor-none" : ""
+        }`}
+      >
+        <div className="relative z-10 flex flex-col items-center opacity-40 hover:opacity-90 transition-opacity duration-500">
+          <div className="text-3xl sm:text-4xl mb-3">🕌</div>
+          <h2 className="text-xl font-bold text-[#2d503d] sm:text-3xl tracking-tight">
+            Shalat {activeShalatMode.label} Berjamaah Sedang Berlangsung
+          </h2>
+          <p className="mt-2 text-sm text-[#233d2f] sm:text-lg">
+            Imam: {activeShalatMode.imamName}
+          </p>
+
+          {/* Operator Skip button (shown subtle) */}
+          <button
+            type="button"
+            onClick={() => setManualExitShalatKey(activeShalatMode.sessionKey)}
+            className="mt-6 rounded-xl border border-white/5 bg-white/5 px-4 py-2 text-xs text-[#2d503d] hover:text-white hover:bg-white/10 transition-all"
+          >
+            Selesai Shalat / Kembali ke Slide Normal
+          </button>
+        </div>
+
+        <div className="absolute bottom-4 right-6 text-xs text-[#1e3428] font-mono">
+          {clockString(serverNow)} WIB
+        </div>
+
+        {renderFloatingControls()}
       </div>
     );
   }
 
   // STANDARD TV DISPLAY MODE
   return (
-    <div suppressHydrationWarning className="relative flex min-h-dvh flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none">
+    <div
+      suppressHydrationWarning
+      className={`relative flex min-h-dvh flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none ${
+        isMouseIdle ? "cursor-none" : ""
+      }`}
+    >
       {/* Background ambient lighting */}
       <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-[#3eb489]/15 blur-[120px]" />
       <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-[#c5a059]/10 blur-[120px]" />
@@ -333,43 +657,25 @@ export default function TVDisplayPage() {
           const activeEv = iqamahActive ?? prayerTimeReached?.event;
           if (!activeEv) return null;
           const iqTarget = new Date(activeEv.iqamahTarget).getTime();
-          const activeKey = ("key" in activeEv ? activeEv.key : "") || activeEv.label;
-          const key = `${activeKey}-${iqTarget}`;
-          if (iqTarget <= serverNow) {
-            if (postIqamahKey !== key || postIqamahUntil === null) {
-              setTimeout(() => {
-                setPostIqamahKey(key);
-                setPostIqamahUntil(iqTarget + 10000);
-              }, 0);
-            }
-            if (postIqamahKey === key && postIqamahUntil && serverNow < postIqamahUntil) {
-              return (
-                <div suppressHydrationWarning className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#11231a]/98 p-4 text-center animate-fade-in backdrop-blur-2xl">
-                  <h2 className="text-4xl font-black text-white sm:text-6xl md:text-8xl leading-tight">
-                    Lurus dan rapatkan shaf untuk kesempurnaan shalat
-                  </h2>
-                </div>
-              );
-            }
-            if (postIqamahKey === key && postIqamahUntil && serverNow >= postIqamahUntil) {
-              setTimeout(() => {
-                setPostIqamahKey(null);
-                setPostIqamahUntil(null);
-              }, 0);
-            }
-            return null;
-          }
-          if (postIqamahKey === key) {
-            setTimeout(() => {
-              setPostIqamahKey(null);
-              setPostIqamahUntil(null);
-            }, 0);
-          }
+          if (iqTarget <= serverNow) return null;
+
+          const secLeft = Math.max(0, Math.floor((iqTarget - serverNow) / 1000));
+          const isFinalCountdown = secLeft <= 10;
+
           return (
             <div suppressHydrationWarning className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#11231a]/98 p-4 text-center animate-fade-in backdrop-blur-2xl sm:p-8">
-              <div className="mb-3 rounded-full bg-[#c5a059]/20 px-4 py-1.5 text-sm font-bold tracking-widest text-[#eddcb2] border border-[#c5a059]/30 uppercase animate-pulse sm:mb-4 sm:px-6 sm:py-2 sm:text-lg">
-                MENUJU IQAMAH
+              <div
+                className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${
+                  isFinalCountdown
+                    ? "bg-amber-400 text-slate-950 ring-4 ring-amber-400/50 animate-pulse font-black"
+                    : "bg-[#c5a059]/20 text-[#eddcb2] border border-[#c5a059]/30"
+                }`}
+              >
+                {isFinalCountdown
+                  ? `PERSIAPAN IQAMAH • ${secLeft} DETIK LAGI`
+                  : "MENUJU IQAMAH"}
               </div>
+
               <div className="mb-2 font-arabic text-3xl text-[#eddcb2] sm:text-4xl">
                 حَيَّ عَلَى الصَّلَاةِ
               </div>
@@ -380,15 +686,23 @@ export default function TVDisplayPage() {
                 Adzan {activeEv.adhanTime} • Waktu Iqamah {activeEv.iqamahTime}
               </p>
 
-              <div className="my-4 rounded-3xl border border-[#c5a059]/40 bg-[#0a1811]/70 px-5 py-4 shadow-2xl ring-2 ring-[#c5a059]/30 sm:my-8 sm:px-12 sm:py-6">
+              <div
+                className={`my-4 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:my-8 sm:px-12 sm:py-6 ${
+                  isFinalCountdown
+                    ? "border-amber-400 bg-amber-500/20 ring-4 ring-amber-400/60 animate-bounce"
+                    : "border-[#c5a059]/40 bg-[#0a1811]/70 ring-2 ring-[#c5a059]/30"
+                }`}
+              >
                 <span className="mb-2 block text-[10px] uppercase tracking-widest text-[#9db3a6] sm:text-xs">
                   Sisa Waktu Menuju Iqamah
                 </span>
-                <span suppressHydrationWarning className="font-mono text-6xl font-black text-[#eddcb2] md:text-9xl sm:text-8xl tracking-tight">
-                  {countdown(
-                    new Date(activeEv.iqamahTarget).getTime(),
-                    serverNow
-                  )}
+                <span
+                  suppressHydrationWarning
+                  className={`font-mono text-6xl font-black md:text-9xl sm:text-8xl tracking-tight ${
+                    isFinalCountdown ? "text-amber-300" : "text-[#eddcb2]"
+                  }`}
+                >
+                  {countdown(iqTarget, serverNow)}
                 </span>
               </div>
 
@@ -820,6 +1134,9 @@ export default function TVDisplayPage() {
           <span>Koneksi Offline — Menampilkan Data Tersimpan</span>
         </div>
       )}
+
+      {/* Floating Controls (WakeLock, Mute, Fullscreen) */}
+      {renderFloatingControls()}
     </div>
   );
 }
