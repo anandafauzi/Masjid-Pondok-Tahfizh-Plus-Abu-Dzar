@@ -322,18 +322,18 @@ export function MobilePrayerTaskbar() {
     return (
       <aside
         aria-label="Panel Pintasan Waktu Sholat dan Jadwal Imam"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#2d946e]/40 bg-[#0c1f16]/95 text-white backdrop-blur-md shadow-2xl transition-all"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/95 text-slate-800 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.08)] transition-all"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)" }}
       >
         <div className="mx-auto max-w-7xl px-3 pt-2 pb-1 sm:px-6">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#2d946e]/20 text-white animate-pulse">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sage-50 text-sage-700 border border-sage-200/80 animate-pulse">
                 🕌
               </div>
               <div>
-                <p className="text-xs font-bold text-white">Memuat Waktu Sholat &amp; Jadwal Imam...</p>
-                <p className="text-[10px] text-[#9db3a6]">Pondok Tahfizh Plus Abu Dzar</p>
+                <p className="text-xs font-bold text-slate-900">Memuat Waktu Sholat &amp; Jadwal Imam...</p>
+                <p className="text-[10px] text-slate-500">Pondok Tahfizh Plus Abu Dzar</p>
               </div>
             </div>
           </div>
@@ -351,7 +351,7 @@ export function MobilePrayerTaskbar() {
       {/* 1. STICKY MOBILE TASKBAR BAR (FIXED AT BOTTOM) */}
       <aside
         aria-label="Panel Pintasan Waktu Sholat dan Jadwal Imam"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#2d946e]/40 bg-[#0c1f16]/95 text-white backdrop-blur-md shadow-2xl transition-all"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/95 text-slate-800 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.08)] transition-all"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)" }}
       >
         <div className="mx-auto max-w-7xl px-3 pt-2 sm:px-6">
@@ -364,10 +364,10 @@ export function MobilePrayerTaskbar() {
               className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus:outline-none group"
             >
               <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold shadow-md transition-transform group-hover:scale-105 ${
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-bold shadow-sm transition-transform group-hover:scale-105 ${
                   prayerState.phase === "IQAMAH"
                     ? "bg-amber-500 text-slate-950 animate-pulse ring-2 ring-amber-400/80"
-                    : "bg-gradient-to-br from-[#2d946e] to-[#1e6149] text-white ring-1 ring-[#3eb489]/40"
+                    : "bg-sage-600 text-white ring-1 ring-sage-500/40"
                 }`}
               >
                 {prayerState.phase === "IQAMAH" ? "⏳" : "🕌"}
@@ -376,10 +376,10 @@ export function MobilePrayerTaskbar() {
               <div className="min-w-0 flex-1">
                 {/* Line 1: Prayer Name & Countdown */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-extrabold text-sm text-white tracking-tight sm:text-base">
+                  <span className="font-extrabold text-sm text-slate-900 tracking-tight sm:text-base">
                     {prayerState.prayerLabel}
                   </span>
-                  <span className="font-mono text-xs text-[#9db3a6] font-semibold">
+                  <span className="font-mono text-xs text-slate-500 font-semibold">
                     {prayerState.adhanTime}
                   </span>
 
@@ -388,7 +388,7 @@ export function MobilePrayerTaskbar() {
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold font-mono tracking-wider shadow-sm transition-colors ${
                       prayerState.phase === "IQAMAH"
                         ? "bg-amber-400 text-slate-950 animate-pulse"
-                        : "bg-[#2d946e]/30 text-[#6ee7b7] border border-[#2d946e]/50"
+                        : "bg-sage-50 text-sage-700 border border-sage-200/90"
                     }`}
                   >
                     <span>
@@ -401,18 +401,18 @@ export function MobilePrayerTaskbar() {
                 </div>
 
                 {/* Line 2: Jadwal Imam untuk Sholat Berikutnya */}
-                <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-[#c1d1c7] truncate">
-                  <User className="h-3 w-3 shrink-0 text-[#eddcb2]" />
-                  <span className="text-[#a4b8ad] shrink-0 font-medium">Imam:</span>
-                  <span className="truncate font-bold text-white">
+                <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-600 truncate">
+                  <User className="h-3 w-3 shrink-0 text-sage-600" />
+                  <span className="text-slate-500 shrink-0 font-medium">Imam:</span>
+                  <span className="truncate font-bold text-slate-900">
                     {nextImamSchedule?.imamName ?? "Asatidz Pondok"}
                   </span>
                   {nextImamSchedule?.muadzinName && (
                     <>
-                      <span className="text-[#526358]">•</span>
-                      <Mic className="h-2.5 w-2.5 shrink-0 text-[#3eb489]" />
-                      <span className="hidden xs:inline text-[#a4b8ad] shrink-0">Muadzin:</span>
-                      <span className="hidden xs:inline truncate text-[#c1d1c7]">
+                      <span className="text-slate-300">•</span>
+                      <Mic className="h-2.5 w-2.5 shrink-0 text-sage-500" />
+                      <span className="hidden xs:inline text-slate-500 shrink-0">Muadzin:</span>
+                      <span className="hidden xs:inline truncate text-slate-600">
                         {nextImamSchedule.muadzinName}
                       </span>
                     </>
@@ -436,8 +436,8 @@ export function MobilePrayerTaskbar() {
                   isPlayingAudio
                     ? "border-amber-400 bg-amber-500 text-slate-950 animate-bounce"
                     : settings.soundEnabled
-                    ? "border-[#2d946e]/40 bg-[#142e22] text-[#6ee7b7] hover:bg-[#1a3a2b]"
-                    : "border-white/10 bg-white/5 text-slate-400 hover:text-white"
+                    ? "border-sage-200 bg-sage-50 text-sage-700 hover:bg-sage-100"
+                    : "border-slate-200 bg-slate-100 text-slate-400 hover:text-slate-700"
                 }`}
               >
                 {isPlayingAudio ? (
@@ -459,14 +459,14 @@ export function MobilePrayerTaskbar() {
               <button
                 type="button"
                 onClick={() => setExpanded(!expanded)}
-                className="flex items-center gap-1 rounded-xl border border-[#2d946e]/40 bg-gradient-to-r from-[#206f52] to-[#1e6149] px-2.5 py-2 text-xs font-bold text-white shadow-sm hover:from-[#2d946e] hover:to-[#247a5b] active:scale-95 transition-all"
+                className="flex items-center gap-1 rounded-xl border border-sage-600 bg-sage-600 px-2.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-sage-700 active:scale-95 transition-all"
                 title="Buka Panel 5 Waktu Sholat & Pilihan Muadzin"
               >
                 <span>5 Waktu</span>
                 {expanded ? (
-                  <ChevronDown className="h-3.5 w-3.5 text-[#eddcb2]" />
+                  <ChevronDown className="h-3.5 w-3.5 text-sage-200" />
                 ) : (
-                  <ChevronUp className="h-3.5 w-3.5 text-[#eddcb2]" />
+                  <ChevronUp className="h-3.5 w-3.5 text-sage-200" />
                 )}
               </button>
             </div>
@@ -480,23 +480,23 @@ export function MobilePrayerTaskbar() {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 backdrop-blur-sm animate-fade-in"
           onClick={() => setExpanded(false)}
         >
           <div
-            className="w-full max-w-2xl rounded-t-3xl border-t border-[#3eb489]/30 bg-[#0d1e16] text-white shadow-2xl max-h-[88vh] overflow-y-auto flex flex-col"
+            className="w-full max-w-2xl rounded-t-3xl border-t border-slate-200 bg-white text-slate-900 shadow-2xl max-h-[88vh] overflow-y-auto flex flex-col"
             onClick={(e) => e.stopPropagation()}
             style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}
           >
             {/* Drawer Drag Bar & Header */}
-            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 bg-[#0d1e16]/95 px-5 py-3.5 backdrop-blur">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-3.5 backdrop-blur">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🕌</span>
                 <div>
-                  <h3 className="font-extrabold text-sm text-white sm:text-base">
+                  <h3 className="font-extrabold text-sm text-slate-900 sm:text-base">
                     Jadwal 5 Waktu &amp; Notifikasi Adzan
                   </h3>
-                  <p className="text-[11px] text-[#9db3a6]">
+                  <p className="text-[11px] text-slate-500">
                     Masjid Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor
                   </p>
                 </div>
@@ -504,7 +504,7 @@ export function MobilePrayerTaskbar() {
               <button
                 type="button"
                 onClick={() => setExpanded(false)}
-                className="rounded-xl p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                 title="Tutup"
               >
                 <X className="h-5 w-5" />
@@ -514,34 +514,34 @@ export function MobilePrayerTaskbar() {
             <div className="space-y-5 p-5">
               
               {/* CURRENT ACTIVE SPOTLIGHT CARD */}
-              <div className="relative overflow-hidden rounded-2xl border border-[#ecd8a6]/40 bg-gradient-to-br from-[#1b382b] to-[#12261d] p-4 text-white shadow-lg">
+              <div className="relative overflow-hidden rounded-2xl border border-sage-200/80 bg-gradient-to-br from-sage-50/60 via-white to-slate-50/60 p-4 text-slate-900 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-amber-400/40">
-                      <Sparkles className="h-3 w-3" />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2.5 py-0.5 text-[10px] font-bold text-sage-800 border border-sage-200">
+                      <Sparkles className="h-3 w-3 text-sage-600" />
                       <span>{prayerState.badgeText}</span>
                     </span>
-                    <h4 className="mt-2 text-2xl font-black text-white">
+                    <h4 className="mt-2 text-2xl font-black text-slate-900">
                       {prayerState.prayerLabel}
                     </h4>
-                    <p className="text-xs text-[#c1d1c7] mt-0.5">
-                      Waktu Adzan: <span className="font-bold font-mono text-white">{prayerState.adhanTime}</span>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Waktu Adzan: <span className="font-bold font-mono text-slate-900">{prayerState.adhanTime}</span>
                       {prayerState.iqamahTime !== "--:--" && (
                         <>
-                          <span className="mx-2 text-white/40">•</span>
-                          Iqamah: <span className="font-bold font-mono text-[#eddcb2]">{prayerState.iqamahTime}</span>
+                          <span className="mx-2 text-slate-300">•</span>
+                          Iqamah: <span className="font-bold font-mono text-sage-700">{prayerState.iqamahTime}</span>
                         </>
                       )}
                     </p>
                   </div>
 
                   <div className="text-right">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#9db3a6] block">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
                       {prayerState.phase === "IQAMAH" ? "Menuju Iqamah" : "Hitung Mundur"}
                     </span>
                     <span
                       suppressHydrationWarning
-                      className="font-mono text-3xl font-black text-[#eddcb2]"
+                      className="font-mono text-3xl font-black text-sage-700"
                     >
                       {prayerState.countdownStr}
                     </span>
@@ -549,19 +549,19 @@ export function MobilePrayerTaskbar() {
                 </div>
 
                 {/* Imam & Muadzin next prayer banner */}
-                <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-black/25 px-3 py-2 border border-white/5 text-xs">
+                <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 px-3 py-2 border border-slate-200/80 text-xs">
                   <div className="flex items-center gap-2">
-                    <User className="h-3.5 w-3.5 text-[#eddcb2]" />
-                    <span className="text-[#a4b8ad]">Imam:</span>
-                    <span className="font-bold text-white">
+                    <User className="h-3.5 w-3.5 text-sage-600" />
+                    <span className="text-slate-500">Imam:</span>
+                    <span className="font-bold text-slate-900">
                       {nextImamSchedule?.imamName ?? "Asatidz Pondok"}
                     </span>
                   </div>
                   {nextImamSchedule?.muadzinName && (
                     <div className="flex items-center gap-2">
-                      <Mic className="h-3.5 w-3.5 text-[#3eb489]" />
-                      <span className="text-[#a4b8ad]">Muadzin:</span>
-                      <span className="font-semibold text-[#c1d1c7]">
+                      <Mic className="h-3.5 w-3.5 text-sage-500" />
+                      <span className="text-slate-500">Muadzin:</span>
+                      <span className="font-semibold text-slate-700">
                         {nextImamSchedule.muadzinName}
                       </span>
                     </div>
@@ -571,8 +571,8 @@ export function MobilePrayerTaskbar() {
 
               {/* TIMELINE 5 WAKTU SHOLAT */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#9db3a6] mb-2.5 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-[#3eb489]" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-sage-600" />
                   <span>Jadwal 5 Waktu Sholat Hari Ini</span>
                 </h4>
 
@@ -594,12 +594,12 @@ export function MobilePrayerTaskbar() {
                         key={item.key}
                         className={`rounded-xl border p-3 transition-all ${
                           isBetween
-                            ? "border-amber-400 bg-amber-500/15 ring-1 ring-amber-400"
+                            ? "border-amber-400 bg-amber-50/70 ring-1 ring-amber-300"
                             : isCurrent
-                            ? "border-[#3eb489] bg-[#163628]"
+                            ? "border-sage-400 bg-sage-50/50 ring-1 ring-sage-300"
                             : isPassed
-                            ? "border-white/5 bg-white/5 opacity-70"
-                            : "border-white/10 bg-[#12261d]"
+                            ? "border-slate-100 bg-slate-50/50 opacity-60"
+                            : "border-slate-200/80 bg-white hover:border-slate-300"
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -617,22 +617,22 @@ export function MobilePrayerTaskbar() {
                             </span>
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm text-white">
+                                <span className="font-bold text-sm text-slate-900">
                                   {item.label}
                                 </span>
-                                <span className="font-mono text-xs font-bold text-[#eddcb2]">
+                                <span className="font-mono text-xs font-bold text-sage-700">
                                   {item.adhanTime}
                                 </span>
                               </div>
-                              <p className="text-[10px] text-[#9db3a6]">
-                                Estimasi Iqamah: <span className="font-mono text-white">{item.iqamahTime}</span>
+                              <p className="text-[10px] text-slate-500">
+                                Estimasi Iqamah: <span className="font-mono text-slate-700 font-semibold">{item.iqamahTime}</span>
                               </p>
                             </div>
                           </div>
 
                           <div className="text-right">
                             {isPassed ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold text-slate-400">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-500">
                                 <CheckCircle2 className="h-3 w-3 text-slate-400" />
                                 <span>Selesai</span>
                               </span>
@@ -641,7 +641,7 @@ export function MobilePrayerTaskbar() {
                                 <span>Iqamah: {formatCountdown(iqamahMs, serverNow)}</span>
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-[#2d946e]/20 px-2 py-0.5 text-[10px] font-mono text-[#6ee7b7] border border-[#2d946e]/40">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-sage-50 px-2 py-0.5 text-[10px] font-mono text-sage-700 border border-sage-200 font-semibold">
                                 <span>Adzan: {formatCountdown(adhanMs, serverNow)}</span>
                               </span>
                             )}
@@ -650,15 +650,15 @@ export function MobilePrayerTaskbar() {
 
                         {/* Petugas Imam & Muadzin per prayer */}
                         {imamInfo && (
-                          <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-[#c1d1c7]">
+                          <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
                             <span className="truncate">
-                              <span className="text-[#a4b8ad]">Imam:</span>{" "}
-                              <strong className="text-white font-semibold">{imamInfo.imamName}</strong>
+                              <span className="text-slate-400">Imam:</span>{" "}
+                              <strong className="text-slate-800 font-semibold">{imamInfo.imamName}</strong>
                             </span>
                             {imamInfo.muadzinName && (
                               <span className="truncate text-right ml-2">
-                                <span className="text-[#a4b8ad]">Muadzin:</span>{" "}
-                                <span className="text-[#c1d1c7]">{imamInfo.muadzinName}</span>
+                                <span className="text-slate-400">Muadzin:</span>{" "}
+                                <span className="text-slate-600">{imamInfo.muadzinName}</span>
                               </span>
                             )}
                           </div>
@@ -670,39 +670,39 @@ export function MobilePrayerTaskbar() {
               </div>
 
               {/* SECTION: SHORTCUT ARAH KIBLAT DIGITAL */}
-              <div className="flex items-center justify-between rounded-2xl border border-[#3eb489]/30 bg-[#163a2a] p-3.5 shadow-sm">
+              <div className="flex items-center justify-between rounded-2xl border border-sage-200 bg-sage-50/50 p-3.5 shadow-sm">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2d946e]/25 text-[#3eb489] ring-1 ring-[#3eb489]/40">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sage-600 text-white shadow-sm">
                     <Compass className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-white">Kompas Arah Kiblat Digital</p>
-                    <p className="text-[10px] text-[#9db3a6]">295.28° Barat Laut (Ka&apos;bah Makkah)</p>
+                    <p className="text-xs font-bold text-slate-900">Kompas Arah Kiblat Digital</p>
+                    <p className="text-[10px] text-slate-500">295.28° Barat Laut (Ka&apos;bah Makkah)</p>
                   </div>
                 </div>
                 <Link
                   href="/kiblat"
                   onClick={() => setExpanded(false)}
-                  className="rounded-xl bg-[#2d946e] hover:bg-[#35a87e] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all active:scale-95"
+                  className="rounded-xl bg-sage-600 hover:bg-sage-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all active:scale-95"
                 >
                   Buka Kompas
                 </Link>
               </div>
 
               {/* SECTION: PENGATURAN NOTIFIKASI & PILIHAN MUADZIN */}
-              <div className="rounded-2xl border border-white/10 bg-[#12261d] p-4">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#9db3a6] mb-3 flex items-center gap-1.5">
-                  <Sliders className="h-3.5 w-3.5 text-[#3eb489]" />
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-1.5">
+                  <Sliders className="h-3.5 w-3.5 text-sage-600" />
                   <span>Pengaturan Notifikasi &amp; Suara Adzan</span>
                 </h4>
 
                 {/* Toggles */}
-                <div className="space-y-3 border-b border-white/10 pb-4">
+                <div className="space-y-3 border-b border-slate-100 pb-4">
                   {/* Toggle Suara Adzan */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-white">Bunyikan Suara Adzan</p>
-                      <p className="text-[10px] text-[#9db3a6]">
+                      <p className="text-xs font-bold text-slate-900">Bunyikan Suara Adzan</p>
+                      <p className="text-[10px] text-slate-500">
                         Memutar lantunan suara adzan saat waktu sholat tiba
                       </p>
                     </div>
@@ -712,7 +712,7 @@ export function MobilePrayerTaskbar() {
                         updateSetting("soundEnabled", !settings.soundEnabled)
                       }
                       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        settings.soundEnabled ? "bg-[#2d946e]" : "bg-slate-700"
+                        settings.soundEnabled ? "bg-sage-600" : "bg-slate-200"
                       }`}
                     >
                       <span
@@ -726,8 +726,8 @@ export function MobilePrayerTaskbar() {
                   {/* Toggle Notifikasi Layar HP */}
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-bold text-white">Notifikasi Layar HP</p>
-                      <p className="text-[10px] text-[#9db3a6]">
+                      <p className="text-xs font-bold text-slate-900">Notifikasi Layar HP</p>
+                      <p className="text-[10px] text-slate-500">
                         {notifGranted
                           ? "Izin notifikasi telah aktif"
                           : "Munculkan notifikasi pop-up saat adzan berkumandang"}
@@ -738,8 +738,8 @@ export function MobilePrayerTaskbar() {
                       onClick={handleRequestNotif}
                       className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold transition-colors ${
                         notifGranted
-                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                          : "bg-[#2d946e] text-white hover:bg-[#35a87e]"
+                          ? "bg-sage-50 text-sage-700 border border-sage-200"
+                          : "bg-sage-600 text-white hover:bg-sage-700"
                       }`}
                     >
                       {notifGranted ? (
@@ -759,8 +759,8 @@ export function MobilePrayerTaskbar() {
                   {/* Volume Slider */}
                   <div>
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-white text-[11px] font-medium">Volume Suara</span>
-                      <span className="font-mono text-[11px] text-[#eddcb2]">
+                      <span className="text-slate-700 text-[11px] font-medium">Volume Suara</span>
+                      <span className="font-mono text-[11px] text-sage-700 font-bold">
                         {Math.round(settings.volume * 100)}%
                       </span>
                     </div>
@@ -773,14 +773,14 @@ export function MobilePrayerTaskbar() {
                       onChange={(e) =>
                         updateSetting("volume", parseFloat(e.target.value))
                       }
-                      className="w-full accent-[#2d946e] h-1.5 bg-slate-700 rounded-lg cursor-pointer"
+                      className="w-full accent-sage-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
                     />
                   </div>
                 </div>
 
                 {/* Pilihan Muadzin dari Berbagai Negara */}
                 <div className="mt-4">
-                  <p className="text-xs font-bold text-white mb-2">
+                  <p className="text-xs font-bold text-slate-900 mb-2">
                     Pilihan Muadzin Dunia
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -793,15 +793,15 @@ export function MobilePrayerTaskbar() {
                           key={item.id}
                           className={`rounded-xl border p-2.5 transition-all text-left flex flex-col justify-between ${
                             isSelected
-                              ? "border-[#3eb489] bg-[#1a3c2d] ring-1 ring-[#3eb489]"
-                              : "border-white/10 bg-white/5 hover:bg-white/10"
+                              ? "border-sage-500 bg-sage-50/60 ring-1 ring-sage-400"
+                              : "border-slate-200/80 bg-slate-50/30 hover:bg-slate-50"
                           }`}
                         >
                           <div>
                             <div className="flex items-center justify-between gap-1">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="text-base">{item.flag}</span>
-                                <span className="text-xs font-bold text-white truncate">
+                                <span className="text-xs font-bold text-slate-900 truncate">
                                   {item.country}
                                 </span>
                               </div>
@@ -810,24 +810,24 @@ export function MobilePrayerTaskbar() {
                                 onClick={() => updateSetting("selectedMuadzinId", item.id)}
                                 className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
                                   isSelected
-                                    ? "bg-[#2d946e] text-white"
-                                    : "bg-white/10 text-[#c1d1c7] hover:bg-white/20"
+                                    ? "bg-sage-600 text-white"
+                                    : "bg-slate-200/70 text-slate-700 hover:bg-slate-200"
                                 }`}
                               >
                                 {isSelected ? "Dipilih" : "Pilih"}
                               </button>
                             </div>
-                            <p className="text-[11px] font-semibold text-[#eddcb2] mt-1 truncate">
+                            <p className="text-[11px] font-semibold text-sage-800 mt-1 truncate">
                               {item.name}
                             </p>
-                            <p className="text-[10px] text-[#9db3a6] line-clamp-1">
+                            <p className="text-[10px] text-slate-500 line-clamp-1">
                               {item.location}
                             </p>
                           </div>
 
                           {/* Preview button */}
-                          <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between">
-                            <span className="text-[9px] text-[#9db3a6]">Contoh Audio</span>
+                          <div className="mt-2 pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                            <span className="text-[9px] text-slate-500">Contoh Audio</span>
                             <button
                               type="button"
                               onClick={() =>
@@ -836,7 +836,7 @@ export function MobilePrayerTaskbar() {
                               className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold transition-colors ${
                                 isPlayingThis
                                   ? "bg-amber-400 text-slate-950 animate-pulse"
-                                  : "bg-white/10 text-white hover:bg-[#2d946e] hover:text-white"
+                                  : "bg-white border border-slate-200 text-slate-700 hover:bg-sage-600 hover:text-white hover:border-sage-600"
                               }`}
                             >
                               {isPlayingThis ? (
@@ -861,17 +861,17 @@ export function MobilePrayerTaskbar() {
               </div>
 
               {/* SECTION: PETUNJUK & TOMBOL PASANG KE TASKBAR HP (PWA) */}
-              <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-[#1a382b] to-[#12261d] p-4 text-white">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-slate-800">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/20 text-xl border border-amber-400/30">
-                      <Smartphone className="h-5 w-5 text-amber-300" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-xl border border-amber-300">
+                      <Smartphone className="h-5 w-5 text-amber-800" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-extrabold text-white">
+                      <h4 className="text-sm font-extrabold text-slate-900">
                         Pasang ke Layar Utama &amp; Taskbar HP
                       </h4>
-                      <p className="text-[11px] text-[#c1d1c7]">
+                      <p className="text-[11px] text-slate-600">
                         Akses cepat satu ketukan seperti aplikasi bawaan HP
                       </p>
                     </div>
@@ -889,21 +889,21 @@ export function MobilePrayerTaskbar() {
                   )}
                 </div>
 
-                <div className="mt-3.5 pt-3 border-t border-white/10 space-y-2 text-xs text-[#c1d1c7]">
+                <div className="mt-3.5 pt-3 border-t border-amber-200/80 space-y-2 text-xs text-slate-700">
                   {isStandalone ? (
-                    <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs bg-emerald-500/20 rounded-xl p-2.5 border border-emerald-500/30">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                    <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs bg-emerald-100/80 rounded-xl p-2.5 border border-emerald-300">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
                       <span>Aplikasi telah terpasang di HP Anda. Ikon dapat disematkan ke bar bawah / taskbar HP!</span>
                     </div>
                   ) : (
                     <>
                       <div className="flex items-start gap-2">
-                        <span className="font-bold text-white shrink-0">🤖 Android:</span>
+                        <span className="font-bold text-slate-900 shrink-0">🤖 Android:</span>
                         <span>Ketuk menu titik tiga <strong>⋮</strong> di pojok kanan atas browser Chrome → Pilih <strong>&quot;Tambahkan ke Layar Utama&quot;</strong> atau <strong>&quot;Instal Aplikasi&quot;</strong>.</span>
                       </div>
                       <div className="flex items-start gap-2">
-                        <span className="font-bold text-white shrink-0">🍏 iPhone:</span>
-                        <span>Ketuk tombol <strong>Bagikan (Share)</strong> <Share2 className="inline h-3 w-3 text-white" /> di bar bawah Safari → Pilih <strong>&quot;Tambah ke Layar Utama&quot;</strong> (Add to Home Screen).</span>
+                        <span className="font-bold text-slate-900 shrink-0">🍏 iPhone:</span>
+                        <span>Ketuk tombol <strong>Bagikan (Share)</strong> <Share2 className="inline h-3 w-3 text-slate-900" /> di bar bawah Safari → Pilih <strong>&quot;Tambah ke Layar Utama&quot;</strong> (Add to Home Screen).</span>
                       </div>
                     </>
                   )}

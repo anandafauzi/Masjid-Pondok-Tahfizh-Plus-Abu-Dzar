@@ -211,41 +211,41 @@ export function QiblaCompass({
       {/* Target & Status Information Bar */}
       <div className="grid gap-4 sm:grid-cols-3">
         {/* Qibla Direction Card */}
-        <div className="rounded-2xl border border-[#ded5c4] bg-white p-5 shadow-sm text-center">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#7c6630]">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm text-center">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
             Derajat Arah Kiblat
           </span>
-          <p className="mt-1 font-mono text-3xl font-black text-[#19261f]">
-            {qiblaAngle}° <span className="text-sm font-semibold text-[#2d946e]">NW</span>
+          <p className="mt-1 font-mono text-3xl font-black text-slate-900">
+            {qiblaAngle}° <span className="text-sm font-semibold text-[#557a64]">NW</span>
           </p>
-          <p className="mt-1 text-xs text-[#5a685e]">
+          <p className="mt-1 text-xs text-slate-500">
             Barat Laut ({qiblaAngle}° dari Utara searah jarum jam)
           </p>
         </div>
 
         {/* Distance Card */}
-        <div className="rounded-2xl border border-[#ded5c4] bg-white p-5 shadow-sm text-center">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#7c6630]">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm text-center">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
             Jarak Garis Lurus ke Ka&apos;bah
           </span>
-          <p className="mt-1 font-mono text-3xl font-black text-[#19261f]">
-            ~{distanceKm.toLocaleString("id-ID")} <span className="text-sm font-semibold text-[#8a6820]">KM</span>
+          <p className="mt-1 font-mono text-3xl font-black text-slate-900">
+            ~{distanceKm.toLocaleString("id-ID")} <span className="text-sm font-semibold text-[#466553]">KM</span>
           </p>
-          <p className="mt-1 text-xs text-[#5a685e]">
+          <p className="mt-1 text-xs text-slate-500">
             Makkah al-Mukarramah, Arab Saudi
           </p>
         </div>
 
         {/* Current Location Card */}
-        <div className="rounded-2xl border border-[#ded5c4] bg-white p-5 shadow-sm text-center flex flex-col justify-between">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm text-center flex flex-col justify-between">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#7c6630]">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Titik Acuan Perhitungan
             </span>
-            <p className="mt-1 text-sm font-bold text-[#19261f] truncate" title={isCustomGps ? locationName : mosqueName}>
+            <p className="mt-1 text-sm font-bold text-slate-900 truncate" title={isCustomGps ? locationName : mosqueName}>
               {isCustomGps ? locationName : mosqueName}
             </p>
-            <p className="text-[11px] text-[#5a685e]">
+            <p className="text-[11px] text-slate-500">
               {isCustomGps ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : (mosqueAddress ?? "Rumpin, Bogor")}
             </p>
           </div>
@@ -256,12 +256,12 @@ export function QiblaCompass({
                 type="button"
                 onClick={requestCurrentGps}
                 disabled={gpsLoading}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#bde5d2] bg-[#eaf6f0] px-2.5 py-1 text-xs font-semibold text-[#1e6149] hover:bg-[#d8efe3] transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2dfd6] bg-[#f4f7f5] px-2.5 py-1 text-xs font-semibold text-[#395243] hover:bg-[#e7efe9] transition-colors"
               >
                 {gpsLoading ? (
-                  <RefreshCw className="h-3 w-3 animate-spin text-[#2d946e]" />
+                  <RefreshCw className="h-3 w-3 animate-spin text-[#557a64]" />
                 ) : (
-                  <MapPin className="h-3 w-3 text-[#2d946e]" />
+                  <MapPin className="h-3 w-3 text-[#557a64]" />
                 )}
                 <span>Gunakan Lokasi GPS Saya</span>
               </button>
@@ -269,7 +269,7 @@ export function QiblaCompass({
               <button
                 type="button"
                 onClick={resetToMosque}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#ded5c4] bg-[#faf7f2] px-2.5 py-1 text-xs font-semibold text-[#6d7c71] hover:bg-[#f1eae0] transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 <RotateCw className="h-3 w-3" />
                 <span>Reset ke Masjid</span>
@@ -280,13 +280,13 @@ export function QiblaCompass({
       </div>
 
       {/* Main Interactive Compass Showcase */}
-      <div className="flex flex-col items-center justify-center rounded-3xl border border-[#ded5c4] bg-gradient-to-b from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] p-6 shadow-xl sm:p-12">
+      <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-12">
         {/* Dynamic Status Guidance Pill */}
         <div
           className={`mb-6 inline-flex items-center gap-2 rounded-full px-5 py-2 text-xs font-bold transition-all duration-300 sm:text-sm ${
             isAligned
-              ? "bg-[#2d946e] text-white shadow-lg ring-4 ring-[#2d946e]/30 scale-105 animate-pulse"
-              : "bg-white text-[#19261f] border border-[#ded5c4] shadow-sm"
+              ? "bg-[#466553] text-white shadow-md ring-4 ring-[#466553]/20 scale-105 animate-pulse"
+              : "bg-[#f8faf9] text-slate-800 border border-slate-200 shadow-sm"
           }`}
         >
           {isAligned ? (
@@ -296,12 +296,12 @@ export function QiblaCompass({
             </>
           ) : diff > 0 ? (
             <>
-              <RotateCw className="h-4 w-4 text-[#8a6820]" />
+              <RotateCw className="h-4 w-4 text-[#557a64]" />
               <span>Putar perangkat ke <b>KANAN</b> sebesar <b>{Math.round(diff)}°</b></span>
             </>
           ) : (
             <>
-              <RotateCw className="h-4 w-4 text-[#8a6820] -scale-x-100" />
+              <RotateCw className="h-4 w-4 text-[#557a64] -scale-x-100" />
               <span>Putar perangkat ke <b>KIRI</b> sebesar <b>{Math.round(Math.abs(diff))}°</b></span>
             </>
           )}
@@ -309,17 +309,17 @@ export function QiblaCompass({
 
         {/* Phone Top Direction Indicator Arrow */}
         <div className="flex flex-col items-center mb-3">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#7c6630]">
-            <Navigation className="h-3.5 w-3.5 text-[#2d946e] fill-[#2d946e]" />
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-500">
+            <Navigation className="h-3.5 w-3.5 text-[#557a64] fill-[#557a64]" />
             <span>Arah Depan Perangkat</span>
           </div>
-          <div className="h-3 w-0.5 bg-[#2d946e] mt-1" />
+          <div className="h-3 w-0.5 bg-[#557a64] mt-1" />
         </div>
 
-        {/* Outer Circular Luxury Compass Housing */}
-        <div className="relative flex h-80 w-80 items-center justify-center rounded-full border-4 border-[#ded5c4] bg-gradient-to-br from-white via-[#fbf9f4] to-[#ede3d1] p-3 shadow-2xl sm:h-96 sm:w-96">
-          {/* Subtle Islamic Golden Ring Accent */}
-          <div className="absolute inset-2 rounded-full border-2 border-dashed border-[#c5a059]/40 pointer-events-none" />
+        {/* Outer Circular Minimalist Compass Housing */}
+        <div className="relative flex h-80 w-80 items-center justify-center rounded-full border-2 border-slate-200 bg-[#fbfdfc] p-3 shadow-md sm:h-96 sm:w-96">
+          {/* Subtle Concentric Ring Accent */}
+          <div className="absolute inset-2 rounded-full border border-dashed border-[#b0c7b7]/60 pointer-events-none" />
 
           {/* Rotating Compass Dial */}
           <div
@@ -327,16 +327,16 @@ export function QiblaCompass({
             style={{ transform: `rotate(${-heading}deg)` }}
           >
             {/* Cardinal Direction Points (U, T, S, B) */}
-            <span className="absolute top-2 font-black text-sm text-[#2d946e] tracking-wider">
+            <span className="absolute top-2 font-black text-sm text-[#466553] tracking-wider">
               U
             </span>
-            <span className="absolute right-3 font-bold text-xs text-[#7c6630]">
+            <span className="absolute right-3 font-bold text-xs text-slate-400">
               T
             </span>
-            <span className="absolute bottom-2 font-bold text-xs text-[#7c6630]">
+            <span className="absolute bottom-2 font-bold text-xs text-slate-400">
               S
             </span>
-            <span className="absolute left-3 font-bold text-xs text-[#7c6630]">
+            <span className="absolute left-3 font-bold text-xs text-slate-400">
               B
             </span>
 
@@ -356,7 +356,7 @@ export function QiblaCompass({
                     y1={isCardinal ? "14" : isMajor ? "18" : "22"}
                     x2="180"
                     y2="28"
-                    stroke={isCardinal ? "#2d946e" : isMajor ? "#c5a059" : "#d8cebe"}
+                    stroke={isCardinal ? "#466553" : isMajor ? "#87aa93" : "#cbd5e1"}
                     strokeWidth={isCardinal ? "2.5" : isMajor ? "1.8" : "1"}
                     transform={`rotate(${deg} 180 180)`}
                   />
@@ -374,8 +374,8 @@ export function QiblaCompass({
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-xl shadow-md border-2 transition-all ${
                     isAligned
-                      ? "border-[#2d946e] bg-[#2d946e] text-white scale-110 ring-4 ring-[#2d946e]/30"
-                      : "border-[#c5a059] bg-[#11231a] text-white"
+                      ? "border-[#466553] bg-[#466553] text-white scale-110 ring-4 ring-[#466553]/20"
+                      : "border-slate-800 bg-[#0f172a] text-white"
                   }`}
                   title={`Ka'bah (${qiblaAngle}°)`}
                 >
@@ -384,14 +384,14 @@ export function QiblaCompass({
                 {/* Pointer Arrow down towards center */}
                 <div
                   className={`h-0 w-0 border-x-4 border-x-transparent border-t-6 transition-colors ${
-                    isAligned ? "border-t-[#2d946e]" : "border-t-[#c5a059]"
+                    isAligned ? "border-t-[#466553]" : "border-t-[#0f172a]"
                   }`}
                 />
               </div>
 
-              {/* Glowing Laser Beam to Center when aligned */}
+              {/* Laser Beam to Center when aligned */}
               {isAligned && (
-                <div className="h-28 w-0.5 bg-gradient-to-b from-[#2d946e] to-transparent shadow-[0_0_8px_#3eb489]" />
+                <div className="h-28 w-0.5 bg-gradient-to-b from-[#466553] to-transparent shadow-[0_0_8px_#557a64]" />
               )}
             </div>
 
@@ -404,8 +404,8 @@ export function QiblaCompass({
               <div
                 className={`w-3 sm:w-3.5 h-32 sm:h-36 rounded-full transition-all duration-300 ${
                   isAligned
-                    ? "bg-gradient-to-t from-[#206f52] via-[#2d946e] to-[#3eb489] shadow-[0_0_15px_rgba(62,180,137,0.7)]"
-                    : "bg-gradient-to-t from-[#6f5119] via-[#c5a059] to-[#eddcb2]"
+                    ? "bg-gradient-to-t from-[#2d4135] via-[#466553] to-[#87aa93] shadow-[0_0_12px_rgba(85,122,100,0.5)]"
+                    : "bg-gradient-to-t from-[#334155] via-[#64748b] to-[#cbd5e1]"
                 }`}
                 style={{
                   clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
@@ -413,7 +413,7 @@ export function QiblaCompass({
               />
 
               {/* Center Pivot Pin */}
-              <div className="absolute h-8 w-8 rounded-full border-2 border-white bg-gradient-to-br from-[#c5a059] to-[#8a6820] shadow-md flex items-center justify-center">
+              <div className="absolute h-8 w-8 rounded-full border-2 border-white bg-slate-800 shadow-md flex items-center justify-center">
                 <div className="h-2.5 w-2.5 rounded-full bg-white shadow-inner" />
               </div>
             </div>
@@ -422,23 +422,23 @@ export function QiblaCompass({
 
         {/* Live Heading & Direction Degrees */}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-center">
-          <div className="rounded-xl border border-[#ded5c4] bg-white px-4 py-2 shadow-sm">
-            <span className="text-[10px] font-bold text-[#7c6630] uppercase block">Arah Hadap Kompas</span>
-            <span className="font-mono text-lg font-black text-[#19261f]">
+          <div className="rounded-xl border border-slate-200/80 bg-[#fbfdfc] px-4 py-2 shadow-sm">
+            <span className="text-[10px] font-bold text-slate-500 uppercase block">Arah Hadap Kompas</span>
+            <span className="font-mono text-lg font-black text-slate-900">
               {heading}°
             </span>
           </div>
 
-          <div className="rounded-xl border border-[#ded5c4] bg-white px-4 py-2 shadow-sm">
-            <span className="text-[10px] font-bold text-[#7c6630] uppercase block">Target Kiblat</span>
-            <span className="font-mono text-lg font-black text-[#2d946e]">
+          <div className="rounded-xl border border-slate-200/80 bg-[#fbfdfc] px-4 py-2 shadow-sm">
+            <span className="text-[10px] font-bold text-slate-500 uppercase block">Target Kiblat</span>
+            <span className="font-mono text-lg font-black text-[#466553]">
               {qiblaAngle}°
             </span>
           </div>
 
-          <div className="rounded-xl border border-[#ded5c4] bg-white px-4 py-2 shadow-sm">
-            <span className="text-[10px] font-bold text-[#7c6630] uppercase block">Selisih Sudut</span>
-            <span className={`font-mono text-lg font-black ${isAligned ? "text-[#2d946e]" : "text-[#c5a059]"}`}>
+          <div className="rounded-xl border border-slate-200/80 bg-[#fbfdfc] px-4 py-2 shadow-sm">
+            <span className="text-[10px] font-bold text-slate-500 uppercase block">Selisih Sudut</span>
+            <span className={`font-mono text-lg font-black ${isAligned ? "text-[#466553]" : "text-amber-700"}`}>
               {Math.abs(Math.round(diff))}°
             </span>
           </div>
@@ -450,14 +450,14 @@ export function QiblaCompass({
             <button
               type="button"
               onClick={requestSensorAccess}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#2d946e] to-[#206f52] px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md hover:from-[#35a87e] hover:to-[#267f5e] active:scale-95 transition-all"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#557a64] hover:bg-[#466553] px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm active:scale-95 transition-all"
             >
               <Smartphone className="h-4 w-4" />
               <span>Aktifkan Sensor Kompas HP</span>
             </button>
           ) : (
-            <div className="inline-flex items-center gap-2 rounded-xl bg-[#eaf6f0] border border-[#bde5d2] px-4 py-2 text-xs font-bold text-[#1e6149]">
-              <Sparkles className="h-4 w-4 text-[#2d946e]" />
+            <div className="inline-flex items-center gap-2 rounded-xl bg-[#f4f7f5] border border-[#d2dfd6] px-4 py-2 text-xs font-bold text-[#395243]">
+              <Sparkles className="h-4 w-4 text-[#557a64]" />
               <span>Sensor Kompas HP Aktif &amp; Berputar Live</span>
             </div>
           )}

@@ -67,18 +67,18 @@ export function MuadzinSelectorCard() {
   if (!mounted) return null;
 
   return (
-    <section className="mt-8 overflow-hidden rounded-3xl border border-[#ded5c4] bg-white shadow-sm">
-      <div className="border-b border-[#ded5c4] bg-gradient-to-r from-[#fdfbf7] via-[#f7f3ea] to-[#f4eee2] px-6 py-5 sm:px-8">
+    <section className="mt-8 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-5 sm:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#2d946e]/10 text-xl text-[#2d946e] border border-[#2d946e]/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage-50 text-xl text-sage-600 border border-sage-200/80">
               <Globe className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-[#19261f] tracking-tight">
+              <h3 className="text-lg font-black text-slate-900 tracking-tight">
                 Pilihan Suara Adzan &amp; Muadzin Dunia
               </h3>
-              <p className="text-xs text-[#5c6e63]">
+              <p className="text-xs text-slate-600">
                 Dengarkan lantunan adzan autentik dari berbagai belahan dunia untuk notifikasi masuk waktu sholat.
               </p>
             </div>
@@ -90,13 +90,13 @@ export function MuadzinSelectorCard() {
               onClick={handleRequestNotif}
               className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all shadow-sm ${
                 notifGranted
-                  ? "bg-[#eaf6f0] text-[#1e6149] border border-[#bde5d2]"
-                  : "bg-[#2d946e] text-white hover:bg-[#35a87e]"
+                  ? "bg-sage-50 text-sage-700 border border-sage-200"
+                  : "bg-sage-600 text-white hover:bg-sage-700"
               }`}
             >
               {notifGranted ? (
                 <>
-                  <BellRing className="h-3.5 w-3.5 text-[#2d946e]" />
+                  <BellRing className="h-3.5 w-3.5 text-sage-600" />
                   <span>Notifikasi Aktif</span>
                 </>
               ) : (
@@ -112,12 +112,12 @@ export function MuadzinSelectorCard() {
 
       <div className="p-6 sm:p-8 space-y-6">
         {/* Settings Bar */}
-        <div className="grid gap-4 sm:grid-cols-2 rounded-2xl border border-[#ded5c4] bg-[#faf7f2] p-4 sm:p-5">
+        <div className="grid gap-4 sm:grid-cols-2 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 sm:p-5">
           {/* Sound Toggle */}
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-bold text-[#19261f]">Kumandangkan Adzan Otomatis</p>
-              <p className="text-[11px] text-[#607066]">
+              <p className="text-xs font-bold text-slate-900">Kumandangkan Adzan Otomatis</p>
+              <p className="text-[11px] text-slate-500">
                 Memutar suara adzan saat waktu shalat tiba
               </p>
             </div>
@@ -125,7 +125,7 @@ export function MuadzinSelectorCard() {
               type="button"
               onClick={() => updateSetting("soundEnabled", !settings.soundEnabled)}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                settings.soundEnabled ? "bg-[#2d946e]" : "bg-slate-300"
+                settings.soundEnabled ? "bg-sage-600" : "bg-slate-300"
               }`}
             >
               <span
@@ -141,12 +141,12 @@ export function MuadzinSelectorCard() {
             {settings.volume === 0 ? (
               <VolumeX className="h-4 w-4 text-slate-400 shrink-0" />
             ) : (
-              <Volume2 className="h-4 w-4 text-[#2d946e] shrink-0" />
+              <Volume2 className="h-4 w-4 text-sage-600 shrink-0" />
             )}
             <div className="flex-1">
-              <div className="flex justify-between text-[11px] font-semibold text-[#19261f] mb-1">
+              <div className="flex justify-between text-[11px] font-semibold text-slate-900 mb-1">
                 <span>Volume Audio</span>
-                <span className="font-mono text-[#2d946e]">
+                <span className="font-mono text-sage-700 font-bold">
                   {Math.round(settings.volume * 100)}%
                 </span>
               </div>
@@ -157,7 +157,7 @@ export function MuadzinSelectorCard() {
                 step={0.05}
                 value={settings.volume}
                 onChange={(e) => updateSetting("volume", parseFloat(e.target.value))}
-                className="w-full accent-[#2d946e] h-1.5 bg-slate-200 rounded-lg cursor-pointer"
+                className="w-full accent-sage-600 h-1.5 bg-slate-200 rounded-lg cursor-pointer"
               />
             </div>
           </div>
@@ -174,15 +174,15 @@ export function MuadzinSelectorCard() {
                 key={item.id}
                 className={`group relative flex flex-col justify-between rounded-2xl border p-4 transition-all ${
                   isSelected
-                    ? "border-[#2d946e] bg-[#f0f9f4] shadow-sm ring-2 ring-[#2d946e]/20"
-                    : "border-[#ded5c4] bg-white hover:border-[#bde5d2] hover:bg-[#fbf9f4]"
+                    ? "border-sage-500 bg-sage-50/60 shadow-sm ring-1 ring-sage-400"
+                    : "border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/40"
                 }`}
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{item.flag}</span>
-                      <span className="text-xs font-bold text-[#19261f]">
+                      <span className="text-xs font-bold text-slate-900">
                         {item.country}
                       </span>
                     </div>
@@ -192,8 +192,8 @@ export function MuadzinSelectorCard() {
                       onClick={() => updateSetting("selectedMuadzinId", item.id)}
                       className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
                         isSelected
-                          ? "bg-[#2d946e] text-white shadow-sm"
-                          : "bg-slate-100 text-[#5c6e63] hover:bg-[#eaf6f0] hover:text-[#1e6149]"
+                          ? "bg-sage-600 text-white shadow-sm"
+                          : "bg-slate-100 text-slate-600 hover:bg-sage-50 hover:text-sage-700"
                       }`}
                     >
                       {isSelected ? (
@@ -207,19 +207,19 @@ export function MuadzinSelectorCard() {
                     </button>
                   </div>
 
-                  <h4 className="mt-2 text-sm font-black text-[#19261f]">
+                  <h4 className="mt-2 text-sm font-black text-slate-900">
                     {item.name}
                   </h4>
-                  <p className="text-xs font-semibold text-[#8a6820]">
+                  <p className="text-xs font-semibold text-sage-700">
                     {item.location}
                   </p>
-                  <p className="mt-1 text-xs text-[#5c6e63] leading-relaxed">
+                  <p className="mt-1 text-xs text-slate-600 leading-relaxed">
                     {item.description}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-[#ded5c4]/60 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-[#8a6820]">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-500">
                     Pratinjau Suara
                   </span>
                   <button
@@ -228,7 +228,7 @@ export function MuadzinSelectorCard() {
                     className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all shadow-sm ${
                       isPlayingThis
                         ? "bg-amber-500 text-slate-950 animate-pulse ring-2 ring-amber-300"
-                        : "bg-[#19261f] text-white hover:bg-[#2d946e]"
+                        : "bg-slate-900 text-white hover:bg-sage-600"
                     }`}
                   >
                     {isPlayingThis ? (

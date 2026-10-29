@@ -73,26 +73,26 @@ export default function AdzanIqamahPage() {
       }
     >
       {/* Header Banner */}
-      <div className="mb-8 rounded-3xl border border-[#ded5c4] bg-gradient-to-r from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-8 text-[#19261f] shadow-lg sm:p-10">
+      <div className="mb-8 rounded-3xl border border-slate-200/80 bg-white p-8 text-slate-900 shadow-sm sm:p-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#2d946e]/10 px-3.5 py-1 text-xs font-semibold text-[#1e6149] border border-[#2d946e]/25 mb-3">
-              <Timer className="h-3.5 w-3.5 text-[#8a6820]" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-sage-50 px-3.5 py-1 text-xs font-semibold text-sage-800 border border-sage-200/80 mb-3">
+              <Timer className="h-3.5 w-3.5 text-sage-600" />
               <span>Hitung Mundur Presisi Digital</span>
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-[#19261f] sm:text-4xl">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
               Hitung Mundur Adzan &amp; Iqamah
             </h1>
-            <p className="mt-2 text-xs text-[#5c6e63] sm:text-sm">
+            <p className="mt-2 text-xs text-slate-600 sm:text-sm">
               Memandu jamaah dalam melaksanakan shalat sunnah qobliyah dan merapatkan shaf tepat waktu.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-[#ded5c4] bg-white p-4 shadow-sm text-right">
-            <span className="text-xs text-[#7c6630] font-semibold block">Waktu Server (WIB)</span>
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 shadow-sm text-right">
+            <span className="text-xs text-slate-500 font-semibold block">Waktu Server (WIB)</span>
             <span
               suppressHydrationWarning
-              className="font-mono text-2xl font-black text-[#2d946e]"
+              className="font-mono text-2xl font-black text-sage-700"
             >
               {mounted
                 ? new Intl.DateTimeFormat("id-ID", {
@@ -108,23 +108,23 @@ export default function AdzanIqamahPage() {
       </div>
 
       {!data ? (
-        <div className="rounded-2xl border border-[#ded5c4] bg-white p-12 text-center text-[#5a685e] shadow-sm">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#eaf6f0] text-[#2d946e] animate-spin mb-3">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-12 text-center text-slate-500 shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-sage-50 text-sage-600 animate-spin mb-3">
             ⏳
           </div>
-          <p className="font-semibold text-[#19261f]">Sinkronisasi Waktu Masjid...</p>
+          <p className="font-semibold text-slate-900">Sinkronisasi Waktu Masjid...</p>
         </div>
       ) : (
         <>
           {/* Main Giant Countdown Box */}
-          <section className="relative overflow-hidden rounded-3xl border border-[#ded5c4] bg-gradient-to-br from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-8 text-center text-[#19261f] shadow-xl sm:p-14">
+          <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-8 text-center text-slate-900 shadow-sm sm:p-14">
             <div className="pointer-events-none absolute inset-0 bg-islamic-pattern opacity-25" />
 
             <div className="relative z-10 flex flex-col items-center">
               {upcoming ? (
                 <>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[#ecd8a6] bg-[#faf4e6] px-4 py-1 text-xs font-bold uppercase tracking-wider text-[#7c6630] shadow-sm">
-                    <Sparkles className="h-3.5 w-3.5 text-[#8a6820]" />
+                  <div className="inline-flex items-center gap-2 rounded-full border border-sage-200/80 bg-sage-50 px-4 py-1 text-xs font-bold uppercase tracking-wider text-sage-800 shadow-sm">
+                    <Sparkles className="h-3.5 w-3.5 text-sage-600" />
                     <span>
                       {upcoming.isBetweenAdhanAndIqamah
                         ? "Adzan Selesai • Menuju Iqamah"
@@ -133,27 +133,27 @@ export default function AdzanIqamahPage() {
                   </div>
 
                   <div className="mt-3 flex items-baseline gap-3">
-                    <p className="text-4xl font-black tracking-tight text-[#19261f] sm:text-6xl md:text-7xl">
+                    <p className="text-4xl font-black tracking-tight text-slate-900 sm:text-6xl md:text-7xl">
                       {upcoming.label}
                     </p>
-                    <span className="font-arabic text-3xl text-[#8a6820] sm:text-4xl">
+                    <span className="font-arabic text-3xl text-sage-700 sm:text-4xl">
                       {PRAYER_NAMES_ARABIC[upcoming.key as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
                     </span>
                   </div>
 
-                  <p className="mt-3 text-sm text-[#5c6e63] sm:text-base">
-                    Waktu Adzan: <span className="font-bold text-[#19261f] font-mono">{upcoming.adhanTime}</span>
-                    <span className="mx-3 text-[#a49782]">•</span>
-                    Estimasi Iqamah: <span className="font-bold text-[#8a6820] font-mono">{upcoming.iqamahTime}</span>
+                  <p className="mt-3 text-sm text-slate-600 sm:text-base">
+                    Waktu Adzan: <span className="font-bold text-slate-900 font-mono">{upcoming.adhanTime}</span>
+                    <span className="mx-3 text-slate-300">•</span>
+                    Estimasi Iqamah: <span className="font-bold text-sage-700 font-mono">{upcoming.iqamahTime}</span>
                   </p>
 
-                  <div className="my-8 rounded-3xl border border-[#ecd8a6] bg-[#faf4e6] px-8 py-6 shadow-inner sm:px-14 sm:py-8">
-                    <span className="text-[11px] font-bold uppercase tracking-widest text-[#7c6630] block mb-2">
+                  <div className="my-8 rounded-3xl border border-sage-200/80 bg-sage-50/40 px-8 py-6 shadow-inner sm:px-14 sm:py-8">
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 block mb-2">
                       Sisa Waktu Menuju Iqamah
                     </span>
                     <p
                       suppressHydrationWarning
-                      className="font-mono text-6xl font-black tracking-wider text-[#8a6820] sm:text-8xl md:text-9xl"
+                      className="font-mono text-6xl font-black tracking-wider text-sage-700 sm:text-8xl md:text-9xl"
                     >
                       {mounted
                         ? countdown(
@@ -164,7 +164,7 @@ export default function AdzanIqamahPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-xl bg-white border border-[#ded5c4] px-6 py-2.5 text-xs text-[#5c6e63] max-w-lg shadow-sm">
+                  <div className="rounded-xl bg-slate-50 border border-slate-200/80 px-6 py-2.5 text-xs text-slate-600 max-w-lg shadow-sm">
                     {upcoming.isBetweenAdhanAndIqamah
                       ? "Mari manfaatkan waktu antara adzan dan iqamah untuk memperbanyak doa dan shalat sunnah."
                       : "Hitung mundur mengacu pada jadwal resmi yang diselaraskan dengan server masjid."}
@@ -172,11 +172,11 @@ export default function AdzanIqamahPage() {
                 </>
               ) : (
                 <div className="py-8">
-                  <CheckCircle2 className="mx-auto h-16 w-16 text-[#2d946e] mb-4" />
-                  <p className="text-2xl font-black text-[#19261f]">
+                  <CheckCircle2 className="mx-auto h-16 w-16 text-sage-600 mb-4" />
+                  <p className="text-2xl font-black text-slate-900">
                     Semua jadwal shalat fardhu hari ini telah selesai.
                   </p>
-                  <p className="mt-2 text-sm text-[#5c6e63]">
+                  <p className="mt-2 text-sm text-slate-600">
                     Jadwal shalat hari esok akan aktif kembali menjelang waktu Subuh.
                   </p>
                 </div>
@@ -185,9 +185,9 @@ export default function AdzanIqamahPage() {
           </section>
 
           {/* Daily Schedule Overview Table */}
-          <section className="mt-8 overflow-hidden rounded-2xl border border-[#ded5c4] bg-white shadow-sm">
-            <div className="border-b border-[#ded5c4] bg-[#fbf9f4] px-6 py-4">
-              <h3 className="font-bold text-[#19261f] text-base">
+          <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-slate-50/60 px-6 py-4">
+              <h3 className="font-bold text-slate-900 text-base">
                 Rincian Jadwal Adzan &amp; Iqamah Hari Ini
               </h3>
             </div>
@@ -195,14 +195,14 @@ export default function AdzanIqamahPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-[#ded5c4] bg-[#f4eee2] text-[#19261f] text-xs font-bold">
+                  <tr className="border-b border-slate-200/80 bg-slate-50/80 text-slate-700 text-xs font-bold">
                     <th className="px-6 py-3.5">Shalat</th>
                     <th className="px-6 py-3.5 text-center">Waktu Adzan</th>
                     <th className="px-6 py-3.5 text-center">Waktu Iqamah</th>
                     <th className="px-6 py-3.5 text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#e8e0d2]">
+                <tbody className="divide-y divide-slate-100">
                   {data.iqamahEvents.map((e) => {
                     const iqamahMs = new Date(e.iqamahTarget).getTime();
                     const passed = iqamahMs <= serverNow;
@@ -213,36 +213,36 @@ export default function AdzanIqamahPage() {
                         key={e.key}
                         className={`transition-colors ${
                           isCurrent
-                            ? "bg-[#edf7f2] font-semibold text-[#1a553f]"
-                            : "hover:bg-[#faf7f2]"
+                            ? "bg-sage-50/60 font-semibold text-sage-900"
+                            : "hover:bg-slate-50/60"
                         }`}
                       >
-                        <td className="px-6 py-4 font-bold text-[#19261f] flex items-center gap-2">
-                          <span className="font-arabic text-sm text-[#8a6820] font-normal">
+                        <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-2">
+                          <span className="font-arabic text-sm text-sage-700 font-normal">
                             {PRAYER_NAMES_ARABIC[e.key as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
                           </span>
                           <span>{e.label}</span>
                         </td>
-                        <td className="px-6 py-4 text-center font-mono font-bold text-[#3c4a41]">
+                        <td className="px-6 py-4 text-center font-mono font-bold text-slate-700">
                           {e.adhanTime}
                         </td>
-                        <td className="px-6 py-4 text-center font-mono font-black text-[#205e48]">
+                        <td className="px-6 py-4 text-center font-mono font-black text-sage-700">
                           {e.iqamahTime}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {passed ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#f4efe4] px-3 py-1 text-xs font-semibold text-[#5a685e]">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-[#748479]" />
+                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
                               <span>Selesai</span>
                             </span>
                           ) : isCurrent ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#2d946e] px-3 py-1 text-xs font-bold text-white shadow-sm animate-pulse">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sage-600 px-3 py-1 text-xs font-bold text-white shadow-sm animate-pulse">
                               <Sparkles className="h-3.5 w-3.5" />
                               <span>Sedang Berjalan</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#eaf6f0] px-3 py-1 text-xs font-semibold text-[#1e6149] border border-[#bde5d2]">
-                              <Clock className="h-3.5 w-3.5 text-[#2d946e]" />
+                            <span className="inline-flex items-center gap-1 rounded-full bg-sage-50 px-3 py-1 text-xs font-semibold text-sage-700 border border-sage-200">
+                              <Clock className="h-3.5 w-3.5 text-sage-600" />
                               <span>Mendatang</span>
                             </span>
                           )}

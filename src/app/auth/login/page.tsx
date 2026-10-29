@@ -53,36 +53,36 @@ function LoginForm() {
 
   if (status === "authenticated") {
     return (
-      <div suppressHydrationWarning className="relative flex min-h-dvh items-center justify-center bg-[#faf7f2] p-4 text-center">
-        <div className="rounded-3xl border border-[#ded5c4] bg-white/95 p-8 shadow-xl">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#3eb489] to-[#206f52] text-2xl shadow-md">
+      <div suppressHydrationWarning className="relative flex min-h-dvh items-center justify-center bg-white p-4 text-center">
+        <div className="rounded-3xl border border-slate-200/80 bg-white p-8 shadow-xl">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-sage-600 text-white text-2xl shadow-md">
             🕌
           </div>
-          <p className="text-sm font-bold text-[#19261f]">Sesi Anda Masih Aktif</p>
-          <p className="mt-1 text-xs text-[#2d946e]">Mengalihkan langsung ke Panel Admin...</p>
+          <p className="text-sm font-bold text-slate-900">Sesi Anda Masih Aktif</p>
+          <p className="mt-1 text-xs text-sage-700">Mengalihkan langsung ke Panel Admin...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div suppressHydrationWarning className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#faf7f2] px-4 py-12 text-[#19261f] bg-islamic-pattern">
+    <div suppressHydrationWarning className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-slate-50/60 px-4 py-12 text-slate-900 bg-islamic-pattern">
       {/* Ambient background glows */}
-      <div className="pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-[#3eb489]/15 blur-3xl" />
-      <div className="pointer-events-none absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-[#c5a059]/15 blur-3xl" />
+      <div className="pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-sage-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-20 h-72 w-72 rounded-full bg-sage-600/10 blur-3xl" />
 
-      <div suppressHydrationWarning className="relative z-10 w-full max-w-md rounded-3xl border border-[#ded5c4] bg-white/95 p-8 shadow-2xl backdrop-blur-xl sm:p-10">
+      <div suppressHydrationWarning className="relative z-10 w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-8 shadow-xl sm:p-10">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#3eb489] to-[#206f52] text-3xl shadow-md ring-2 ring-[#bde5d2]">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-sage-600 text-white text-3xl shadow-sm">
             🕌
           </div>
-          <div className="font-arabic text-xl font-bold text-[#8a6820] mb-1">
+          <div className="font-arabic text-xl font-bold text-sage-800 mb-1">
             بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-[#19261f] sm:text-3xl">
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
             Admin Dashboard
           </h1>
-          <p className="mt-1 text-xs text-[#5c6e63]">
+          <p className="mt-1 text-xs text-slate-500">
             Masjid Pondok Tahfizh Plus Abu Dzar
           </p>
         </div>
@@ -91,12 +91,12 @@ function LoginForm() {
           <div>
             <label
               htmlFor="email"
-              className="block text-xs font-bold uppercase tracking-wider text-[#3f5045] mb-1.5"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5"
             >
               Email Administrator
             </label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-3 h-4 w-4 text-[#2d946e]" />
+              <Mail className="absolute left-3.5 top-3 h-4 w-4 text-sage-600" />
               <input
                 id="email"
                 type="email"
@@ -105,7 +105,7 @@ function LoginForm() {
                 required
                 autoComplete="email"
                 placeholder="nama@abudzar.sch.id"
-                className="w-full rounded-xl border border-[#ded5c4] bg-[#faf7f2] pl-10 pr-4 py-2.5 text-sm text-[#19261f] placeholder-[#8e9f94] focus:border-[#2d946e] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2d946e] transition-all"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sage-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sage-500/20 transition-all"
               />
             </div>
           </div>
@@ -113,12 +113,12 @@ function LoginForm() {
           <div>
             <label
               htmlFor="password"
-              className="block text-xs font-bold uppercase tracking-wider text-[#3f5045] mb-1.5"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5"
             >
               Kata Sandi
             </label>
             <div className="relative">
-              <Lock className="absolute left-3.5 top-3 h-4 w-4 text-[#2d946e]" />
+              <Lock className="absolute left-3.5 top-3 h-4 w-4 text-sage-600" />
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -127,19 +127,19 @@ function LoginForm() {
                 required
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-[#ded5c4] bg-[#faf7f2] pl-10 pr-10 py-2.5 text-sm text-[#19261f] placeholder-[#8e9f94] focus:border-[#2d946e] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#2d946e] transition-all"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-10 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sage-600 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sage-500/20 transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-[#5c6e63] hover:text-[#19261f] transition-colors"
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-700 transition-colors"
                 title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                 tabIndex={-1}
               >
                 {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-[#5c6e63]" />
+                  <EyeOff className="h-4 w-4 text-slate-400" />
                 ) : (
-                  <Eye className="h-4 w-4 text-[#5c6e63]" />
+                  <Eye className="h-4 w-4 text-slate-400" />
                 )}
               </button>
             </div>
@@ -148,16 +148,16 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-2 rounded-xl bg-gradient-to-r from-[#2d946e] to-[#206f52] py-3 px-4 font-bold text-white shadow-md hover:from-[#35a87e] hover:to-[#267f5e] active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
+            className="w-full mt-2 rounded-xl bg-sage-600 py-3 px-4 font-bold text-white shadow-sm hover:bg-sage-700 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
           >
             {loading ? "Memverifikasi..." : "Masuk ke Panel Admin"}
           </button>
         </form>
 
-        <div className="mt-8 text-center border-t border-[#ded5c4]/60 pt-4">
+        <div className="mt-8 text-center border-t border-slate-100 pt-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[#5c6e63] hover:text-[#19261f] transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Kembali ke Beranda Publik</span>
@@ -170,7 +170,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div suppressHydrationWarning className="min-h-screen bg-[#faf7f2]" />}>
+    <Suspense fallback={<div suppressHydrationWarning className="min-h-screen bg-white" />}>
       <LoginForm />
     </Suspense>
   );

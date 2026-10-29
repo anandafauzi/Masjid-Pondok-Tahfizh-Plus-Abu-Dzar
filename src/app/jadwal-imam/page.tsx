@@ -158,21 +158,21 @@ export default async function JadwalImamPage() {
       </div>
 
       {/* ========================================================
-          WEB SCREEN VIEW (Interactive Luxury UI)
+          WEB SCREEN VIEW (Clean Minimalist Modern UI)
           ======================================================== */}
       <div className="print:hidden">
         {/* Page Header */}
-        <div className="mb-8 rounded-3xl border border-[#ded5c4] bg-gradient-to-r from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-6 text-[#19261f] shadow-lg sm:p-10">
+        <div className="mb-8 rounded-3xl border border-slate-200/80 bg-white p-6 text-slate-800 shadow-sm sm:p-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#2d946e]/10 px-3.5 py-1 text-xs font-semibold text-[#1e6149] border border-[#2d946e]/25 mb-3">
-                <Users className="h-3.5 w-3.5 text-[#8a6820]" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#f4f7f5] px-3.5 py-1 text-xs font-semibold text-[#466553] border border-[#d2dfd6] mb-3">
+                <Users className="h-3.5 w-3.5 text-[#557a64]" />
                 <span>Petugas Ibadah Shalat Fardhu</span>
               </div>
-              <h1 className="text-3xl font-black tracking-tight text-[#19261f] sm:text-4xl">
+              <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
                 Jadwal Imam &amp; Muadzin
               </h1>
-              <p className="mt-2 text-xs text-[#5c6e63] sm:text-sm max-w-2xl">
+              <p className="mt-2 text-xs text-slate-500 sm:text-sm max-w-2xl">
                 Jadwal penugasan para asatidzah dan santri tahfizh untuk memimpin shalat 5 waktu di {mosque.mosqueName}.
               </p>
             </div>
@@ -191,22 +191,22 @@ export default async function JadwalImamPage() {
 
         {/* Imam Subuh Jumat Spotlight */}
         {rollingImam && (
-          <section className="mb-8 rounded-2xl border border-[#ded3be] bg-gradient-to-br from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] p-6 shadow-sm">
+          <section className="mb-8 rounded-2xl border border-[#d2dfd6] bg-[#fbfdfc] p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#c5a059]/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#82621c] border border-[#c5a059]/30">
-                <Sparkles className="h-3 w-3 text-[#c5a059]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f4f7f5] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#395243] border border-[#d2dfd6]">
+                <Sparkles className="h-3 w-3 text-[#557a64]" />
                 Imam Subuh Jumat Pekan Ini
               </span>
-              <span className="text-xs font-semibold text-[#6d7c71]">
+              <span className="text-xs font-semibold text-slate-500">
                 Rotasi {rollingImam.index + 1} dari {rollingImam.total}
               </span>
             </div>
 
             <div className="mt-3">
-              <h2 className="text-2xl font-bold text-[#19261f]">
+              <h2 className="text-2xl font-bold text-slate-900">
                 {rollingImam.name}
               </h2>
-              <p className="mt-1 text-xs text-[#5a685e]">
+              <p className="mt-1 text-xs text-slate-500">
                 Bertugas memimpin shalat Subuh berjamaah pada {formatDateOnlyLong(friday)}
               </p>
             </div>
@@ -228,15 +228,15 @@ export default async function JadwalImamPage() {
                   key={key}
                   className={`overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
                     isToday
-                      ? "border-[#3eb489] ring-2 ring-[#3eb489]/20 shadow-md"
-                      : "border-[#ded5c4]"
+                      ? "border-[#557a64] ring-2 ring-[#557a64]/15 shadow-md"
+                      : "border-slate-200/80"
                   }`}
                 >
                   <div
                     className={`px-6 py-3.5 flex items-center justify-between border-b ${
                       isToday
-                        ? "bg-[#163a2a] text-white border-[#24523c]"
-                        : "bg-[#fbf9f4] text-[#19261f] border-[#ded5c4]"
+                        ? "bg-[#466553] text-white border-[#395243]"
+                        : "bg-[#f8faf9] text-slate-800 border-slate-100"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -244,46 +244,46 @@ export default async function JadwalImamPage() {
                         {formatDateOnlyLong(dateObj)}
                       </h3>
                       {isToday && (
-                        <span className="rounded-full bg-[#2d946e] px-2.5 py-0.5 text-[10px] font-bold text-white uppercase shadow-sm">
+                        <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold text-[#395243] uppercase shadow-sm">
                           Hari Ini
                         </span>
                       )}
                     </div>
-                    <span className="text-xs opacity-75">
+                    <span className="text-xs opacity-80">
                       {list.length} Waktu Terjadwal
                     </span>
                   </div>
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm min-w-[500px]">
-                      <thead className="bg-[#fbf9f4]/60 text-xs font-semibold text-[#5a685e] border-b border-[#ded5c4]">
+                      <thead className="bg-[#fcfdfc] text-xs font-semibold text-slate-500 border-b border-slate-100">
                         <tr>
                           <th className="px-6 py-3">Waktu Shalat</th>
                           <th className="px-6 py-3">Imam</th>
                           <th className="px-6 py-3">Muadzin</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#e8e0d2]">
+                      <tbody className="divide-y divide-slate-100">
                         {list.map((s) => (
                           <tr
                             key={s.id}
-                            className="hover:bg-[#faf7f2] transition-colors"
+                            className="hover:bg-[#fbfdfc] transition-colors"
                           >
-                            <td className="px-6 py-3.5 font-bold text-[#19261f] flex items-center gap-2">
-                              <span className="font-arabic text-xs text-[#8a6820]">
+                            <td className="px-6 py-3.5 font-bold text-slate-900 flex items-center gap-2">
+                              <span className="font-arabic text-xs text-[#557a64]">
                                 {PRAYER_NAMES_ARABIC[s.prayerName.toLowerCase() as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
                               </span>
                               <span>{s.prayerName}</span>
                             </td>
-                            <td className="px-6 py-3.5 text-[#2c3b31] font-medium">
+                            <td className="px-6 py-3.5 text-slate-800 font-medium">
                               <div className="flex items-center gap-1.5">
-                                <UserCheck className="h-4 w-4 text-[#2d946e]" />
+                                <UserCheck className="h-4 w-4 text-[#557a64]" />
                                 <span>{s.imamName}</span>
                               </div>
                             </td>
-                            <td className="px-6 py-3.5 text-[#5a685e]">
+                            <td className="px-6 py-3.5 text-slate-500">
                               <div className="flex items-center gap-1.5">
-                                <Mic className="h-3.5 w-3.5 text-[#457c6b]" />
+                                <Mic className="h-3.5 w-3.5 text-slate-400" />
                                 <span>{s.muadzinName}</span>
                               </div>
                             </td>

@@ -148,21 +148,21 @@ export default async function JadwalShalatPage() {
       </div>
 
       {/* ========================================================
-          WEB SCREEN VIEW (Interactive Luxury UI)
+          WEB SCREEN VIEW (Clean Minimalist Modern UI)
           ======================================================== */}
       <div className="print:hidden">
         {/* Top Page Header */}
-        <div className="mb-8 rounded-3xl border border-[#ded5c4] bg-gradient-to-r from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-6 text-[#19261f] shadow-lg sm:p-10">
+        <div className="mb-8 rounded-3xl border border-slate-200/80 bg-white p-6 text-slate-800 shadow-sm sm:p-8">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#2d946e]/10 px-3.5 py-1 text-xs font-semibold text-[#1e6149] border border-[#2d946e]/25 mb-3">
-                <Calendar className="h-3.5 w-3.5 text-[#8a6820]" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#f4f7f5] px-3.5 py-1 text-xs font-semibold text-[#466553] border border-[#d2dfd6] mb-3">
+                <Calendar className="h-3.5 w-3.5 text-[#557a64]" />
                 <span>Kalender Jadwal Shalat Digital</span>
               </div>
-              <h1 className="text-3xl font-black tracking-tight text-[#19261f] sm:text-4xl">
+              <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
                 Jadwal Shalat 7 Hari
               </h1>
-              <p className="mt-2 text-xs text-[#5c6e63] sm:text-sm max-w-2xl">
+              <p className="mt-2 text-xs text-slate-500 sm:text-sm max-w-2xl">
                 {mosque.mosqueName} • Dihitung otomatis zona WIB • Metode {mosque.prayerCalculationMethod}
               </p>
             </div>
@@ -180,15 +180,15 @@ export default async function JadwalShalatPage() {
         </div>
 
         {/* Today's Prayers Spotlight Cards */}
-        <section className="mb-10 rounded-2xl border border-[#bde5d2] bg-gradient-to-br from-[#f8fdfb] via-[#edf7f3] to-[#e4f3ec] p-6 shadow-sm">
+        <section className="mb-10 rounded-2xl border border-[#d2dfd6] bg-[#fbfdfc] p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-[#2d946e]" />
-              <h2 className="text-lg font-bold text-[#19261f]">
+              <Sparkles className="h-4 w-4 text-[#557a64]" />
+              <h2 className="text-base font-bold text-slate-900">
                 Jadwal Adzan &amp; Iqamah Hari Ini
               </h2>
             </div>
-            <span className="text-xs font-bold text-[#1e6149] bg-[#eaf6f0] border border-[#bde5d2] px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-[#466553] bg-[#f4f7f5] border border-[#d2dfd6] px-2.5 py-0.5 rounded-full">
               WIB (UTC+7)
             </span>
           </div>
@@ -199,17 +199,17 @@ export default async function JadwalShalatPage() {
               return (
                 <div
                   key={e.key}
-                  className="group relative overflow-hidden rounded-xl border border-[#ded5c4] bg-white p-4 text-center shadow-sm transition-all hover:border-[#3eb489] hover:shadow-md"
+                  className="group relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 text-center shadow-sm transition-all hover:border-[#b0c7b7] hover:shadow-md"
                 >
-                  <span className="font-arabic text-xs text-[#8a6820] block">
+                  <span className="font-arabic text-xs text-slate-400 block">
                     {ar}
                   </span>
-                  <p className="text-sm font-bold text-[#19261f]">{e.label}</p>
-                  <p className="font-mono text-2xl font-black text-[#19261f] mt-1">
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">{e.label}</p>
+                  <p className="font-mono text-2xl font-black text-slate-900 mt-1">
                     {e.adhanTime}
                   </p>
-                  <div className="mt-2 flex items-center justify-center gap-1 text-[11px] font-semibold text-[#1e6149] bg-[#eaf6f0] py-1 px-2 rounded-lg border border-[#bde5d2]/60">
-                    <Timer className="h-3 w-3 text-[#2d946e]" />
+                  <div className="mt-2 flex items-center justify-center gap-1 text-[11px] font-semibold text-[#466553] bg-[#f4f7f5] py-1 px-2 rounded-lg border border-[#d2dfd6]">
+                    <Timer className="h-3 w-3 text-[#557a64]" />
                     <span>Iqamah {e.iqamahTime}</span>
                   </div>
                 </div>
@@ -219,13 +219,13 @@ export default async function JadwalShalatPage() {
         </section>
 
         {/* 7-Days Timetable Table */}
-        <section className="overflow-hidden rounded-2xl border border-[#ded5c4] bg-white shadow-sm">
-          <div className="border-b border-[#ded5c4] bg-[#fbf9f4] px-6 py-4 flex items-center justify-between">
+        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+          <div className="border-b border-slate-100 bg-[#fbfdfc] px-6 py-4 flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-[#19261f] text-base">
+              <h3 className="font-bold text-slate-900 text-base">
                 Tabel Waktu Shalat Sepekan
               </h3>
-              <p className="text-xs text-[#5a685e]">
+              <p className="text-xs text-slate-500">
                 Menampilkan waktu Imsak, Terbit, dan Shalat Fardhu 5 Waktu
               </p>
             </div>
@@ -234,19 +234,19 @@ export default async function JadwalShalatPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
-                <tr className="border-b border-[#ded5c4] bg-[#f4eee2] text-[#19261f] text-xs font-bold">
+                <tr className="border-b border-slate-100 bg-[#f8faf9] text-slate-800 text-xs font-bold">
                   <th className="px-5 py-3.5">Tanggal</th>
                   {ROWS.map((key) => (
                     <th key={key} className="px-4 py-3.5 text-center">
                       <div>{PRAYER_NAMES[key]}</div>
-                      <div className="font-arabic text-[11px] text-[#8a6820] font-normal">
+                      <div className="font-arabic text-[11px] text-[#557a64] font-normal">
                         {PRAYER_NAMES_ARABIC[key]}
                       </div>
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e8e0d2]">
+              <tbody className="divide-y divide-slate-100">
                 {days.map(({ date, times }, index) => {
                   const isToday = index === 0;
                   return (
@@ -254,27 +254,27 @@ export default async function JadwalShalatPage() {
                       key={index}
                       className={`transition-colors ${
                         isToday
-                          ? "bg-[#edf7f2] font-semibold text-[#164433]"
-                          : "hover:bg-[#faf7f2]"
+                          ? "bg-[#f4f7f5] font-semibold text-[#2d4135]"
+                          : "hover:bg-[#fbfcfb]"
                       }`}
                     >
                       <td className="px-5 py-4 font-medium">
                         {isToday ? (
                           <div className="flex items-center gap-2">
-                            <span className="rounded-md bg-[#2d946e] px-2 py-0.5 text-[10px] font-bold text-white uppercase shadow-sm">
+                            <span className="rounded-md bg-[#557a64] px-2 py-0.5 text-[10px] font-bold text-white uppercase shadow-sm">
                               Hari Ini
                             </span>
-                            <span className="text-[#19261f]">{formatDateOnlyShort(date)}</span>
+                            <span className="text-slate-900">{formatDateOnlyShort(date)}</span>
                           </div>
                         ) : (
-                          <span className="text-[#3c4a41]">{formatDateOnlyShort(date)}</span>
+                          <span className="text-slate-700">{formatDateOnlyShort(date)}</span>
                         )}
                       </td>
                       {ROWS.map((key) => (
                         <td
                           key={key}
                           className={`px-4 py-4 text-center font-mono text-sm ${
-                            isToday ? "font-bold text-[#1a553f]" : "text-[#3c4a41]"
+                            isToday ? "font-bold text-[#395243]" : "text-slate-700"
                           }`}
                         >
                           {times[key]}
@@ -289,11 +289,11 @@ export default async function JadwalShalatPage() {
         </section>
 
         {/* Iqamah Settings Explanation */}
-        <section className="mt-10 rounded-2xl border border-[#ded5c4] bg-white p-6 shadow-sm">
-          <h3 className="text-base font-bold text-[#19261f]">
+        <section className="mt-10 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+          <h3 className="text-base font-bold text-slate-900">
             Ketetapan Jeda Waktu Adzan ke Iqamah
           </h3>
-          <p className="mt-1 text-xs text-[#5c6e63]">
+          <p className="mt-1 text-xs text-slate-500">
             Durasi jeda waktu shalat sunnah qobliyah dan persiapan shaf berjamaah di Masjid Abu Dzar:
           </p>
 
@@ -305,15 +305,15 @@ export default async function JadwalShalatPage() {
               return (
                 <div
                   key={key}
-                  className="rounded-xl border border-[#ded5c4] bg-[#fbf9f4] p-4 text-center"
+                  className="rounded-xl border border-slate-200/80 bg-[#fbfdfc] p-4 text-center"
                 >
-                  <span className="font-arabic text-xs text-[#8a6820] block">
+                  <span className="font-arabic text-xs text-slate-400 block">
                     {PRAYER_NAMES_ARABIC[key]}
                   </span>
-                  <p className="font-bold text-[#19261f] text-sm">
+                  <p className="font-bold text-slate-900 text-sm">
                     {PRAYER_NAMES[key]}
                   </p>
-                  <p className="mt-1 text-xs font-semibold text-[#1e6149]">
+                  <p className="mt-1 text-xs font-semibold text-[#466553]">
                     {setting?.mode === "FIXED_TIME" && setting.fixedIqamahTime
                       ? `Pukul ${setting.fixedIqamahTime} WIB`
                       : `${setting?.delayMinutes ?? 15} Menit Setelah Adzan`}

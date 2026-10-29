@@ -1,87 +1,100 @@
 @import "tailwindcss";
 
 @theme {
-  /* Override Default Slate to Pantone Warm Cream, Linen & Forest Charcoal */
-  --color-slate-50: #faf7f2;
-  --color-slate-100: #f4eee2;
-  --color-slate-200: #e8ded0;
-  --color-slate-300: #d5c6b0;
-  --color-slate-400: #8c9b91;
-  --color-slate-500: #6b7a70;
-  --color-slate-600: #4e5e54;
-  --color-slate-700: #38463c;
-  --color-slate-800: #243228;
-  --color-slate-900: #19261f;
-  --color-slate-950: #0a1811;
+  /* Clean Minimalist Modern Slate Palette */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
 
-  /* Override Default Emerald to Pantone Mint, Celadon & Cypress */
-  --color-emerald-50: #f0f9f5;
-  --color-emerald-100: #dcf2e8;
-  --color-emerald-200: #bde5d2;
-  --color-emerald-300: #8fd2b5;
-  --color-emerald-400: #5bbd96;
-  --color-emerald-500: #3eb489;
-  --color-emerald-600: #2d946e;
-  --color-emerald-700: #257659;
-  --color-emerald-800: #205e48;
-  --color-emerald-900: #163a2a;
-  --color-emerald-950: #0d2c22;
+  /* Refined Hijau Sage (Sage Green) Palette */
+  --color-sage-50: #f4f7f5;
+  --color-sage-100: #e7efe9;
+  --color-sage-200: #d2dfd6;
+  --color-sage-300: #b0c7b7;
+  --color-sage-400: #87aa93;
+  --color-sage-500: #557a64;
+  --color-sage-600: #466553;
+  --color-sage-700: #395243;
+  --color-sage-800: #2d4135;
+  --color-sage-900: #25352c;
+  --color-sage-950: #121c17;
 
-  /* Override Amber to Pantone Warm Champagne Gold & Brass */
-  --color-amber-50: #faf6eb;
-  --color-amber-100: #f4ebd2;
-  --color-amber-200: #eddcb2;
-  --color-amber-300: #e2c98a;
-  --color-amber-400: #d5b565;
-  --color-amber-500: #c5a059;
-  --color-amber-600: #ad8741;
-  --color-amber-700: #8a6820;
-  --color-amber-800: #6f5119;
-  --color-amber-900: #533b12;
-  --color-amber-950: #312106;
+  /* Emerald mapped to Clean Sage Accent */
+  --color-emerald-50: #f4f7f5;
+  --color-emerald-100: #e7efe9;
+  --color-emerald-200: #d2dfd6;
+  --color-emerald-300: #b0c7b7;
+  --color-emerald-400: #87aa93;
+  --color-emerald-500: #557a64;
+  --color-emerald-600: #466553;
+  --color-emerald-700: #395243;
+  --color-emerald-800: #2d4135;
+  --color-emerald-900: #25352c;
+  --color-emerald-950: #121c17;
 
-  /* Explicit Pantone Color Tokens */
-  --color-pantone-cream: #faf7f2;
-  --color-pantone-cream-50: #fdfcf9;
-  --color-pantone-cream-100: #faf7f2;
-  --color-pantone-cream-200: #f4eee2;
-  --color-pantone-cream-300: #e8ded0;
-  --color-pantone-cream-400: #d5c6b0;
+  /* Warm Muted Sand & Gold Accents */
+  --color-amber-50: #faf8f5;
+  --color-amber-100: #f3ede2;
+  --color-amber-200: #e6dac5;
+  --color-amber-300: #d5c3a2;
+  --color-amber-400: #beaa80;
+  --color-amber-500: #a89467;
+  --color-amber-600: #8f7c52;
+  --color-amber-700: #756441;
+  --color-amber-800: #5d5035;
+  --color-amber-900: #473d2a;
+  --color-amber-950: #282216;
 
-  --color-pantone-mint: #3eb489;
-  --color-pantone-mint-50: #f0f9f5;
-  --color-pantone-mint-100: #dcf2e8;
-  --color-pantone-mint-200: #bde5d2;
-  --color-pantone-mint-300: #8fd2b5;
-  --color-pantone-mint-400: #5bbd96;
-  --color-pantone-mint-500: #3eb489;
-  --color-pantone-mint-600: #2d946e;
-  --color-pantone-mint-700: #257659;
-  --color-pantone-mint-800: #205e48;
-  --color-pantone-mint-900: #163a2a;
-  --color-pantone-mint-950: #0d2c22;
+  /* Explicit Theme Color Tokens */
+  --color-pantone-cream: #ffffff;
+  --color-pantone-cream-50: #ffffff;
+  --color-pantone-cream-100: #f8fafc;
+  --color-pantone-cream-200: #f1f5f9;
+  --color-pantone-cream-300: #e2e8f0;
+  --color-pantone-cream-400: #cbd5e1;
 
-  --color-pantone-forest: #11231a;
-  --color-pantone-forest-dark: #0a1811;
-  --color-pantone-forest-light: #163a2a;
+  --color-pantone-mint: #557a64;
+  --color-pantone-mint-50: #f4f7f5;
+  --color-pantone-mint-100: #e7efe9;
+  --color-pantone-mint-200: #d2dfd6;
+  --color-pantone-mint-300: #b0c7b7;
+  --color-pantone-mint-400: #87aa93;
+  --color-pantone-mint-500: #557a64;
+  --color-pantone-mint-600: #466553;
+  --color-pantone-mint-700: #395243;
+  --color-pantone-mint-800: #2d4135;
+  --color-pantone-mint-900: #25352c;
+  --color-pantone-mint-950: #121c17;
 
-  --color-pantone-gold: #c5a059;
-  --color-pantone-gold-light: #eddcb2;
-  --color-pantone-champagne: #f4ebd2;
-  --color-pantone-sand: #e8ded0;
+  --color-pantone-forest: #0f172a;
+  --color-pantone-forest-dark: #020617;
+  --color-pantone-forest-light: #1e293b;
+
+  --color-pantone-gold: #a89467;
+  --color-pantone-gold-light: #e6dac5;
+  --color-pantone-champagne: #f3ede2;
+  --color-pantone-sand: #e2e8f0;
 
   /* Masjid App Brand Colors */
-  --color-masjid-navy: #11231a;
-  --color-masjid-navy-dark: #0a1811;
-  --color-masjid-emerald: #2d946e;
-  --color-masjid-emerald-light: #3eb489;
-  --color-masjid-gold: #c5a059;
-  --color-masjid-gold-light: #eddcb2;
+  --color-masjid-navy: #0f172a;
+  --color-masjid-navy-dark: #020617;
+  --color-masjid-emerald: #557a64;
+  --color-masjid-emerald-light: #87aa93;
+  --color-masjid-gold: #a89467;
+  --color-masjid-gold-light: #e6dac5;
 }
 
 :root {
-  --background: #faf7f2;
-  --foreground: #19261f;
+  --background: #ffffff;
+  --foreground: #0f172a;
 }
 
 html,
@@ -101,65 +114,55 @@ body {
   font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
 }
 
-/* Islamic Geometric Pattern background - Pantone Warm Cream with Mint & Champagne Gold Dots */
-.bg-islamic-pattern {
-  background-color: #faf7f2;
-  background-image: radial-gradient(rgba(45, 148, 110, 0.12) 1.5px, transparent 1.5px),
-    radial-gradient(rgba(197, 160, 89, 0.10) 1.5px, transparent 1.5px);
-  background-size: 32px 32px;
-  background-position: 0 0, 16px 16px;
-}
-
+/* Islamic Geometric Micro Pattern - Clean White & Subtle Sage Dots */
+.bg-islamic-pattern,
 .bg-islamic-pattern-light {
-  background-color: #faf7f2;
-  background-image: radial-gradient(rgba(45, 148, 110, 0.09) 1.5px, transparent 1.5px),
-    radial-gradient(rgba(197, 160, 89, 0.08) 1.5px, transparent 1.5px);
-  background-size: 28px 28px;
-  background-position: 0 0, 14px 14px;
+  background-color: #ffffff;
+  background-image: radial-gradient(rgba(85, 122, 100, 0.08) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
 }
 
 .bg-islamic-pattern-dark {
-  background-color: #11231a;
-  background-image: radial-gradient(rgba(62, 180, 137, 0.16) 1.2px, transparent 1.2px),
-    radial-gradient(rgba(197, 160, 89, 0.13) 1.2px, transparent 1.2px);
-  background-size: 32px 32px;
-  background-position: 0 0, 16px 16px;
+  background-color: #0b1410;
+  background-image: radial-gradient(rgba(135, 170, 147, 0.14) 1.2px, transparent 1.2px);
+  background-size: 28px 28px;
 }
 
-/* Glassmorphism Classes with warm cream and mint tints */
+/* Clean Minimalist Modern Glassmorphism */
 .glass-panel {
-  background: rgba(253, 251, 247, 0.88);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(222, 213, 196, 0.7);
-  box-shadow: 0 10px 30px -10px rgba(17, 35, 26, 0.06), 0 4px 6px -2px rgba(17, 35, 26, 0.03);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03);
 }
 
 .glass-panel-dark {
-  background: rgba(10, 24, 17, 0.85);
+  background: rgba(11, 20, 16, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(197, 160, 89, 0.22);
-  box-shadow: 0 20px 40px -15px rgba(5, 15, 10, 0.6);
+  border: 1px solid rgba(135, 170, 147, 0.2);
+  box-shadow: 0 20px 40px -15px rgba(2, 6, 23, 0.5);
 }
 
 .glass-pill {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(197, 160, 89, 0.3);
+  border: 1px solid rgba(226, 232, 240, 0.9);
 }
 
-/* Pantone Gradient Texts */
+/* Clean Sage Gradient Text */
 .gold-gradient-text {
-  background: linear-gradient(135deg, #f4ebd2 0%, #c5a059 50%, #8a6820 100%);
+  background: linear-gradient(135deg, #a89467 0%, #756441 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
+.sage-gradient-text,
 .mint-gradient-text,
 .emerald-gradient-text {
-  background: linear-gradient(135deg, #8fd2b5 0%, #3eb489 50%, #205e48 100%);
+  background: linear-gradient(135deg, #557a64 0%, #395243 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
