@@ -17,39 +17,57 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const rawEmail = String(credentials.email).toLowerCase().trim();
         const candidateEmail = rawEmail.includes("@")
           ? rawEmail
-          : `${rawEmail}@masjidabudzar.com`;
+          : `${rawEmail}@abudzar.sch.id`;
 
-        const user = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { email: rawEmail },
-              { email: candidateEmail },
-            ],
-          },
-        });
+        try {
+          const user = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { email: rawEmail },
+                { email: candidateEmail },
+                { email: `${rawEmail}@abudzar.sch.id` },
+                { email: `${rawEmail}@masjidabudzar.com` },
+              ],
+            },
+          });
 
-        if (!user || !user.isActive) return null;
-
-        const rawPassword = String(credentials.password);
-        let isValid = await bcrypt.compare(rawPassword, user.password);
-
-        // Friendly fallback for mobile keyboard auto-capitalization (e.g. "Admin123" -> "admin123")
-        if (!isValid && rawPassword.length > 0) {
-          const lowerFirst =
-            rawPassword.charAt(0).toLowerCase() + rawPassword.slice(1);
-          if (lowerFirst !== rawPassword) {
-            isValid = await bcrypt.compare(lowerFirst, user.password);
+          if (!user || !user.isActive) {
+            console.warn(`[AUTH] Login failed: User '${rawEmail}' not found or inactive.`);
+            return null;
           }
+
+          const rawPassword = String(credentials.password);
+          let isValid = await bcrypt.compare(rawPassword, user.password);
+
+          // Friendly fallback for mobile keyboard auto-capitalization (e.g. "Masjidabudzar" -> "masjidabudzar")
+          if (!isValid && rawPassword.length > 0) {
+            const lowerFirst =
+              rawPassword.charAt(0).toLowerCase() + rawPassword.slice(1);
+            if (lowerFirst !== rawPassword) {
+              isValid = await bcrypt.compare(lowerFirst, user.password);
+            }
+          }
+
+          // Case-insensitive password check fallback
+          if (!isValid) {
+            isValid = await bcrypt.compare(rawPassword.toLowerCase(), user.password);
+          }
+
+          if (!isValid) {
+            console.warn(`[AUTH] Login failed: Password mismatch for '${rawEmail}'.`);
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error("[AUTH] Database error during authorize:", error);
+          return null;
         }
-
-        if (!isValid) return null;
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       },
     }),
   ],
