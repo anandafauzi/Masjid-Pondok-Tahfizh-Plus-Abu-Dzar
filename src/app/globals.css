@@ -231,3 +231,65 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Print Media Styles for High-Quality A4 Poster & Document Export */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    font-size: 10pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force hide screen-only UI */
+  header,
+  footer,
+  nav,
+  .print\:hidden,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Force show print components */
+  .print\:block {
+    display: block !important;
+  }
+  .print\:flex {
+    display: flex !important;
+  }
+  .print\:table {
+    display: table !important;
+  }
+
+  /* Table rules for crisp printing */
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 1rem !important;
+  }
+  .print-table th,
+  .print-table td {
+    border: 1px solid #222222 !important;
+    padding: 5px 7px !important;
+    color: #000000 !important;
+    font-size: 8.5pt !important;
+  }
+  .print-table th {
+    background-color: #f0f0f0 !important;
+    font-weight: 700 !important;
+  }
+
+  /* Prevent page breaks inside cards or rows */
+  tr,
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

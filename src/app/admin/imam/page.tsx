@@ -31,6 +31,7 @@ import {
 import { DAYS_OF_WEEK, PRAYERS, WeeklyImamItem } from "@/types/weekly-imam";
 
 import { PetugasItem } from "@/types/petugas";
+import { ScheduleExportActions } from "@/components/schedule-export-actions";
 
 interface Rolling {
   id: string;
@@ -340,6 +341,22 @@ export default function AdminImamPage() {
         icon={Users}
         title="Imam &amp; Muadzin"
         description="Atur jadwal imam pekanan rutin (dengan opsi Tetap Selamanya), rotasi Subuh Jumat, serta jadwal pengganti harian."
+        action={
+          <ScheduleExportActions
+            type="imam"
+            mosqueName="Masjid Pondok Tahfizh Plus Abu Dzar"
+            schedules={schedules.map((s) => ({
+              id: s.id,
+              scheduleDate: s.scheduleDate,
+              prayerName: s.prayerName,
+              imamName: s.imamName,
+              muadzinName: s.muadzinName,
+              notes: s.notes,
+            }))}
+            rollingImamName={rolling.find((r) => r.isActive)?.imamName}
+            variant="admin"
+          />
+        }
       />
 
       {/* Navigation Tabs */}

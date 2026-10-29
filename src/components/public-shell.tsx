@@ -45,15 +45,15 @@ export function PublicShell({
   mosque?: PublicMosqueInfo;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-[#faf7f2] bg-islamic-pattern-light text-[#19261f]">
+    <div className="flex min-h-screen flex-col bg-[#faf7f2] bg-islamic-pattern-light text-[#19261f] print:bg-white print:text-black">
       {/* Top Banner Ribbon */}
-      <div className="border-b border-[#e6decb] bg-[#f4eee2] py-1.5 text-center text-[11px] font-medium tracking-wider text-[#6a5e46]">
+      <div className="border-b border-[#e6decb] bg-[#f4eee2] py-1.5 text-center text-[11px] font-medium tracking-wider text-[#6a5e46] print:hidden">
         <span className="font-arabic text-xs mr-2 font-bold text-[#8a6820]">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span>
         <span className="text-[#526358]">• Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
       </div>
 
       {/* Main Glass Header */}
-      <header className="sticky top-0 z-40 border-b border-[#ded5c4] bg-[#fdfbf7]/95 text-[#19261f] shadow-sm backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-[#ded5c4] bg-[#fdfbf7]/95 text-[#19261f] shadow-sm backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           {/* Logo / Mosque Title */}
           <Link href="/" className="group flex items-center gap-3">
@@ -137,12 +137,12 @@ export function PublicShell({
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 pb-28 sm:px-6 sm:pb-12 lg:px-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 pb-28 sm:px-6 sm:pb-12 lg:px-8 print:p-0 print:m-0 print:max-w-none">
         {children}
       </main>
 
       {/* Modern Luxury Pantone Cream Footer */}
-      <footer className="mt-auto border-t border-[#e2d9c8] bg-[#f5f0e4]/90 backdrop-blur-md pb-24 sm:pb-0">
+      <footer className="mt-auto border-t border-[#e2d9c8] bg-[#f5f0e4]/90 backdrop-blur-md pb-24 sm:pb-0 print:hidden">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <div className="grid gap-8 md:grid-cols-3">
             {/* Mosque Identity */}
@@ -232,7 +232,9 @@ export function PublicShell({
       </footer>
 
       {/* Mobile Sticky Shortcut Taskbar */}
-      <MobilePrayerTaskbar />
+      <div className="print:hidden">
+        <MobilePrayerTaskbar />
+      </div>
     </div>
   );
 }
