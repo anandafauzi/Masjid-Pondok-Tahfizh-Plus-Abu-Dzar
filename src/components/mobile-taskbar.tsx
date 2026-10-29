@@ -877,11 +877,11 @@ export function MobilePrayerTaskbar() {
                     <>
                       <div className="flex items-start gap-2">
                         <span className="font-bold text-white shrink-0">🤖 Android:</span>
-                        <span>Ketuk menu titik tiga <strong>⋮</strong> di pojok kanan atas browser Chrome → Pilih <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Instal Aplikasi"</strong>.</span>
+                        <span>Ketuk menu titik tiga <strong>⋮</strong> di pojok kanan atas browser Chrome → Pilih <strong>&quot;Tambahkan ke Layar Utama&quot;</strong> atau <strong>&quot;Instal Aplikasi&quot;</strong>.</span>
                       </div>
                       <div className="flex items-start gap-2">
                         <span className="font-bold text-white shrink-0">🍏 iPhone:</span>
-                        <span>Ketuk tombol <strong>Bagikan (Share)</strong> <Share2 className="inline h-3 w-3 text-white" /> di bar bawah Safari → Pilih <strong>"Tambah ke Layar Utama"</strong> (Add to Home Screen).</span>
+                        <span>Ketuk tombol <strong>Bagikan (Share)</strong> <Share2 className="inline h-3 w-3 text-white" /> di bar bawah Safari → Pilih <strong>&quot;Tambah ke Layar Utama&quot;</strong> (Add to Home Screen).</span>
                       </div>
                     </>
                   )}
