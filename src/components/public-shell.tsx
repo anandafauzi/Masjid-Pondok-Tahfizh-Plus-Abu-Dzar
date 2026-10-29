@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MASJID_INFO } from "@/utils/constants";
+import { MobilePrayerTaskbar } from "@/components/mobile-taskbar";
 import {
   Compass,
   Tv,
@@ -136,12 +137,12 @@ export function PublicShell({
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 pb-28 sm:px-6 sm:pb-12 lg:px-8">
         {children}
       </main>
 
       {/* Modern Luxury Pantone Cream Footer */}
-      <footer className="mt-auto border-t border-[#e2d9c8] bg-[#f5f0e4]/90 backdrop-blur-md">
+      <footer className="mt-auto border-t border-[#e2d9c8] bg-[#f5f0e4]/90 backdrop-blur-md pb-24 sm:pb-0">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <div className="grid gap-8 md:grid-cols-3">
             {/* Mosque Identity */}
@@ -229,6 +230,9 @@ export function PublicShell({
           </div>
         </div>
       </footer>
+
+      {/* Mobile Sticky Shortcut Taskbar */}
+      <MobilePrayerTaskbar />
     </div>
   );
 }

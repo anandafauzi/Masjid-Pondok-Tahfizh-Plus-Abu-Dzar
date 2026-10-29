@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PublicShell } from "@/components/public-shell";
+import { MuadzinSelectorCard } from "@/components/muadzin-selector";
 import type { TvData } from "@/lib/public-data";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import { Timer, Clock, Sparkles, CheckCircle2 } from "lucide-react";
@@ -253,6 +254,9 @@ export default function AdzanIqamahPage() {
               </table>
             </div>
           </section>
+
+          {/* Muadzin Audio & Notification Settings Card */}
+          <MuadzinSelectorCard />
         </>
       )}
     </PublicShell>

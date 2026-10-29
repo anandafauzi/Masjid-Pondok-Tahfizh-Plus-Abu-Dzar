@@ -17,3 +17,4 @@ export const ROLE_LABELS: Record<PetugasRole, { label: string; badgeColor: strin
   PEMATERI: { label: "Pemateri Kajian", badgeColor: "bg-[#4361ee]/10 text-[#2740b0] border-[#4361ee]/30" },
   LAINNYA: { label: "Lainnya", badgeColor: "bg-slate-100 text-slate-700 border-slate-300" },
 };
+
