@@ -72,13 +72,15 @@ async function main() {
     });
   }
 
-  const hashedPassword = await bcrypt.hash("admin123", 10);
+  const hashedPassword = await bcrypt.hash("masjidabudzar", 10);
   await prisma.user.upsert({
-    where: { email: "admin@masjidabudzar.com" },
-    update: {},
+    where: { email: "fauzi@abudzar.sch.id" },
+    update: {
+      password: hashedPassword,
+    },
     create: {
-      name: "Super Admin",
-      email: "admin@masjidabudzar.com",
+      name: "Fauzi",
+      email: "fauzi@abudzar.sch.id",
       password: hashedPassword,
       role: "SUPER_ADMIN",
       isActive: true,
@@ -214,7 +216,7 @@ async function main() {
   }
 
   console.log("Seeding completed!");
-  console.log("Default admin: admin@masjidabudzar.com / admin123");
+  console.log("Default admin: fauzi@abudzar.sch.id");
 }
 
 main()
