@@ -9,8 +9,8 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#0b132b",
-  "theme_color": "#0b132b",
+  "background_color": "#ffffff",
+  "theme_color": "#557a64",
   "orientation": "any",
   "categories": ["education", "lifestyle", "utilities"],
   "prefer_related_applications": false,
@@ -38,6 +38,36 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jadwal Shalat & Iqamah",
+      "short_name": "Shalat",
+      "description": "Cek jadwal waktu shalat dan jeda iqamah",
+      "url": "/jadwal-shalat",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Jadwal Imam Pekanan",
+      "short_name": "Imam",
+      "description": "Penugasan imam dan muadzin harian",
+      "url": "/jadwal-imam",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Kompas Arah Kiblat",
+      "short_name": "Kiblat",
+      "description": "Penunjuk arah Ka'bah Makkah",
+      "url": "/kiblat",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Panel Pengurus DKM",
+      "short_name": "Admin",
+      "description": "Akses khusus admin masjid",
+      "url": "/admin",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

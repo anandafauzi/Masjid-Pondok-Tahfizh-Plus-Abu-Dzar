@@ -1,4 +1,4 @@
-const CACHE = "masjid-cache-v4";
+const CACHE = "masjid-cache-v5";
 const PRECACHE = [
   "/",
   "/tv",
@@ -6,6 +6,7 @@ const PRECACHE = [
   "/jadwal-imam",
   "/kiblat",
   "/manifest.json",
+  "/manifest-admin.json",
   "/offline.html",
   "/icon-192.png",
   "/icon-512.png",

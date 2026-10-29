@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   CalendarClock,
@@ -24,6 +24,9 @@ import {
   X,
   ExternalLink,
   Sparkles,
+  Smartphone,
+  Share2,
+  CheckCircle2,
 } from "lucide-react";
 
 interface NavItem {
@@ -59,6 +62,43 @@ export function AdminShell({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window.navigator as any).standalone === true
+      ) {
+        setIsStandalone(true);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handleBeforeInstall = (e: any) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+      };
+      window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+      return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+    }
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice.outcome === "accepted") {
+        setDeferredPrompt(null);
+        setIsStandalone(true);
+      }
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
 
   const items = NAV.filter(
     (item) => !item.superOnly || user.role === "SUPER_ADMIN"
@@ -106,8 +146,19 @@ export function AdminShell({
       </nav>
 
       {/* Footer Profile & Logout */}
-      <div className="border-t border-slate-100 p-3 bg-slate-50/50">
-        <div className="mb-2 px-2.5 py-2 rounded-xl bg-white border border-slate-200/80 shadow-sm">
+      <div className="border-t border-slate-100 p-3 bg-slate-50/50 space-y-2">
+        {!isStandalone && (
+          <button
+            type="button"
+            onClick={handleInstallApp}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-sage-200 bg-sage-50 px-3 py-2 text-xs font-bold text-sage-800 hover:bg-sage-100 transition-colors shadow-sm"
+          >
+            <Smartphone className="h-4 w-4 text-sage-600" />
+            <span>Pasang App Admin di HP</span>
+          </button>
+        )}
+
+        <div className="px-2.5 py-2 rounded-xl bg-white border border-slate-200/80 shadow-sm">
           <p className="truncate text-xs font-bold text-slate-900">{user.name}</p>
           <p className="truncate text-[11px] text-slate-500">{user.email}</p>
           <span className="mt-1 inline-block rounded-md bg-sage-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sage-700 border border-sage-200">
@@ -163,6 +214,18 @@ export function AdminShell({
           </div>
 
           <div className="flex items-center gap-2">
+            {!isStandalone && (
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-sage-200 bg-sage-50 px-2.5 py-1.5 text-xs font-bold text-sage-800 hover:bg-sage-100 transition-colors"
+                title="Pasang aplikasi admin langsung ke layar utama HP / desktop"
+              >
+                <Smartphone className="h-3.5 w-3.5 text-sage-600" />
+                <span>Pasang App Admin</span>
+              </button>
+            )}
+
             <Link
               href="/"
               target="_blank"
@@ -187,6 +250,77 @@ export function AdminShell({
 
         <main className="p-4 md:p-8 max-w-7xl mx-auto">{children}</main>
       </div>
+
+      {/* Install Admin Guide Modal */}
+      {showInstallGuide && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowInstallGuide(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sage-600 text-white shadow-sm">
+                  <Smartphone className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    Pasang Aplikasi Khusus Admin
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Ikon langsung membuka Panel Admin
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInstallGuide(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 text-xs text-slate-700">
+              <div className="rounded-xl bg-sage-50 border border-sage-200/80 p-3 text-sage-900">
+                <p className="font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-sage-600" />
+                  <span>Aplikasi Terpisah dari Web Jamaah</span>
+                </p>
+                <p className="mt-1 text-[11px] text-slate-600 leading-relaxed">
+                  Dengan memasang aplikasi ini dari halaman Admin / Login, ikon di layar utama HP Anda akan dinamai <strong>&quot;Admin DKM&quot;</strong> dan otomatis membuka panel admin secara mandiri tanpa membuka dashboard umum jamaah.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-slate-900 shrink-0">🤖 Android (Chrome):</span>
+                  <span>Ketuk menu titik tiga <strong>⋮</strong> di pojok kanan atas browser → Pilih <strong>&quot;Tambahkan ke Layar Utama&quot;</strong> atau <strong>&quot;Instal Aplikasi&quot;</strong>.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-bold text-slate-900 shrink-0">🍏 iPhone (Safari):</span>
+                  <span>Ketuk ikon <strong>Bagikan</strong> <Share2 className="inline h-3.5 w-3.5 text-slate-800" /> di bar bawah Safari → Pilih <strong>&quot;Tambah ke Layar Utama&quot;</strong> (Add to Home Screen).</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-3 border-t border-slate-100 text-right">
+              <button
+                type="button"
+                onClick={() => setShowInstallGuide(false)}
+                className="rounded-xl bg-sage-600 px-4 py-2 text-xs font-bold text-white hover:bg-sage-700 active:scale-95 transition-all shadow-sm"
+              >
+                Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

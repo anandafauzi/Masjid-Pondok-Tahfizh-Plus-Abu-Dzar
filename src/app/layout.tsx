@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0d1e16",
+  themeColor: "#557a64",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -47,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${plusJakarta.variable} ${amiri.variable}`}>
-      <body className="min-h-screen bg-[#faf7f2] text-[#19261f] font-sans antialiased selection:bg-[#3eb489] selection:text-white">
+      <body className="min-h-screen bg-white text-slate-900 font-sans antialiased selection:bg-sage-600 selection:text-white">
         <Providers>{children}</Providers>
       </body>
     </html>

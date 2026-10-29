@@ -5,7 +5,18 @@ import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-import { Lock, Mail, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import {
+  Lock,
+  Mail,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Smartphone,
+  Download,
+  CheckCircle2,
+  Share2,
+  ShieldCheck,
+} from "lucide-react";
 
 function LoginForm() {
   const { status } = useSession();
@@ -17,11 +28,48 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/admin";
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
+
   useEffect(() => {
     if (status === "authenticated") {
       router.replace(callbackUrl);
     }
   }, [status, router, callbackUrl]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window.navigator as any).standalone === true
+      ) {
+        setIsStandalone(true);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handleBeforeInstall = (e: any) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+      };
+      window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+      return () => {
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      };
+    }
+  }, []);
+
+  const handleInstallAdminApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === "accepted") {
+      setDeferredPrompt(null);
+      setIsStandalone(true);
+      toast.success("Aplikasi Admin berhasil dipasang ke Layar Utama!");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +202,56 @@ function LoginForm() {
           </button>
         </form>
 
-        <div className="mt-8 text-center border-t border-slate-100 pt-4">
+        {/* PWA Dedicated Admin Install Card */}
+        <div className="mt-6 rounded-2xl border border-sage-200/80 bg-sage-50/60 p-4 text-left">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sage-600 text-white shadow-sm">
+                <Smartphone className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                  <span>Pasang Aplikasi Admin</span>
+                  <ShieldCheck className="h-3.5 w-3.5 text-sage-600" />
+                </p>
+                <p className="text-[11px] text-slate-600">
+                  Membuka langsung Panel Admin (bukan dashboard jamaah)
+                </p>
+              </div>
+            </div>
+
+            {deferredPrompt && (
+              <button
+                type="button"
+                onClick={handleInstallAdminApp}
+                className="inline-flex items-center gap-1 rounded-xl bg-sage-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-sage-700 active:scale-95 transition-all shrink-0 animate-pulse"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Instal</span>
+              </button>
+            )}
+          </div>
+
+          <div className="mt-3 pt-2.5 border-t border-sage-200/60 text-[11px] text-slate-600 space-y-1">
+            {isStandalone ? (
+              <div className="flex items-center gap-1.5 text-sage-800 font-semibold">
+                <CheckCircle2 className="h-3.5 w-3.5 text-sage-600" />
+                <span>Aplikasi Admin telah aktif dalam mode layar penuh HP.</span>
+              </div>
+            ) : (
+              <>
+                <p>
+                  <strong className="text-slate-800">🤖 Android:</strong> Ketuk menu titik tiga <strong>⋮</strong> di Chrome → <strong>&quot;Tambahkan ke Layar Utama&quot;</strong> atau <strong>&quot;Instal Aplikasi&quot;</strong>.
+                </p>
+                <p>
+                  <strong className="text-slate-800">🍏 iPhone:</strong> Ketuk tombol <strong>Bagikan</strong> <Share2 className="inline h-3 w-3 text-slate-700" /> di Safari → <strong>&quot;Tambah ke Layar Utama&quot;</strong>.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 text-center border-t border-slate-100 pt-4">
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors"
