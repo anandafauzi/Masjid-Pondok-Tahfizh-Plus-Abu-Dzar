@@ -716,10 +716,10 @@ export default function TVDisplayPage() {
         {/* SLIDE 0: MASTER PRAYER TIMES + SPOTLIGHT CARD */}
         {slide === 0 && (
           <div className="w-full max-w-7xl mx-auto h-full flex flex-col justify-center animate-fade-in">
-            <div className="grid h-full gap-3 sm:gap-6 lg:grid-cols-12 lg:gap-8 items-stretch">
+            <div className="grid h-full gap-3 sm:gap-6 lg:grid-cols-12 lg:gap-8 items-stretch overflow-hidden">
               {/* Left Column: 7 Prayers Master Cards */}
-              <div className="lg:col-span-7 h-full flex flex-col justify-between rounded-3xl border border-[#ded5c4] bg-white/95 p-3 backdrop-blur-2xl shadow-xl sm:p-6">
-                <div className="mb-3 flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-3 sm:mb-4 sm:pb-4">
+              <div className="lg:col-span-7 h-full flex flex-col justify-between rounded-3xl border border-[#ded5c4] bg-white/95 p-3.5 backdrop-blur-2xl shadow-xl sm:p-6 overflow-hidden">
+                <div className="mb-2.5 flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-2.5 sm:mb-3 sm:pb-3 shrink-0">
                   <div className="flex items-center gap-2 text-base font-bold text-[#19261f] sm:text-xl">
                     <Clock className="h-4 w-4 text-[#2d946e] sm:h-5 sm:w-5" />
                     <span>Jadwal Shalat Hari Ini</span>
@@ -729,7 +729,7 @@ export default function TVDisplayPage() {
                   </span>
                 </div>
 
-                <div className="space-y-1 sm:space-y-2 flex-1 flex flex-col justify-between">
+                <div className="space-y-1 sm:space-y-1.5 flex-1 flex flex-col justify-between min-h-0">
                   {PRAYER_LIST.map(({ key, label, ar }) => {
                     const isNext =
                       !data.nextPrayer.tomorrow && key === data.nextPrayer.key;
@@ -738,7 +738,7 @@ export default function TVDisplayPage() {
                     return (
                       <div
                         key={key}
-                        className={`flex items-center justify-between gap-2 rounded-2xl px-3 py-1.5 transition-all sm:px-6 sm:py-2.5 ${
+                        className={`flex items-center justify-between gap-2 rounded-2xl px-3 py-1.5 transition-all flex-1 min-h-0 sm:px-5 sm:py-2 ${
                           isNext
                             ? "border border-[#3eb489] bg-gradient-to-r from-[#eef8f3] to-white shadow-lg ring-2 ring-[#3eb489]/30 scale-[1.01]"
                             : "border border-[#ded5c4]/60 bg-[#fbf9f4] hover:bg-white"
@@ -775,9 +775,9 @@ export default function TVDisplayPage() {
               </div>
 
               {/* Right Column: Next Prayer Spotlight + Imam Info */}
-              <div className="lg:col-span-5 h-full flex flex-col justify-between gap-3 sm:gap-6">
+              <div className="lg:col-span-5 h-full flex flex-col justify-between gap-3 sm:gap-6 overflow-hidden">
                 {/* Next Prayer Glowing Card */}
-                <div className="flex-1 flex flex-col justify-between rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#eef8f3] via-[#f7fbf8] to-[#e8f6ef] p-4 text-[#19261f] backdrop-blur-2xl shadow-xl sm:p-7">
+                <div className="flex-1 flex flex-col justify-between rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#eef8f3] via-[#f7fbf8] to-[#e8f6ef] p-4 text-[#19261f] backdrop-blur-2xl shadow-xl sm:p-6 overflow-hidden">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="inline-block rounded-full bg-[#faf4e6] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#7c6630] border border-[#ecd8a6] sm:px-3.5 sm:text-xs">
@@ -819,7 +819,7 @@ export default function TVDisplayPage() {
                 </div>
 
                 {/* Imam & Muadzin Today Snippet */}
-                <div className="rounded-3xl border border-[#ded5c4] bg-white/95 p-4 shadow-xl flex flex-col justify-between sm:p-5 text-[#19261f]">
+                <div className="rounded-3xl border border-[#ded5c4] bg-white/95 p-3.5 shadow-xl flex flex-col justify-between sm:p-4 text-[#19261f] shrink-0">
                   <div className="flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-2">
                     <div className="flex items-center gap-2 text-sm font-bold text-[#19261f] sm:text-base">
                       <Users className="h-4 w-4 text-[#2d946e]" />
@@ -829,23 +829,23 @@ export default function TVDisplayPage() {
                   </div>
 
                   {data.imamToday.length === 0 ? (
-                    <div className="my-auto text-center py-4">
+                    <div className="my-auto text-center py-3">
                       <p className="text-[#5a685e] text-xs sm:text-sm">
                         Jadwal petugas shalat harian tertera di papan informasi.
                       </p>
                     </div>
                   ) : (
-                    <div className="mt-2 space-y-1.5 sm:mt-2.5">
+                    <div className="mt-2 space-y-1 sm:mt-2">
                       {data.imamToday.slice(0, 4).map((s) => (
                         <div
                           key={s.id}
-                          className="flex items-center justify-between gap-2 rounded-xl bg-[#fbf9f4] border border-[#ded5c4]/60 px-2.5 py-1.5 text-xs sm:px-3.5 sm:py-2 sm:text-sm"
+                          className="flex items-center justify-between gap-2 rounded-xl bg-[#fbf9f4] border border-[#ded5c4]/60 px-2.5 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm"
                         >
                           <span className="w-14 shrink-0 font-bold text-[#8a6820] sm:w-16">
                             {s.prayerName}
                           </span>
-                          <div className="min-w-0 text-right">
-                            <span className="block truncate font-semibold text-[#19261f] sm:inline">
+                          <div className="min-w-0 text-right truncate">
+                            <span className="font-semibold text-[#19261f]">
                               {s.imamName}
                             </span>
                             <span className="ml-1 text-[10px] text-[#5a685e] sm:ml-2 sm:text-xs">
@@ -865,54 +865,80 @@ export default function TVDisplayPage() {
         {/* SLIDE 1: PRAYER & IQAMAH MATRIX */}
         {slide === 1 && (
           <div className="w-full max-w-7xl mx-auto h-full flex flex-col justify-center animate-fade-in">
-            <div className="w-full rounded-3xl border border-[#ded5c4] bg-white/95 p-4 sm:p-7 lg:p-8 backdrop-blur-2xl shadow-xl flex flex-col justify-between">
-              <div className="mb-3 text-center sm:mb-5">
-                <span className="rounded-full bg-[#3eb489]/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1e6149] border border-[#3eb489]/30 sm:px-4 sm:text-xs">
+            <div className="w-full h-full rounded-3xl border border-[#ded5c4] bg-white/95 p-3.5 sm:p-6 lg:p-7 backdrop-blur-2xl shadow-xl flex flex-col justify-between overflow-hidden">
+              {/* Header */}
+              <div className="shrink-0 text-center pb-2 border-b border-[#ded5c4]/60">
+                <span className="inline-block rounded-full bg-[#3eb489]/15 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1e6149] border border-[#3eb489]/30 sm:px-3.5 sm:py-1 sm:text-xs">
                   Waktu &amp; Iqamah
                 </span>
-                <h2 className="mt-1.5 text-2xl font-black text-[#19261f] sm:text-3xl md:text-4xl">
+                <h2 className="mt-1 text-xl font-black text-[#19261f] sm:text-2xl lg:text-3xl">
                   Jadwal Shalat &amp; Iqamah
                 </h2>
-                <p className="mt-1 text-xs text-[#5a685e] sm:text-sm">
+                <p className="text-[11px] text-[#5a685e] sm:text-xs">
                   Waktu hitung mundur iqamah dimulai otomatis saat waktu shalat tiba
                 </p>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-[#ded5c4] bg-[#fbf9f4]">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-[#ded5c4] bg-[#f4eee2] text-xs font-bold text-[#19261f] sm:text-base">
-                      <th className="px-4 py-2.5 sm:px-8 sm:py-3.5">Waktu Shalat</th>
-                      <th className="px-4 py-2.5 text-center sm:px-8 sm:py-3.5">Waktu Adzan</th>
-                      <th className="px-4 py-2.5 text-center sm:px-8 sm:py-3.5">Waktu Iqamah</th>
-                      <th className="px-4 py-2.5 text-right sm:px-8 sm:py-3.5">Jeda Tunggu</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#ded5c4] text-[#19261f]">
-                    {data.iqamahEvents.map((e) => (
-                      <tr
-                        key={e.key}
-                        className="text-base font-semibold transition-colors hover:bg-white sm:text-xl lg:text-2xl"
-                      >
-                        <td className="flex items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-8 sm:py-3.5">
-                          <span className="font-arabic text-base text-[#8a6820] sm:text-xl">
-                            {PRAYER_NAMES_ARABIC[e.key as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
-                          </span>
-                          <span className="text-[#19261f] font-bold">{e.label}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-center font-mono font-bold text-[#19261f] sm:px-8 sm:py-3.5">
-                          {e.adhanTime}
-                        </td>
-                        <td className="px-4 py-2.5 text-center font-mono font-black text-[#205e48] sm:px-8 sm:py-3.5">
-                          {e.iqamahTime}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-mono text-[10px] text-[#748479] sm:px-8 sm:py-3.5 sm:text-sm">
-                          {e.mode === "FIXED_TIME" ? "Waktu Tetap" : `${e.label === "Magrib" ? "5" : "15-20"} Menit`}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* Symmetrical Table Header */}
+              <div className="shrink-0 my-2 grid grid-cols-12 gap-2 sm:gap-4 rounded-xl border border-[#ded5c4] bg-[#f4eee2] px-3 py-2 sm:px-6 sm:py-2.5 text-xs font-bold uppercase tracking-wider text-[#7c6630]">
+                <div className="col-span-4 flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-[#8a6820]" />
+                  <span>Waktu Shalat</span>
+                </div>
+                <div className="col-span-3 text-center border-l border-[#ded5c4] pl-2">
+                  <span>Waktu Adzan</span>
+                </div>
+                <div className="col-span-3 text-center border-l border-[#ded5c4] pl-2">
+                  <span>Waktu Iqamah</span>
+                </div>
+                <div className="col-span-2 text-right border-l border-[#ded5c4] pr-2">
+                  <span>Jeda Tunggu</span>
+                </div>
+              </div>
+
+              {/* Rows */}
+              <div className="flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5 min-h-0 overflow-hidden">
+                {data.iqamahEvents.map((e) => (
+                  <div
+                    key={e.key}
+                    className="grid grid-cols-12 gap-2 sm:gap-4 items-center flex-1 rounded-2xl border border-[#ded5c4] bg-[#fbf9f4] px-3 py-1.5 sm:px-6 sm:py-2 hover:bg-white transition-colors shadow-sm"
+                  >
+                    <div className="col-span-4 flex items-center gap-2.5 sm:gap-4 min-w-0">
+                      <span className="w-10 sm:w-14 shrink-0 font-arabic text-base sm:text-xl text-[#8a6820]">
+                        {PRAYER_NAMES_ARABIC[e.key as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
+                      </span>
+                      <div className="min-w-0 font-bold text-sm sm:text-lg lg:text-xl text-[#19261f] truncate">
+                        {e.label}
+                      </div>
+                    </div>
+
+                    <div className="col-span-3 text-center border-l border-[#ded5c4]/70 pl-2">
+                      <span className="font-mono text-base sm:text-xl lg:text-2xl font-bold text-[#19261f]">
+                        {e.adhanTime}
+                      </span>
+                      <span className="ml-1 text-[10px] sm:text-xs text-[#6d7c71]">WIB</span>
+                    </div>
+
+                    <div className="col-span-3 text-center border-l border-[#ded5c4]/70 pl-2">
+                      <span className="font-mono text-base sm:text-xl lg:text-2xl font-black text-[#1e6149]">
+                        {e.iqamahTime}
+                      </span>
+                      <span className="ml-1 text-[10px] sm:text-xs text-[#2d946e]">WIB</span>
+                    </div>
+
+                    <div className="col-span-2 text-right border-l border-[#ded5c4]/70 pr-1">
+                      <span className="inline-block rounded-md bg-[#eaf6f0] px-2 py-0.5 font-mono text-[10px] sm:text-xs font-semibold text-[#1e6149] border border-[#bde5d2]">
+                        {e.mode === "FIXED_TIME" ? "Tetap" : `${e.label === "Magrib" ? "5" : "15-20"} Mnt`}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="shrink-0 flex items-center justify-between text-[11px] sm:text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
+                <span>Pondok Pesantren Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
+                <span className="font-semibold text-[#1e6149]">Metode Kemenag RI (+2 Menit Ihtiyat)</span>
               </div>
             </div>
           </div>
@@ -921,47 +947,102 @@ export default function TVDisplayPage() {
         {/* SLIDE 2: IMAM & MUADZIN ROSTER */}
         {slide === 2 && (
           <div className="w-full max-w-7xl mx-auto h-full flex flex-col justify-center animate-fade-in">
-            <div className="w-full rounded-3xl border border-[#ded5c4] bg-white/95 p-4 sm:p-7 lg:p-8 backdrop-blur-2xl shadow-xl flex flex-col justify-between">
-              <div className="mb-3 text-center sm:mb-5">
-                <span className="rounded-full bg-[#3eb489]/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1e6149] border border-[#3eb489]/30 sm:px-4 sm:text-xs">
-                  Petugas Shalat Berjamaah
-                </span>
-                <h2 className="mt-1.5 text-2xl font-black text-[#19261f] sm:text-3xl md:text-4xl">
+            <div className="w-full h-full rounded-3xl border border-[#ded5c4] bg-white/95 p-3.5 sm:p-6 lg:p-7 backdrop-blur-2xl shadow-xl flex flex-col justify-between overflow-hidden">
+              {/* Header */}
+              <div className="shrink-0 text-center pb-2 border-b border-[#ded5c4]/60">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-[#3eb489]/15 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#1e6149] border border-[#3eb489]/30 sm:px-3.5 sm:py-1 sm:text-xs">
+                  <Users className="h-3.5 w-3.5 text-[#2d946e]" />
+                  <span>Petugas Shalat Berjamaah</span>
+                </div>
+                <h2 className="mt-1 text-xl font-black text-[#19261f] sm:text-2xl lg:text-3xl">
                   Jadwal Imam &amp; Muadzin Hari Ini
                 </h2>
-                <p className="mt-1 text-xs text-[#5a685e] sm:text-sm">
-                  Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor
+                <p className="text-[11px] text-[#5a685e] sm:text-xs">
+                  Pondok Pesantren Tahfizh Plus Abu Dzar • Rumpin, Bogor
                 </p>
               </div>
 
-              <div className="grid gap-2 sm:gap-3">
-                {data.imamToday.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex flex-col gap-2 rounded-2xl border border-[#ded5c4] bg-[#fbf9f4] px-4 py-2.5 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-3.5"
-                  >
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#c5a059]/20 text-sm font-bold text-[#8a6820] sm:h-11 sm:w-11 sm:text-base">
-                        {s.prayerName.slice(0, 3)}
-                      </div>
-                      <div>
-                        <p className="text-base font-bold text-[#19261f] sm:text-xl">{s.prayerName}</p>
-                        <p className="text-[10px] text-[#5a685e] sm:text-xs">Shalat Fardhu Berjamaah</p>
-                      </div>
-                    </div>
+              {/* Symmetrical Table Header */}
+              <div className="shrink-0 my-2 grid grid-cols-12 gap-2 sm:gap-4 rounded-xl border border-[#ded5c4] bg-[#f4eee2] px-3 py-2 sm:px-6 sm:py-2.5 text-xs font-bold uppercase tracking-wider text-[#7c6630]">
+                <div className="col-span-3 flex items-center gap-2">
+                  <Clock className="h-3.5 w-3.5 text-[#8a6820]" />
+                  <span>Waktu Shalat</span>
+                </div>
+                <div className="col-span-5 flex items-center gap-2 border-l border-[#ded5c4] pl-3 sm:pl-4">
+                  <Users className="h-3.5 w-3.5 text-[#2d946e]" />
+                  <span>Imam Rawatib</span>
+                </div>
+                <div className="col-span-4 flex items-center gap-2 border-l border-[#ded5c4] pl-3 sm:pl-4">
+                  <Volume2 className="h-3.5 w-3.5 text-[#457c6b]" />
+                  <span>Muadzin / Bilal</span>
+                </div>
+              </div>
 
-                    <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:items-center sm:gap-12">
-                      <div className="text-right">
-                        <p className="text-[9px] uppercase font-bold text-[#2d946e] sm:text-xs">Imam</p>
-                        <p className="truncate text-sm font-bold text-[#19261f] sm:text-lg">{s.imamName}</p>
+              {/* Symmetrical Table Rows */}
+              <div className="flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5 min-h-0 overflow-hidden">
+                {data.imamToday.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#ded5c4] bg-[#fbf9f4] p-6 text-center">
+                    <Users className="h-8 w-8 text-[#8a6820]/40 mb-2" />
+                    <p className="text-base font-bold text-[#19261f]">Belum Ada Jadwal Petugas Khusus Hari Ini</p>
+                    <p className="text-xs text-[#5a685e] mt-1">Imam dan Muadzin diampu oleh asatidzah &amp; santri Pondok Tahfizh Abu Dzar.</p>
+                  </div>
+                ) : (
+                  data.imamToday.map((s) => (
+                    <div
+                      key={s.id}
+                      className="grid grid-cols-12 gap-2 sm:gap-4 items-center flex-1 rounded-2xl border border-[#ded5c4] bg-[#fbf9f4] px-3 py-1.5 sm:px-6 sm:py-2 hover:bg-white transition-colors shadow-sm"
+                    >
+                      {/* Col 1: Waktu Shalat */}
+                      <div className="col-span-3 flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                        <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-[#c5a059]/20 font-mono text-xs sm:text-sm font-black text-[#8a6820] shadow-inner">
+                          {s.prayerName.slice(0, 3).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-black text-[#19261f] sm:text-base lg:text-lg leading-tight truncate">
+                            {s.prayerName}
+                          </div>
+                          <div className="text-[10px] sm:text-xs text-[#748479] truncate">
+                            Shalat Fardhu
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right sm:border-l sm:border-[#ded5c4] sm:pl-10">
-                        <p className="text-[9px] uppercase font-bold text-[#457c6b] sm:text-xs">Muadzin</p>
-                        <p className="truncate text-sm font-bold text-[#19261f] sm:text-lg">{s.muadzinName}</p>
+
+                      {/* Col 2: Imam Rawatib */}
+                      <div className="col-span-5 flex items-center border-l border-[#ded5c4]/70 pl-3 sm:pl-4 min-w-0">
+                        <div className="min-w-0 w-full">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="inline-block rounded bg-[#2d946e]/15 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-[#1e6149]">
+                              Imam
+                            </span>
+                          </div>
+                          <p className="truncate text-sm sm:text-base lg:text-lg font-bold text-[#19261f] leading-snug">
+                            {s.imamName || "Asatidzah Pondok"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Col 3: Muadzin / Bilal */}
+                      <div className="col-span-4 flex items-center border-l border-[#ded5c4]/70 pl-3 sm:pl-4 min-w-0">
+                        <div className="min-w-0 w-full">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="inline-block rounded bg-[#c5a059]/20 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-[#8a6820]">
+                              Muadzin
+                            </span>
+                          </div>
+                          <p className="truncate text-sm sm:text-base lg:text-lg font-bold text-[#1e6149] leading-snug">
+                            {s.muadzinName || "Santri Bertugas"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="shrink-0 flex items-center justify-between text-[11px] sm:text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
+                <span>* Jika berhalangan hadir, harap segera berkoordinasi dengan Takmir Masjid</span>
+                <span className="font-semibold text-[#1e6149]">Pondok Pesantren Tahfizh Plus Abu Dzar</span>
               </div>
             </div>
           </div>
@@ -970,9 +1051,9 @@ export default function TVDisplayPage() {
         {/* SLIDE 3: FRIDAY KHUTBAH & KAJIAN */}
         {slide === 3 && (
           <div className="w-full max-w-7xl mx-auto h-full flex flex-col justify-center animate-fade-in">
-            <div className="grid h-full gap-3 sm:gap-6 lg:grid-cols-2 lg:gap-8 items-stretch">
+            <div className="grid h-full gap-3 sm:gap-6 lg:grid-cols-2 lg:gap-8 items-stretch overflow-hidden">
               {/* Left: Friday Khatib */}
-              <div className="h-full flex flex-col justify-between rounded-3xl border border-[#ded3be] bg-gradient-to-br from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] p-4 backdrop-blur-2xl shadow-xl sm:p-7">
+              <div className="h-full flex flex-col justify-between rounded-3xl border border-[#ded3be] bg-gradient-to-br from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] p-3.5 sm:p-6 lg:p-7 backdrop-blur-2xl shadow-xl overflow-hidden">
                 <div>
                   <span className="rounded-full bg-[#c5a059] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm sm:px-4 sm:text-xs">
                     Jadwal Jumat Mendatang
@@ -1016,9 +1097,9 @@ export default function TVDisplayPage() {
               </div>
 
               {/* Right: Upcoming Kajian */}
-              <div className="h-full flex flex-col justify-between rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#f8fdfb] via-[#edf7f3] to-[#e4f3ec] p-4 backdrop-blur-2xl shadow-xl sm:p-7">
-                <div>
-                  <div className="flex items-center justify-between gap-2 border-b border-[#bde5d2] pb-3 sm:pb-3.5">
+              <div className="h-full flex flex-col justify-between rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#f8fdfb] via-[#edf7f3] to-[#e4f3ec] p-3.5 sm:p-6 lg:p-7 backdrop-blur-2xl shadow-xl overflow-hidden">
+                <div className="overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 border-b border-[#bde5d2] pb-2.5 sm:pb-3 shrink-0">
                     <div className="flex items-center gap-2 text-base font-bold text-[#19261f] sm:text-lg">
                       <BookOpen className="h-4 w-4 text-[#2d946e] sm:h-5 sm:w-5" />
                       <span>Kajian &amp; Majelis Taklim</span>
@@ -1038,17 +1119,17 @@ export default function TVDisplayPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
+                    <div className="mt-2.5 space-y-2 sm:mt-3 sm:space-y-2.5 overflow-hidden">
                       {data.kajian.slice(0, 3).map((k) => (
                         <div
                           key={k.id}
-                          className="rounded-2xl border border-[#bde5d2] bg-white/80 p-3 sm:p-3.5"
+                          className="rounded-2xl border border-[#bde5d2] bg-white/80 p-2.5 sm:p-3"
                         >
-                          <h4 className="text-sm font-bold text-[#19261f] sm:text-base">{k.title}</h4>
-                          <p className="mt-0.5 text-xs font-semibold text-[#257659]">
+                          <h4 className="text-sm font-bold text-[#19261f] sm:text-base truncate">{k.title}</h4>
+                          <p className="mt-0.5 text-xs font-semibold text-[#257659] truncate">
                             {k.speakerName}
                           </p>
-                          <p className="mt-1 text-[10px] text-[#5a685e] sm:text-xs">
+                          <p className="mt-0.5 text-[10px] text-[#5a685e] sm:text-xs truncate">
                             {new Intl.DateTimeFormat("id-ID", {
                               dateStyle: "medium",
                               timeStyle: "short",
@@ -1062,7 +1143,7 @@ export default function TVDisplayPage() {
                   )}
                 </div>
 
-                <div className="mt-3 text-center text-[10px] text-[#5a685e] sm:mt-4 sm:text-xs">
+                <div className="mt-3 text-center text-[10px] text-[#5a685e] sm:mt-4 sm:text-xs shrink-0">
                   Informasi lebih lanjut dapat menghubungi Pengurus Takmir Masjid
                 </div>
               </div>
@@ -1073,35 +1154,44 @@ export default function TVDisplayPage() {
         {/* SLIDE 4: ISLAMIC ADVICE & HADITH */}
         {slide === 4 && (
           <div className="w-full max-w-7xl mx-auto h-full flex flex-col justify-center animate-fade-in">
-            <div className="w-full rounded-3xl border border-[#ded5c4] bg-gradient-to-br from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-6 sm:p-10 lg:p-14 text-center text-[#19261f] shadow-2xl flex flex-col items-center justify-center">
-              <span className="mb-3 rounded-full bg-[#faf4e6] px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#7c6630] border border-[#ecd8a6] sm:mb-6 sm:px-4 sm:text-xs">
-                Mutiara Nasihat &amp; Hikmah
-              </span>
+            <div className="w-full h-full rounded-3xl border border-[#ded5c4] bg-gradient-to-br from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-4 sm:p-8 lg:p-10 text-center text-[#19261f] shadow-xl flex flex-col items-center justify-between overflow-hidden">
+              <div className="shrink-0">
+                <span className="inline-block rounded-full bg-[#faf4e6] px-3.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#7c6630] border border-[#ecd8a6] sm:px-4 sm:text-xs shadow-sm">
+                  Mutiara Nasihat &amp; Hikmah
+                </span>
+              </div>
 
-              {data.advice.length === 0 ? (
-                <div className="max-w-4xl mx-auto">
-                  <p className="font-arabic text-2xl text-[#8a6820] leading-relaxed sm:text-4xl">
-                    إِنَّ الصَّلَاةَ تَنْهَىٰ عَنِ الْفَحْشَاءِ وَالْمُنكَرِ
-                  </p>
-                  <p className="mt-3 text-lg font-bold text-[#19261f] leading-relaxed sm:mt-6 sm:text-2xl">
-                    “Sesungguhnya shalat itu mencegah dari perbuatan-perbuatan keji dan mungkar.”
-                  </p>
-                  <p className="mt-2 text-xs font-bold uppercase tracking-wider text-[#2d946e] sm:mt-4 sm:text-sm">
-                    QS. Al-Ankabut: 45
-                  </p>
-                </div>
-              ) : (
-                <div key={adviceIndex} className="animate-fade-in space-y-3 sm:space-y-6 max-w-4xl mx-auto">
-                  <p className="text-xl font-bold leading-relaxed text-[#19261f] sm:text-3xl md:text-4xl">
-                    “{data.advice[adviceIndex % data.advice.length].content}”
-                  </p>
-                  <p className="text-sm font-bold text-[#8a6820] sm:text-lg">
-                    {data.advice[adviceIndex % data.advice.length].sourceReference ||
-                      data.advice[adviceIndex % data.advice.length].authorOrSource ||
-                      "Hadits Shahih"}
-                  </p>
-                </div>
-              )}
+              <div className="flex-1 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4">
+                {data.advice.length === 0 ? (
+                  <div className="space-y-4 sm:space-y-6">
+                    <p className="font-arabic text-2xl text-[#8a6820] leading-relaxed sm:text-4xl lg:text-5xl">
+                      إِنَّ الصَّلَاةَ تَنْهَىٰ عَنِ الْفَحْشَاءِ وَالْمُنكَرِ
+                    </p>
+                    <p className="text-lg font-bold text-[#19261f] leading-relaxed sm:text-2xl lg:text-3xl">
+                      “Sesungguhnya shalat itu mencegah dari perbuatan-perbuatan keji dan mungkar.”
+                    </p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#2d946e] sm:text-sm">
+                      QS. Al-Ankabut: 45
+                    </p>
+                  </div>
+                ) : (
+                  <div key={adviceIndex} className="animate-fade-in space-y-4 sm:space-y-6">
+                    <p className="text-xl font-bold leading-relaxed text-[#19261f] sm:text-3xl lg:text-4xl">
+                      “{data.advice[adviceIndex % data.advice.length].content}”
+                    </p>
+                    <p className="text-sm font-bold text-[#8a6820] sm:text-lg">
+                      {data.advice[adviceIndex % data.advice.length].sourceReference ||
+                        data.advice[adviceIndex % data.advice.length].authorOrSource ||
+                        "Hadits Shahih"}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="shrink-0 w-full flex items-center justify-between text-[11px] sm:text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
+                <span>Pondok Pesantren Tahfizh Plus Abu Dzar</span>
+                <span className="text-[#8a6820] font-semibold">Tausiyah Harian</span>
+              </div>
             </div>
           </div>
         )}
