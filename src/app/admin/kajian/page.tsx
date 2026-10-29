@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { PetugasItem } from "@/types/petugas";
+import { PetugasSelect } from "@/components/admin/petugas-select";
 
 interface Kajian {
   id: string;
@@ -51,8 +52,6 @@ export default function AdminKajianPage() {
   const [petugas, setPetugas] = useState<PetugasItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  const pemateriOptions = petugas.filter((p) => p.roles.includes("PEMATERI") && p.isActive).map((p) => p.name);
 
   const [title, setTitle] = useState("");
   const [speaker, setSpeaker] = useState("");
@@ -195,12 +194,13 @@ export default function AdminKajianPage() {
           </div>
           <div>
             <Label htmlFor="speaker">Pemateri</Label>
-            <Input
+            <PetugasSelect
               id="speaker"
-              list="pemateri-names"
               value={speaker}
-              onChange={(e) => setSpeaker(e.target.value)}
-              placeholder="Pilih atau ketik nama ustadz"
+              onChange={setSpeaker}
+              roleFilter="PEMATERI"
+              placeholder="Pilih Pemateri..."
+              petugasList={petugas}
             />
           </div>
           <div>
@@ -342,12 +342,6 @@ export default function AdminKajianPage() {
           ))
         )}
       </div>
-      {/* Datalist for quick speaker selection */}
-      <datalist id="pemateri-names">
-        {pemateriOptions.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
     </div>
   );
 }

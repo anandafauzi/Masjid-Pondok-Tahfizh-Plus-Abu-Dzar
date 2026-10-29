@@ -108,7 +108,36 @@ export interface TvData {
 export async function buildTvData(): Promise<TvData> {
   const now = new Date();
   const today = todayDateOnly();
-  const mosque = await getMosqueSettings();
+  const friday = nextFriday(today);
+
+  // Concurrently fetch all database dependencies in parallel
+  const [
+    mosque,
+    iqamahSettings,
+    display,
+    runningTexts,
+    advice,
+    kajian,
+    khutbah,
+    khatibUpcoming,
+    khatibRolling,
+    imamRolling,
+    imamToday,
+    fridaySchedule,
+  ] = await Promise.all([
+    getMosqueSettings(),
+    getIqamahSettings(),
+    getDisplaySettings(),
+    getRunningTextsSafe(),
+    getAdviceSafe(),
+    getKajianSafe(now, 5),
+    getActiveKhutbah(now).catch(() => null),
+    getUpcomingKhatibSchedules(today, 4),
+    getKhatibRollingActive(),
+    getImamRollingActive(),
+    getImamSchedulesBetween(today, today),
+    getKhatibScheduleForDate(friday),
+  ]);
 
   const prayerTimes = calculatePrayerTimes(today, {
     method: mosque.prayerCalculationMethod,
@@ -125,34 +154,9 @@ export async function buildTvData(): Promise<TvData> {
     latitude: mosque.latitude,
     longitude: mosque.longitude,
   });
-  const iqamahSettings = await getIqamahSettings();
+
   const iqamahEvents = computeIqamahEvents(today, prayerTimes, iqamahSettings);
   const nextIqamah = getNextIqamah(iqamahEvents, now);
-
-  const [
-    imamToday,
-    display,
-    runningTexts,
-    advice,
-    kajian,
-    khutbah,
-    khatibUpcoming,
-    khatibRolling,
-    imamRolling,
-  ] = await Promise.all([
-    getImamSchedulesBetween(today, today),
-    getDisplaySettings(),
-    getRunningTextsSafe(),
-    getAdviceSafe(),
-    getKajianSafe(now, 5),
-    getActiveKhutbah(now).catch(() => null),
-    getUpcomingKhatibSchedules(today, 4),
-    getKhatibRollingActive(),
-    getImamRollingActive(),
-  ]);
-
-  const friday = nextFriday(today);
-  const fridaySchedule = await getKhatibScheduleForDate(friday);
 
   const rollingKhatib = resolveRolling(
     khatibRolling.map((r) => ({

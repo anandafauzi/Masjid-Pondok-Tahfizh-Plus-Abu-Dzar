@@ -4,6 +4,7 @@ import type { IqamahSettingLike } from "@/lib/iqamah";
 
 export interface MosqueSettingsData {
   mosqueName: string;
+  logoUrl: string | null;
   address: string | null;
   latitude: number;
   longitude: number;
@@ -24,6 +25,7 @@ export interface DisplaySettingsData {
 
 export const DEFAULT_MOSQUE_SETTINGS: MosqueSettingsData = {
   mosqueName: MASJID_INFO.name,
+  logoUrl: null,
   address: MASJID_INFO.address,
   latitude: MASJID_INFO.latitude,
   longitude: MASJID_INFO.longitude,
@@ -62,6 +64,7 @@ export async function getMosqueSettings(): Promise<MosqueSettingsData> {
 
     return {
       mosqueName: settings.mosqueName,
+      logoUrl: settings.logoUrl ?? null,
       address: settings.address,
       latitude: settings.latitude,
       longitude: settings.longitude,

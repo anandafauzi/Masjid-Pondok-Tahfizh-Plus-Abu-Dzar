@@ -27,6 +27,7 @@ export default async function KajianPage() {
     <PublicShell
       mosque={{
         name: mosque.mosqueName,
+        logoUrl: mosque.logoUrl,
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}

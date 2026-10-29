@@ -121,11 +121,8 @@ function LoginForm() {
 
       <div suppressHydrationWarning className="relative z-10 w-full max-w-md rounded-3xl border border-slate-200/80 bg-white p-8 shadow-xl sm:p-10">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-sage-600 text-white text-3xl shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2d946e] text-white text-3xl shadow-sm">
             🕌
-          </div>
-          <div className="font-arabic text-xl font-bold text-sage-800 mb-1">
-            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
           </div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
             Admin Dashboard

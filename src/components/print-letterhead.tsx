@@ -7,6 +7,7 @@ interface PrintLetterheadProps {
   period?: string;
   mosqueName?: string;
   mosqueAddress?: string | null;
+  logoUrl?: string | null;
 }
 
 export function PrintLetterhead({
@@ -15,24 +16,28 @@ export function PrintLetterhead({
   period,
   mosqueName = MASJID_INFO.name,
   mosqueAddress = MASJID_INFO.address,
+  logoUrl,
 }: PrintLetterheadProps) {
   const today = todayDateOnly();
   const printDateStr = formatDateOnlyLong(today);
 
   return (
     <div className="hidden print:block w-full text-black mb-6">
-      {/* Arabic Basmalah */}
-      <div className="text-center mb-1">
-        <span className="font-arabic text-lg font-bold tracking-widest text-slate-800">
-          بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-        </span>
-      </div>
 
       {/* Mosque Kop Surat Header */}
       <div className="flex items-center justify-between border-b-2 border-black pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-black bg-slate-100 text-3xl font-bold">
-            🕌
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-black bg-white text-3xl font-bold">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="h-full w-full object-contain p-1"
+              />
+            ) : (
+              <span>🕌</span>
+            )}
           </div>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-700">

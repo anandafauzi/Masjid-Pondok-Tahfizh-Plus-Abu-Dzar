@@ -66,6 +66,7 @@ export default function AdzanIqamahPage() {
         data
           ? {
               name: data.mosque.name,
+              logoUrl: data.mosque.logoUrl,
               address: data.mosque.address,
               mapUrl: data.mosque.mapUrl,
             }

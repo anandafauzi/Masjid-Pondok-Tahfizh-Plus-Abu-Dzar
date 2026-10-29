@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { PetugasItem } from "@/types/petugas";
+import { PetugasSelect } from "@/components/admin/petugas-select";
 
 interface Rolling {
   id: string;
@@ -54,10 +55,9 @@ export default function AdminKhatibPage() {
   const [saving, setSaving] = useState(false);
   const [ordering, setOrdering] = useState(false);
 
-  const khatibOptions = petugas.filter((p) => p.roles.includes("KHATIB") && p.isActive).map((p) => p.name);
-
   const [rollName, setRollName] = useState("");
   const [rollFrom, setRollFrom] = useState(todayYmd());
+  const [editingRollingId, setEditingRollingId] = useState<string | null>(null);
 
   const [date, setDate] = useState(todayYmd());
   const [khatib, setKhatib] = useState("");
@@ -86,22 +86,42 @@ export default function AdminKhatibPage() {
     load();
   }, []);
 
-  async function addRolling() {
+  function resetRollingForm() {
+    setRollName("");
+    setRollFrom(todayYmd());
+    setEditingRollingId(null);
+  }
+
+  function beginEditRolling(r: Rolling) {
+    setRollName(r.khatibName);
+    setRollFrom(toYmd(r.effectiveFrom));
+    setEditingRollingId(r.id);
+  }
+
+  async function submitRolling() {
     if (!rollName.trim()) return toast.error("Nama khatib wajib diisi");
     setSaving(true);
     try {
-      const res = await fetch("/api/khatib-rolling", {
-        method: "POST",
+      const url = editingRollingId
+        ? `/api/khatib-rolling/${editingRollingId}`
+        : "/api/khatib-rolling";
+      const method = editingRollingId ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ khatibName: rollName, effectiveFrom: rollFrom }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal menambah");
-      setRollName("");
-      toast.success("Khatib rolling ditambahkan");
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
+      toast.success(
+        editingRollingId
+          ? "Rotasi khatib berhasil diperbarui"
+          : "Khatib rotasi ditambahkan"
+      );
+      resetRollingForm();
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal menambah");
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
     } finally {
       setSaving(false);
     }
@@ -211,12 +231,13 @@ export default function AdminKhatibPage() {
           <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
             <div>
               <Label htmlFor="rollName">Nama Khatib</Label>
-              <Input
+              <PetugasSelect
                 id="rollName"
-                list="khatib-names"
                 value={rollName}
-                onChange={(e) => setRollName(e.target.value)}
-                placeholder="Pilih atau ketik nama ustadz"
+                onChange={setRollName}
+                roleFilter="KHATIB"
+                placeholder="Pilih Khatib..."
+                petugasList={petugas}
               />
             </div>
             <div>
@@ -228,9 +249,24 @@ export default function AdminKhatibPage() {
                 onChange={(e) => setRollFrom(e.target.value)}
               />
             </div>
-            <Button onClick={addRolling} disabled={saving}>
-              <Plus className="h-4 w-4" /> Tambah
-            </Button>
+            <div className="flex gap-1.5">
+              <Button onClick={submitRolling} disabled={saving}>
+                {editingRollingId ? (
+                  <>
+                    <Pencil className="h-4 w-4" /> Simpan
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" /> Tambah
+                  </>
+                )}
+              </Button>
+              {editingRollingId && (
+                <Button variant="secondary" onClick={resetRollingForm}>
+                  Batal
+                </Button>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -263,6 +299,14 @@ export default function AdminKhatibPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700"
+                      onClick={() => beginEditRolling(r)}
+                      title="Edit Rotasi Khatib"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       type="button"
                       className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
@@ -316,12 +360,13 @@ export default function AdminKhatibPage() {
             </div>
             <div>
               <Label htmlFor="khatib">Nama Khatib</Label>
-              <Input
+              <PetugasSelect
                 id="khatib"
-                list="khatib-names"
                 value={khatib}
-                onChange={(e) => setKhatib(e.target.value)}
-                placeholder="Pilih atau ketik nama ustadz"
+                onChange={setKhatib}
+                roleFilter="KHATIB"
+                placeholder="Pilih Khatib..."
+                petugasList={petugas}
               />
             </div>
             <div>
@@ -335,12 +380,13 @@ export default function AdminKhatibPage() {
             </div>
             <div>
               <Label htmlFor="backup">Khatib Cadangan</Label>
-              <Input
+              <PetugasSelect
                 id="backup"
-                list="khatib-names"
                 value={backup}
-                onChange={(e) => setBackup(e.target.value)}
-                placeholder="Opsional"
+                onChange={setBackup}
+                roleFilter="KHATIB"
+                placeholder="Pilih Khatib Cadangan..."
+                petugasList={petugas}
               />
             </div>
           </div>
@@ -421,12 +467,6 @@ export default function AdminKhatibPage() {
           </div>
         </Card>
       </div>
-      {/* Datalist for quick khatib selection */}
-      <datalist id="khatib-names">
-        {khatibOptions.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
     </div>
   );
 }

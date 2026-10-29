@@ -32,6 +32,7 @@ import { DAYS_OF_WEEK, PRAYERS, WeeklyImamItem } from "@/types/weekly-imam";
 
 import { PetugasItem } from "@/types/petugas";
 import { ScheduleExportActions } from "@/components/schedule-export-actions";
+import { PetugasSelect } from "@/components/admin/petugas-select";
 
 interface Rolling {
   id: string;
@@ -68,14 +69,12 @@ export default function AdminImamPage() {
   const [saving, setSaving] = useState(false);
   const [ordering, setOrdering] = useState(false);
 
-  const imamOptions = petugas.filter((p) => p.roles.includes("IMAM") && p.isActive).map((p) => p.name);
-  const muadzinOptions = petugas.filter((p) => p.roles.includes("MUADZIN") && p.isActive).map((p) => p.name);
-
   // Rolling form state
   const [rollName, setRollName] = useState("");
   const [rollFrom, setRollFrom] = useState(todayYmd());
   const [rollPermanent, setRollPermanent] = useState(true);
   const [rollUntil, setRollUntil] = useState("");
+  const [editingRollingId, setEditingRollingId] = useState<string | null>(null);
 
   // Daily Schedule form state
   const [date, setDate] = useState(todayYmd());
@@ -168,7 +167,7 @@ export default function AdminImamPage() {
       const res = await fetch("/api/imam-weekly", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: weeklyItems, syncDays: 60 }),
+        body: JSON.stringify({ items: weeklyItems, syncDays: 14 }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menyimpan jadwal pekanan");
@@ -217,12 +216,37 @@ export default function AdminImamPage() {
   }
 
   // --- ROLLING LOGIC ---
-  async function addRolling() {
+  function resetRollingForm() {
+    setRollName("");
+    setRollFrom(todayYmd());
+    setRollUntil("");
+    setRollPermanent(true);
+    setEditingRollingId(null);
+  }
+
+  function beginEditRolling(r: Rolling) {
+    setRollName(r.imamName);
+    setRollFrom(toYmd(r.effectiveFrom));
+    if (r.effectiveUntil) {
+      setRollPermanent(false);
+      setRollUntil(toYmd(r.effectiveUntil));
+    } else {
+      setRollPermanent(true);
+      setRollUntil("");
+    }
+    setEditingRollingId(r.id);
+  }
+
+  async function submitRolling() {
     if (!rollName.trim()) return toast.error("Nama imam wajib diisi");
     setSaving(true);
     try {
-      const res = await fetch("/api/imam-rolling", {
-        method: "POST",
+      const url = editingRollingId
+        ? `/api/imam-rolling/${editingRollingId}`
+        : "/api/imam-rolling";
+      const method = editingRollingId ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           imamName: rollName,
@@ -231,14 +255,16 @@ export default function AdminImamPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Gagal menambah");
-      setRollName("");
-      setRollUntil("");
-      setRollPermanent(true);
-      toast.success("Imam rotasi ditambahkan");
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
+      resetRollingForm();
+      toast.success(
+        editingRollingId
+          ? "Rotasi imam berhasil diperbarui"
+          : "Imam rotasi ditambahkan"
+      );
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Gagal menambah");
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
     } finally {
       setSaving(false);
     }
@@ -533,23 +559,24 @@ export default function AdminImamPage() {
                               </span>
                             )}
                           </div>
-                          <Input
-                            list="imam-names"
+                          <PetugasSelect
                             value={item.imamName}
-                            onChange={(e) =>
+                            onChange={(val) =>
                               updateWeeklyField(
                                 selectedDay,
                                 prayerName,
                                 "imamName",
-                                e.target.value
+                                val
                               )
                             }
+                            roleFilter="IMAM"
                             placeholder={
                               selectedDay === 5 && prayerName === "Subuh"
-                                ? "Otomatis bergilir sesuai Tab 'Rotasi Subuh Jumat'"
-                                : "Pilih atau ketik nama imam"
+                                ? "Otomatis bergilir (Rotasi Subuh)"
+                                : "Pilih Nama Imam"
                             }
-                            className="text-xs sm:text-sm bg-white"
+                            className="bg-white"
+                            petugasList={petugas}
                           />
                           {selectedDay === 5 && prayerName === "Subuh" && (
                             <p className="mt-1 text-[11px] text-[#5c6e63]">
@@ -563,19 +590,20 @@ export default function AdminImamPage() {
                           <Label className="text-[11px] text-[#5c6e63] mb-1">
                             Nama Muadzin
                           </Label>
-                          <Input
-                            list="muadzin-names"
+                          <PetugasSelect
                             value={item.muadzinName}
-                            onChange={(e) =>
+                            onChange={(val) =>
                               updateWeeklyField(
                                 selectedDay,
                                 prayerName,
                                 "muadzinName",
-                                e.target.value
+                                val
                               )
                             }
-                            placeholder="Pilih atau ketik nama muadzin"
-                            className="text-xs sm:text-sm bg-white"
+                            roleFilter="MUADZIN"
+                            placeholder="Pilih Nama Muadzin"
+                            className="bg-white"
+                            petugasList={petugas}
                           />
                         </div>
 
@@ -682,18 +710,19 @@ export default function AdminImamPage() {
 
           <div className="mb-6 rounded-2xl border border-[#ded5c4] bg-white p-4 shadow-sm">
             <h4 className="text-xs font-bold text-[#19261f] uppercase tracking-wider mb-3">
-              Tambah Imam Rotasi Subuh Jumat
+              {editingRollingId ? "Edit Imam Rotasi Subuh Jumat" : "Tambah Imam Rotasi Subuh Jumat"}
             </h4>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_auto_auto_auto] items-end">
               <div>
                 <Label htmlFor="rollName">Nama Imam</Label>
-                <Input
+                <PetugasSelect
                   id="rollName"
-                  list="imam-names"
                   value={rollName}
-                  onChange={(e) => setRollName(e.target.value)}
-                  placeholder="Pilih atau ketik nama ustadz"
+                  onChange={setRollName}
+                  roleFilter="IMAM"
+                  placeholder="Pilih Imam Subuh..."
                   className="bg-[#fcfaf6]"
+                  petugasList={petugas}
                 />
               </div>
 
@@ -722,13 +751,28 @@ export default function AdminImamPage() {
                 </label>
               </div>
 
-              <Button
-                onClick={addRolling}
-                disabled={saving}
-                className="bg-[#2d946e] hover:bg-[#237858] text-white"
-              >
-                <Plus className="h-4 w-4" /> Tambah
-              </Button>
+              <div className="flex gap-1.5">
+                <Button
+                  onClick={submitRolling}
+                  disabled={saving}
+                  className="bg-[#2d946e] hover:bg-[#237858] text-white"
+                >
+                  {editingRollingId ? (
+                    <>
+                      <Pencil className="h-4 w-4" /> Simpan
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" /> Tambah
+                    </>
+                  )}
+                </Button>
+                {editingRollingId && (
+                  <Button variant="secondary" onClick={resetRollingForm}>
+                    Batal
+                  </Button>
+                )}
+              </div>
             </div>
 
             {!rollPermanent && (
@@ -782,6 +826,14 @@ export default function AdminImamPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700"
+                      onClick={() => beginEditRolling(r)}
+                      title="Edit Imam Rotasi"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       type="button"
                       className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
@@ -854,24 +906,26 @@ export default function AdminImamPage() {
               </div>
               <div>
                 <Label htmlFor="imam">Nama Imam</Label>
-                <Input
+                <PetugasSelect
                   id="imam"
-                  list="imam-names"
                   value={imam}
-                  onChange={(e) => setImam(e.target.value)}
-                  placeholder="Pilih atau ketik nama imam"
+                  onChange={setImam}
+                  roleFilter="IMAM"
+                  placeholder="Pilih Nama Imam"
                   className="bg-[#fcfaf6]"
+                  petugasList={petugas}
                 />
               </div>
               <div>
                 <Label htmlFor="muadzin">Nama Muadzin</Label>
-                <Input
+                <PetugasSelect
                   id="muadzin"
-                  list="muadzin-names"
                   value={muadzin}
-                  onChange={(e) => setMuadzin(e.target.value)}
-                  placeholder="Pilih atau ketik nama muadzin"
+                  onChange={setMuadzin}
+                  roleFilter="MUADZIN"
+                  placeholder="Pilih Nama Muadzin"
                   className="bg-[#fcfaf6]"
+                  petugasList={petugas}
                 />
               </div>
               <div className="sm:col-span-2">
@@ -974,17 +1028,6 @@ export default function AdminImamPage() {
           </div>
         </Card>
       )}
-      {/* Datalists for quick name selection */}
-      <datalist id="imam-names">
-        {imamOptions.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
-      <datalist id="muadzin-names">
-        {muadzinOptions.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
     </div>
   );
 }

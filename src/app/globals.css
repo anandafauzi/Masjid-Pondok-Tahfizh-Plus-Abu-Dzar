@@ -54,47 +54,47 @@
   --color-amber-950: #282216;
 
   /* Explicit Theme Color Tokens */
-  --color-pantone-cream: #ffffff;
-  --color-pantone-cream-50: #ffffff;
-  --color-pantone-cream-100: #f8fafc;
-  --color-pantone-cream-200: #f1f5f9;
-  --color-pantone-cream-300: #e2e8f0;
-  --color-pantone-cream-400: #cbd5e1;
+  --color-pantone-cream: #faf7f2;
+  --color-pantone-cream-50: #fdfbf7;
+  --color-pantone-cream-100: #faf7f2;
+  --color-pantone-cream-200: #f5f0e6;
+  --color-pantone-cream-300: #eae2d1;
+  --color-pantone-cream-400: #ded5c4;
 
-  --color-pantone-mint: #557a64;
-  --color-pantone-mint-50: #f4f7f5;
-  --color-pantone-mint-100: #e7efe9;
-  --color-pantone-mint-200: #d2dfd6;
-  --color-pantone-mint-300: #b0c7b7;
-  --color-pantone-mint-400: #87aa93;
-  --color-pantone-mint-500: #557a64;
-  --color-pantone-mint-600: #466553;
-  --color-pantone-mint-700: #395243;
-  --color-pantone-mint-800: #2d4135;
-  --color-pantone-mint-900: #25352c;
-  --color-pantone-mint-950: #121c17;
+  --color-pantone-mint: #2d946e;
+  --color-pantone-mint-50: #f2faf5;
+  --color-pantone-mint-100: #eaf6f0;
+  --color-pantone-mint-200: #bde5d2;
+  --color-pantone-mint-300: #8fd2b5;
+  --color-pantone-mint-400: #3eb489;
+  --color-pantone-mint-500: #2d946e;
+  --color-pantone-mint-600: #237858;
+  --color-pantone-mint-700: #1e6149;
+  --color-pantone-mint-800: #174a38;
+  --color-pantone-mint-900: #12392b;
+  --color-pantone-mint-950: #081a13;
 
-  --color-pantone-forest: #0f172a;
-  --color-pantone-forest-dark: #020617;
-  --color-pantone-forest-light: #1e293b;
+  --color-pantone-forest: #19261f;
+  --color-pantone-forest-dark: #08130e;
+  --color-pantone-forest-light: #25392e;
 
-  --color-pantone-gold: #a89467;
-  --color-pantone-gold-light: #e6dac5;
-  --color-pantone-champagne: #f3ede2;
-  --color-pantone-sand: #e2e8f0;
+  --color-pantone-gold: #c5a059;
+  --color-pantone-gold-light: #eddcb2;
+  --color-pantone-champagne: #faf4e6;
+  --color-pantone-sand: #ded5c4;
 
   /* Masjid App Brand Colors */
-  --color-masjid-navy: #0f172a;
-  --color-masjid-navy-dark: #020617;
-  --color-masjid-emerald: #557a64;
-  --color-masjid-emerald-light: #87aa93;
-  --color-masjid-gold: #a89467;
-  --color-masjid-gold-light: #e6dac5;
+  --color-masjid-navy: #19261f;
+  --color-masjid-navy-dark: #08130e;
+  --color-masjid-emerald: #2d946e;
+  --color-masjid-emerald-light: #3eb489;
+  --color-masjid-gold: #c5a059;
+  --color-masjid-gold-light: #eddcb2;
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --background: #faf7f2;
+  --foreground: #19261f;
 }
 
 html,
@@ -114,11 +114,11 @@ body {
   font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
 }
 
-/* Islamic Geometric Micro Pattern - Clean White & Subtle Sage Dots */
+/* Islamic Geometric Micro Pattern - Warm Cream with Subtle Accent Dots */
 .bg-islamic-pattern,
 .bg-islamic-pattern-light {
-  background-color: #ffffff;
-  background-image: radial-gradient(rgba(85, 122, 100, 0.08) 1.2px, transparent 1.2px);
+  background-color: #faf7f2;
+  background-image: radial-gradient(rgba(45, 148, 110, 0.08) 1.2px, transparent 1.2px);
   background-size: 24px 24px;
 }
 

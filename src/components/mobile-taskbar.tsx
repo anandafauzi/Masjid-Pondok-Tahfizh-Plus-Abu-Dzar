@@ -322,7 +322,7 @@ export function MobilePrayerTaskbar() {
     return (
       <aside
         aria-label="Panel Pintasan Waktu Sholat dan Jadwal Imam"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/95 text-slate-800 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.08)] transition-all"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#ded5c4] bg-[#faf7f2]/95 text-slate-800 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.06)] transition-all"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)" }}
       >
         <div className="mx-auto max-w-7xl px-3 pt-2 pb-1 sm:px-6">
@@ -351,7 +351,7 @@ export function MobilePrayerTaskbar() {
       {/* 1. STICKY MOBILE TASKBAR BAR (FIXED AT BOTTOM) */}
       <aside
         aria-label="Panel Pintasan Waktu Sholat dan Jadwal Imam"
-        className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200/80 bg-white/95 text-slate-800 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.08)] transition-all"
+        className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#ded5c4] bg-[#faf7f2]/95 text-slate-800 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.06)] transition-all"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)" }}
       >
         <div className="mx-auto max-w-7xl px-3 pt-2 sm:px-6">
@@ -484,12 +484,12 @@ export function MobilePrayerTaskbar() {
           onClick={() => setExpanded(false)}
         >
           <div
-            className="w-full max-w-2xl rounded-t-3xl border-t border-slate-200 bg-white text-slate-900 shadow-2xl max-h-[88vh] overflow-y-auto flex flex-col"
+            className="w-full max-w-2xl rounded-t-3xl border-t border-[#ded5c4] bg-[#faf7f2] text-slate-900 shadow-2xl max-h-[88vh] overflow-y-auto flex flex-col"
             onClick={(e) => e.stopPropagation()}
             style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}
           >
             {/* Drawer Drag Bar & Header */}
-            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-3.5 backdrop-blur">
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[#ded5c4] bg-[#faf7f2]/95 px-5 py-3.5 backdrop-blur">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🕌</span>
                 <div>

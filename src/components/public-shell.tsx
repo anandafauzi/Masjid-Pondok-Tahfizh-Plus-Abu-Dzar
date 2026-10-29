@@ -29,6 +29,7 @@ export interface PublicMosqueInfo {
   address: string | null;
   mapUrl: string;
   shortName?: string;
+  logoUrl?: string | null;
 }
 
 const DEFAULT_MOSQUE: PublicMosqueInfo = {
@@ -36,6 +37,7 @@ const DEFAULT_MOSQUE: PublicMosqueInfo = {
   address: MASJID_INFO.address,
   mapUrl: MASJID_INFO.mapUrl,
   shortName: MASJID_INFO.shortName,
+  logoUrl: null,
 };
 
 export function PublicShell({
@@ -46,20 +48,28 @@ export function PublicShell({
   mosque?: PublicMosqueInfo;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-white text-slate-800 print:bg-white print:text-black">
+    <div className="flex min-h-screen flex-col bg-[#faf7f2] text-slate-800 print:bg-white print:text-black">
       {/* Top Clean Minimalist Ribbon */}
-      <div className="border-b border-slate-100 bg-[#fbfdfc] py-1.5 text-center text-[11px] font-medium tracking-wide text-slate-500 print:hidden">
-        <span className="font-arabic text-xs mr-2 font-bold text-[#557a64]">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span>
-        <span className="text-slate-500">• Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
+      <div className="border-b border-[#ded5c4] bg-[#f5efe4] py-1.5 text-center text-[11px] font-semibold tracking-wide text-[#5c6e63] print:hidden">
+        <span>Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
       </div>
 
       {/* Main Glass Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-100/90 bg-white/90 text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.02)] backdrop-blur-md print:hidden">
+      <header className="sticky top-0 z-40 border-b border-[#ded5c4]/90 bg-[#faf7f2]/90 text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.02)] backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           {/* Logo / Mosque Title */}
           <Link href="/" className="group flex items-center gap-3">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-[#557a64] text-xl text-white shadow-sm ring-1 ring-[#557a64]/30 transition-transform duration-200 group-hover:scale-105">
-              <span>🕌</span>
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-xl text-white shadow-sm ring-1 ring-[#ded5c4] transition-transform duration-200 group-hover:scale-105">
+              {mosque.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={mosque.logoUrl}
+                  alt={mosque.shortName ?? "Logo"}
+                  className="h-full w-full object-contain p-0.5"
+                />
+              ) : (
+                <span>🕌</span>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-1.5">

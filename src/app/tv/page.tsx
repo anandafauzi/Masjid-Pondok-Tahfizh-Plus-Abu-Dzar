@@ -512,10 +512,6 @@ export default function TVDisplayPage() {
             <span className="truncate">{data.mosque.name}</span>
           </div>
 
-          <div className="mb-3 font-arabic text-3xl font-bold text-[#8a6820] sm:mb-4 sm:text-4xl">
-            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-          </div>
-
           <div className="my-4 w-full max-w-4xl rounded-3xl border border-[#ded5c4] bg-[#fdfbf7] p-5 shadow-2xl sm:my-6 sm:p-10">
             <span className="mb-3 inline-block rounded-full bg-[#faf4e6] px-3 py-1 text-xs font-bold tracking-widest text-[#7c6630] border border-[#ecd8a6] uppercase sm:mb-6 sm:px-4 sm:text-sm">
               Shalat Jumat
@@ -601,10 +597,6 @@ export default function TVDisplayPage() {
           <div className="my-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm font-semibold text-rose-200 sm:text-lg flex items-center gap-3">
             <span className="text-xl">📴</span>
             <span>Harap nonaktifkan atau senyapkan nada dering handphone Anda</span>
-          </div>
-
-          <div className="mt-2 text-xs font-mono text-[#9db3a6]">
-            Memulai takbir shalat dalam <span className="text-amber-300 font-bold font-mono text-sm">{activeShalatMode.shafSecondsLeft} detik</span>
           </div>
         </div>
 
@@ -750,8 +742,45 @@ export default function TVDisplayPage() {
           const iqTarget = new Date(activeEv.iqamahTarget).getTime();
           if (iqTarget <= serverNow) return null;
 
+          const adhanTarget = new Date(activeEv.adhanTarget).getTime();
+          const isEnteringPrayerTime =
+            serverNow >= adhanTarget && serverNow < adhanTarget + 10_000;
+
+          if (isEnteringPrayerTime) {
+            return (
+              <div
+                suppressHydrationWarning
+                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#0d1e15]/98 p-6 text-center animate-fade-in backdrop-blur-3xl sm:p-12 select-none"
+              >
+                <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/30 via-transparent to-transparent" />
+
+                <div className="relative z-10 flex flex-col items-center max-w-4xl w-full">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#2d946e]/20 border-2 border-[#2d946e]/40 text-4xl shadow-2xl animate-pulse">
+                    🕌
+                  </div>
+
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-5 py-2 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-base animate-pulse">
+                    <span>WAKTU SHALAT TIBA</span>
+                  </div>
+
+                  <h1 className="text-4xl font-black text-white sm:text-6xl md:text-7xl tracking-tight">
+                    Telah masuk waktu sholat {activeEv.label}...
+                  </h1>
+
+                  <p className="mt-4 text-base text-[#b8ccc0] sm:text-2xl font-medium">
+                    Pondok Tahfizh Plus Abu Dzar
+                  </p>
+                </div>
+              </div>
+            );
+          }
+
           const secLeft = Math.max(0, Math.floor((iqTarget - serverNow) / 1000));
           const isFinalCountdown = secLeft <= 10;
+          const imamInfo = data.imamToday.find((s) =>
+            s.prayerName.toLowerCase().includes(activeEv.label.toLowerCase())
+          );
+          const imamName = imamInfo?.imamName ?? "Asatidzah Pondok";
 
           return (
             <div suppressHydrationWarning className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#11231a]/98 p-4 text-center animate-fade-in backdrop-blur-2xl sm:p-8">
@@ -775,6 +804,12 @@ export default function TVDisplayPage() {
               <p className="mt-2 text-lg text-[#b8ccc0] font-medium sm:mt-4 sm:text-2xl md:text-3xl">
                 Adzan {activeEv.adhanTime} • Waktu Iqamah {activeEv.iqamahTime}
               </p>
+
+              {/* Imam yang bertugas */}
+              <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-[#1e6149]/40 border border-[#3eb489]/40 px-5 py-2 text-sm sm:text-lg text-white shadow-sm">
+                <span className="text-[#a5e4cb] font-semibold">Imam Shalat:</span>
+                <span className="font-extrabold text-amber-300">{imamName}</span>
+              </div>
 
               <div
                 className={`my-4 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:my-8 sm:px-12 sm:py-6 ${isFinalCountdown
@@ -995,7 +1030,7 @@ export default function TVDisplayPage() {
 
               {/* Footer */}
               <div className="shrink-0 flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
-                <span>Pondok Pesantren Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
+                <span>Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
                 <span className="font-semibold text-[#1e6149]">Metode Kemenag RI (+2 Menit Ihtiyat)</span>
               </div>
             </div>
@@ -1078,7 +1113,7 @@ export default function TVDisplayPage() {
               {/* Footer */}
               <div className="shrink-0 flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
                 <span>* Jadwal petugas shalat fardhu berjamaah</span>
-                <span className="font-semibold text-[#1e6149]">Pondok Pesantren Tahfizh Plus Abu Dzar</span>
+                <span className="font-semibold text-[#1e6149]">Pondok Tahfizh Plus Abu Dzar</span>
               </div>
             </div>
           </div>
@@ -1219,7 +1254,7 @@ export default function TVDisplayPage() {
               </div>
 
               <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
-                <span>Pondok Pesantren Tahfizh Plus Abu Dzar</span>
+                <span>Pondok Tahfizh Plus Abu Dzar</span>
                 <span className="text-[#8a6820] font-semibold">Tausiyah Harian</span>
               </div>
             </div>

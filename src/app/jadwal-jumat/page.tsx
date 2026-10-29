@@ -74,6 +74,7 @@ export default async function JadwalJumatPage() {
     <PublicShell
       mosque={{
         name: mosque.mosqueName,
+        logoUrl: mosque.logoUrl,
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}

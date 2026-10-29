@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import {
   badRequest,
   getSessionUser,
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     const items = body.items as WeeklyImamItem[];
-    const syncDays = typeof body.syncDays === "number" ? body.syncDays : 60;
+    const syncDays = typeof body.syncDays === "number" ? Math.min(body.syncDays, 14) : 14;
 
     await saveWeeklyImamSettings(items, syncDays);
 
@@ -47,6 +48,13 @@ export async function POST(request: NextRequest) {
       entityId: "weekly-imam",
       changeSummary: `Memperbarui ${items.length} jadwal imam pekanan (Opsi: Tetap Selamanya / Terjadwal)`,
     });
+
+    try {
+      revalidatePath("/", "layout");
+      revalidatePath("/admin", "layout");
+    } catch {
+      // ignore
+    }
 
     return ok({ success: true, count: items.length });
   } catch (error) {

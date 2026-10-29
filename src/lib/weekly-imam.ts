@@ -76,7 +76,7 @@ export async function getWeeklyImamSettings(): Promise<WeeklyImamItem[]> {
  */
 export async function saveWeeklyImamSettings(
   items: WeeklyImamItem[],
-  syncDays = 60
+  syncDays = 14
 ): Promise<void> {
   const display = await prisma.displaySetting.findFirst({
     select: { id: true, themeSettings: true },
@@ -107,15 +107,43 @@ export async function saveWeeklyImamSettings(
  */
 export async function syncWeeklyToCalendar(
   weeklyItems: WeeklyImamItem[],
-  daysCount = 60
+  daysCount = 14
 ): Promise<number> {
   if (!weeklyItems || weeklyItems.length === 0) return 0;
 
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
-  const activeRules = weeklyItems.filter((w) => w.isActive && w.imamName && w.muadzinName);
-  let upsertedCount = 0;
+  const activeRules = weeklyItems.filter(
+    (w) => w.isActive && w.imamName?.trim() && w.muadzinName?.trim()
+  );
+  if (activeRules.length === 0) return 0;
+
+  const endDate = addDaysUTC(today, daysCount);
+
+  // Fetch existing schedules in that range in a single fast query
+  const existing = await prisma.imamMuadzinSchedule.findMany({
+    where: {
+      scheduleDate: { gte: today, lte: endDate },
+    },
+    select: { scheduleDate: true, prayerName: true },
+  });
+
+  const existingMap = new Set<string>();
+  for (const item of existing) {
+    existingMap.add(
+      `${item.scheduleDate.toISOString().slice(0, 10)}_${item.prayerName}`
+    );
+  }
+
+  const toCreate: Array<{
+    scheduleDate: Date;
+    prayerName: string;
+    imamName: string;
+    muadzinName: string;
+    notes: string | null;
+    createdBy: string;
+  }> = [];
 
   for (let i = 0; i < daysCount; i++) {
     const targetDate = addDaysUTC(today, i);
@@ -125,38 +153,35 @@ export async function syncWeeklyToCalendar(
     const rulesForDay = activeRules.filter((r) => r.dayOfWeek === dayOfWeek);
 
     for (const rule of rulesForDay) {
-      // Check date validity
       if (rule.effectiveFrom && dateStr < rule.effectiveFrom) continue;
-      if (!rule.isPermanent && rule.effectiveUntil && dateStr > rule.effectiveUntil) continue;
+      if (
+        !rule.isPermanent &&
+        rule.effectiveUntil &&
+        dateStr > rule.effectiveUntil
+      )
+        continue;
 
-      try {
-        await prisma.imamMuadzinSchedule.upsert({
-          where: {
-            scheduleDate_prayerName: {
-              scheduleDate: targetDate,
-              prayerName: rule.prayerName,
-            },
-          },
-          update: {
-            // Update only if it was originally created by weekly recurrence
-            // Don't overwrite if manual override was set by admin
-          },
-          create: {
-            scheduleDate: targetDate,
-            prayerName: rule.prayerName,
-            imamName: rule.imamName,
-            muadzinName: rule.muadzinName,
-            recurrenceRuleId: "weekly-rule",
-            notes: rule.notes ?? null,
-            createdBy: "weekly-sync",
-          },
+      const key = `${dateStr}_${rule.prayerName}`;
+      if (!existingMap.has(key)) {
+        toCreate.push({
+          scheduleDate: targetDate,
+          prayerName: rule.prayerName,
+          imamName: rule.imamName.trim(),
+          muadzinName: rule.muadzinName.trim(),
+          notes: rule.notes ?? null,
+          createdBy: "weekly-sync",
         });
-        upsertedCount++;
-      } catch {
-        // ignore unique constraint collisions or concurrent updates
+        existingMap.add(key);
       }
     }
   }
 
-  return upsertedCount;
+  if (toCreate.length > 0) {
+    await prisma.imamMuadzinSchedule.createMany({
+      data: toCreate,
+      skipDuplicates: true,
+    });
+  }
+
+  return toCreate.length;
 }

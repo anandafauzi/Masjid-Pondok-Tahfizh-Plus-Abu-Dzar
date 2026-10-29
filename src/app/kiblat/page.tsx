@@ -19,6 +19,7 @@ export default async function KiblatPage() {
     <PublicShell
       mosque={{
         name: mosque.mosqueName,
+        logoUrl: mosque.logoUrl,
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}

@@ -17,6 +17,7 @@ interface HomeHeroProps {
   };
   mosqueName: string;
   mosqueAddress: string | null;
+  logoUrl?: string | null;
 }
 
 const PRAYERS_LIST = [
@@ -38,6 +39,7 @@ export function HomeHero({
   nextPrayer,
   mosqueName,
   mosqueAddress,
+  logoUrl,
 }: HomeHeroProps) {
   const [now, setNow] = useState(Date.now());
   const [mounted, setMounted] = useState(false);
@@ -92,13 +94,19 @@ export function HomeHero({
       <div className="pointer-events-none absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#557a64]/5 blur-3xl" />
 
       <div className="relative z-10 flex flex-col items-center text-center">
-        {/* Arabic Basmalah Calligraphy */}
-        <div className="font-arabic text-2xl font-bold tracking-wide text-[#395243] sm:text-3xl md:text-4xl">
-          بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-        </div>
+        {logoUrl && (
+          <div className="mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-white p-2 shadow-md ring-1 ring-[#ded5c4]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoUrl}
+              alt={mosqueName}
+              className="h-full w-full object-contain"
+            />
+          </div>
+        )}
 
         {/* Mosque Badge & Name */}
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#d2dfd6] bg-[#f4f7f5] px-4 py-1 text-xs font-semibold tracking-wide text-[#466553]">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d2dfd6] bg-[#f4f7f5] px-4 py-1 text-xs font-semibold tracking-wide text-[#466553]">
           <Sparkles className="h-3.5 w-3.5 text-[#557a64]" />
           <span>SISTEM INFORMASI MASJID RESMI</span>
         </div>

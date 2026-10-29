@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -100,9 +101,16 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const logoUrl =
+      body.logoUrl !== undefined
+        ? body.logoUrl === "" || body.logoUrl === null
+          ? null
+          : String(body.logoUrl)
+        : undefined;
+
     const data = {
       mosqueName,
-      logoUrl: body.logoUrl ?? undefined,
+      logoUrl,
       address: body.address ?? undefined,
       latitude,
       longitude,
@@ -130,6 +138,14 @@ export async function PUT(request: NextRequest) {
       entityId: settings.id,
       changeSummary: "Memperbarui pengaturan masjid",
     });
+
+    try {
+      revalidatePath("/", "layout");
+      revalidatePath("/admin", "layout");
+      revalidatePath("/tv", "page");
+    } catch {
+      // ignore
+    }
 
     return ok(settings);
   } catch (error) {

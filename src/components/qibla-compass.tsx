@@ -82,11 +82,47 @@ export function QiblaCompass({
     // iOS Safari
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyEvent = event as any;
-    if (typeof anyEvent.webkitCompassHeading === "number" && !isNaN(anyEvent.webkitCompassHeading)) {
+    if (
+      typeof anyEvent.webkitCompassHeading === "number" &&
+      !isNaN(anyEvent.webkitCompassHeading)
+    ) {
       currentHeading = anyEvent.webkitCompassHeading;
     } else if (event.alpha !== null && !isNaN(event.alpha)) {
-      // Android / Standard Chrome
-      currentHeading = (360 - event.alpha) % 360;
+      // Android / Standard Chrome with 3D tilt compensation
+      const { alpha, beta, gamma } = event;
+      if (
+        beta !== null &&
+        gamma !== null &&
+        (Math.abs(beta) >= 8 || Math.abs(gamma) >= 8)
+      ) {
+        const degToRad = Math.PI / 180;
+        const a = alpha * degToRad;
+        const b = beta * degToRad;
+        const g = gamma * degToRad;
+
+        const cA = Math.cos(a),
+          sA = Math.sin(a);
+        const cG = Math.cos(g),
+          sG = Math.sin(g);
+        const sB = Math.sin(b);
+
+        const yX = -cA * sG - sA * sB * cG;
+        const yY = -sA * sG + cA * sB * cG;
+
+        const h = Math.atan2(yX, yY) * (180 / Math.PI);
+        currentHeading = (h + 360) % 360;
+      } else {
+        currentHeading = (360 - alpha) % 360;
+      }
+
+      // Screen rotation adjustment if any
+      const screenAngle =
+        window.screen?.orientation?.angle ??
+        (window as unknown as { orientation?: number }).orientation ??
+        0;
+      if (screenAngle) {
+        currentHeading = (currentHeading + screenAngle + 360) % 360;
+      }
     }
 
     if (currentHeading !== null) {
@@ -174,10 +210,31 @@ export function QiblaCompass({
     }
   }, [isAligned, hasVibrated]);
 
-  // Request Geolocation GPS
+  // Auto-request current GPS on mount seamlessly
+  useEffect(() => {
+    if (typeof window !== "undefined" && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setCoords({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+          setLocationName(
+            `GPS Saya (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`
+          );
+          setIsCustomGps(true);
+        },
+        () => {
+          // Keep default mosque coordinates
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+  }, []);
+
+  // Request Geolocation GPS manually
   function requestCurrentGps() {
     if (!navigator.geolocation) {
-      alert("Perangkat Anda tidak mendukung fitur lokasi GPS.");
       return;
     }
 
@@ -192,9 +249,8 @@ export function QiblaCompass({
         setIsCustomGps(true);
         setGpsLoading(false);
       },
-      (err) => {
+      () => {
         setGpsLoading(false);
-        alert(`Gagal mengambil koordinat GPS: ${err.message}. Menggunakan lokasi default Masjid.`);
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );

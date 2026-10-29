@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/api";
+import { getMosqueSettings } from "@/lib/settings";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getSessionUser();
+  const [user, mosque] = await Promise.all([
+    getSessionUser(),
+    getMosqueSettings(),
+  ]);
 
   if (!user) {
     redirect("/auth/login?callbackUrl=/admin");
@@ -35,6 +39,7 @@ export default async function AdminLayout({
         email: user.email,
         role: user.role,
       }}
+      logoUrl={mosque.logoUrl}
     >
       {children}
     </AdminShell>

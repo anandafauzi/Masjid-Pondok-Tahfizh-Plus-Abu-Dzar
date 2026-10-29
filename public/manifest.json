@@ -1,5 +1,5 @@
 {
-  "id": "/",
+  "id": "/main-pwa",
   "name": "Masjid Abu Dzar",
   "short_name": "Masjid Abu Dzar",
   "description": "Sistem Informasi Masjid Pondok Tahfizh Plus Abu Dzar",
@@ -9,8 +9,8 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#ffffff",
-  "theme_color": "#557a64",
+  "background_color": "#faf7f2",
+  "theme_color": "#2d946e",
   "orientation": "any",
   "categories": ["education", "lifestyle", "utilities"],
   "prefer_related_applications": false,
