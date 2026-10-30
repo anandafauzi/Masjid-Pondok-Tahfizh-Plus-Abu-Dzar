@@ -9,6 +9,7 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,8 @@ export async function PUT(
       changeSummary: "Memperbarui nasihat islami",
     });
 
+    revalidateAllAppPaths();
+
     return ok(item);
   } catch (error) {
     console.error(error);
@@ -102,6 +105,9 @@ export async function DELETE(
       entityId: id,
       changeSummary: "Menghapus nasihat islami",
     });
+
+    revalidateAllAppPaths();
+
     return ok({ success: true });
   } catch (error) {
     console.error(error);

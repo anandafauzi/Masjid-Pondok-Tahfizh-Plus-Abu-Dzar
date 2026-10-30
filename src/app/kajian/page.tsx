@@ -4,6 +4,7 @@ import { getMosqueSettings } from "@/lib/settings";
 import { BookMarked, Calendar, MapPin, User, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function formatDateTime(iso: string) {
   return new Intl.DateTimeFormat("id-ID", {

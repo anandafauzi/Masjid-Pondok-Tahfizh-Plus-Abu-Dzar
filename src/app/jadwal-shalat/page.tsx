@@ -17,6 +17,7 @@ import { PRAYER_NAMES, PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import { Calendar, Timer, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const ROWS = ["imsak", "fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"] as const;
 const PRAYER_COLS = ["fajr", "dhuhr", "asr", "maghrib", "isha"] as const;

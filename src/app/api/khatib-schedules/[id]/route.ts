@@ -10,6 +10,7 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,7 @@ export async function PUT(
       entityId: item.id,
       changeSummary: "Memperbarui jadwal khatib",
     });
+    revalidateAllAppPaths();
     return ok(item);
   } catch (error) {
     if (
@@ -97,6 +99,7 @@ export async function DELETE(
       entityId: id,
       changeSummary: "Menghapus jadwal khatib",
     });
+    revalidateAllAppPaths();
     return ok({ success: true });
   } catch (error) {
     console.error(error);

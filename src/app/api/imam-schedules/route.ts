@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { addDaysUTC, todayDateOnly } from "@/lib/datetime";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,8 @@ export async function POST(request: NextRequest) {
       entityId: item.id,
       changeSummary: `Menambah jadwal imam ${item.imamName} untuk ${item.prayerName}`,
     });
+
+    revalidateAllAppPaths();
 
     return ok(item, 201);
   } catch (error) {

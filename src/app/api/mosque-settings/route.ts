@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
@@ -139,13 +139,7 @@ export async function PUT(request: NextRequest) {
       changeSummary: "Memperbarui pengaturan masjid",
     });
 
-    try {
-      revalidatePath("/", "layout");
-      revalidatePath("/admin", "layout");
-      revalidatePath("/tv", "page");
-    } catch {
-      // ignore
-    }
+    revalidateAllAppPaths();
 
     return ok(settings);
   } catch (error) {

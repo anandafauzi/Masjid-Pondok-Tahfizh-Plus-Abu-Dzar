@@ -264,18 +264,22 @@ export default function TVDisplayPage() {
 
   const interval = (data?.display.slideIntervalSeconds ?? 12) * 1000;
 
-  // Fallback 5 daily prayers roster so Petugas slide is always full & symmetrical
+  // 5 daily prayers roster so Petugas slide is always structured & symmetrical
   const displayImamList = useMemo(() => {
-    if (data?.imamToday && data.imamToday.length > 0) {
-      return data.imamToday;
-    }
-    return [
-      { id: "subuh", prayerName: "Subuh", imamName: "Ust. Ahmad Fauzi", muadzinName: "Santri Tahfizh" },
-      { id: "dhuhr", prayerName: "Zuhur", imamName: "Asatidzah Pondok", muadzinName: "Santri Tahfizh" },
-      { id: "asr", prayerName: "Asar", imamName: "Asatidzah Pondok", muadzinName: "Santri Tahfizh" },
-      { id: "maghrib", prayerName: "Magrib", imamName: "Ust. Dr. Hasan Basri", muadzinName: "Santri Tahfizh" },
-      { id: "isha", prayerName: "Isya", imamName: "Ust. Muhammad Fachri", muadzinName: "Santri Tahfizh" },
-    ];
+    const list = data?.imamToday && data.imamToday.length > 0 ? data.imamToday : [];
+    const prayers = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"];
+    return prayers.map((pName) => {
+      const found = list.find((item) => item.prayerName.toLowerCase() === pName.toLowerCase());
+      if (found && (found.imamName || found.muadzinName)) {
+        return found;
+      }
+      return {
+        id: pName.toLowerCase(),
+        prayerName: pName,
+        imamName: found?.imamName || "Belum Ditentukan",
+        muadzinName: found?.muadzinName || "-",
+      };
+    });
   }, [data]);
 
   // All 5 slides are active in the rotation
@@ -1143,7 +1147,7 @@ export default function TVDisplayPage() {
                       Khatib Jumat
                     </p>
                     <h3 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-black text-[#19261f] break-words leading-tight">
-                      {data.jumat.khatibName ?? "Ust. Dr. Hasan Basri, Lc., M.A."}
+                      {data.jumat.khatibName || "Belum Ditentukan"}
                     </h3>
                   </div>
 
@@ -1152,7 +1156,7 @@ export default function TVDisplayPage() {
                       Tema Khutbah
                     </p>
                     <p className="mt-1 text-sm sm:text-base lg:text-lg font-semibold text-[#19261f] break-words">
-                      “{data.jumat.sermonTopic && data.jumat.sermonTopic.trim() !== "" ? data.jumat.sermonTopic : "Urgensi Menuntut Ilmu Syar'i dan Menjaga Akhlaq Al-Karimah"}”
+                      {data.jumat.sermonTopic && data.jumat.sermonTopic.trim() !== "" ? `“${data.jumat.sermonTopic}”` : "Belum ada tema khusus"}
                     </p>
                   </div>
                 </div>
@@ -1160,7 +1164,7 @@ export default function TVDisplayPage() {
                 <div className="mt-3 flex items-center justify-between border-t border-[#ded3be] pt-3 text-xs sm:text-sm">
                   <span className="text-[#5a685e]">Imam Subuh Jumat:</span>
                   <span className="font-bold text-[#1e6149]">
-                    {data.jumat.imamSubuh ?? "Ust. Ahmad Fauzi"}
+                    {data.jumat.imamSubuh || "Belum Ditentukan"}
                   </span>
                 </div>
               </div>

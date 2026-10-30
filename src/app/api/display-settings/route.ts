@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,8 @@ export async function PUT(request: NextRequest) {
       entityId: settings.id,
       changeSummary: "Memperbarui pengaturan tampilan TV",
     });
+
+    revalidateAllAppPaths();
 
     return ok(settings);
   } catch (error) {

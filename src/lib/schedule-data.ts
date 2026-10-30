@@ -110,13 +110,15 @@ export async function getImamSchedulesBetween(from: Date, to: Date) {
           (r) =>
             r.dayOfWeek === dayOfWeek &&
             r.prayerName.toLowerCase() === prayer.toLowerCase() &&
-            r.isActive
+            r.isActive &&
+            r.imamName &&
+            r.imamName.trim() !== ""
         );
 
         // For Friday Subuh, if rolling imam exists, it takes precedence over static weekly rule
         const imamName = isFridaySubuh && fridaySubuhRollingName
           ? fridaySubuhRollingName
-          : rule?.imamName;
+          : rule?.imamName?.trim() || "";
 
         const muadzinName = rule?.muadzinName || "";
 

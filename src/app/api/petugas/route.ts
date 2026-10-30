@@ -9,6 +9,7 @@ import {
 import { writeAudit } from "@/lib/audit";
 import { getPetugasList, savePetugasList } from "@/lib/petugas";
 import { PetugasItem } from "@/types/petugas";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
         entityId: "master-petugas",
         changeSummary: `Memperbarui daftar petugas (${body.items.length} orang)`,
       });
+      revalidateAllAppPaths();
       return ok({ success: true, count: body.items.length });
     }
 
@@ -66,6 +68,8 @@ export async function POST(request: NextRequest) {
         entityId: newPetugas.id,
         changeSummary: `Menambah petugas: ${newPetugas.name} (${newPetugas.roles.join(", ")})`,
       });
+
+      revalidateAllAppPaths();
 
       return ok(newPetugas, 201);
     }

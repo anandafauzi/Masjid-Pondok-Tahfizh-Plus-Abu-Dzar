@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { badRequest, getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,8 @@ export async function POST(request: NextRequest) {
       entityId: item.id,
       changeSummary: `Menambah kajian: ${item.title}`,
     });
+
+    revalidateAllAppPaths();
 
     return ok(item, 201);
   } catch (error) {

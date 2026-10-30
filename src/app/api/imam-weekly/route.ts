@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 import {
   badRequest,
   getSessionUser,
@@ -49,12 +49,7 @@ export async function POST(request: NextRequest) {
       changeSummary: `Memperbarui ${items.length} jadwal imam pekanan (Opsi: Tetap Selamanya / Terjadwal)`,
     });
 
-    try {
-      revalidatePath("/", "layout");
-      revalidatePath("/admin", "layout");
-    } catch {
-      // ignore
-    }
+    revalidateAllAppPaths();
 
     return ok({ success: true, count: items.length });
   } catch (error) {

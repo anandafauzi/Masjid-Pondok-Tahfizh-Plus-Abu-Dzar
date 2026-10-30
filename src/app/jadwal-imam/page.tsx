@@ -16,6 +16,7 @@ import { Users, Sparkles, UserCheck, Mic } from "lucide-react";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const PRAYERS_LIST = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"];
 

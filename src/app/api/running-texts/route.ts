@@ -9,6 +9,7 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,8 @@ export async function POST(request: NextRequest) {
       entityId: item.id,
       changeSummary: `Menambah running text: ${item.content.slice(0, 60)}`,
     });
+
+    revalidateAllAppPaths();
 
     return ok(item, 201);
   } catch (error) {

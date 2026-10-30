@@ -361,7 +361,7 @@ export default async function Home() {
                   Khatib Shalat Jumat
                 </p>
                 <h3 className="mt-1 text-xl sm:text-2xl font-black text-[#19261f]">
-                  {fridayKhatib?.khatibName ?? "Ust. Dr. Hasan Basri, Lc., M.A."}
+                  {fridayKhatib?.khatibName || "Belum Ditentukan"}
                 </h3>
 
                 {fridayKhatib?.sermonTopic && (
@@ -444,15 +444,9 @@ export default async function Home() {
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-xl border border-dashed border-[#ded5c4] bg-[#fcfaf6] p-4 text-center">
-                    <h4 className="text-sm font-bold text-[#19261f]">
-                      Kajian Rutin Tafsir Al-Qur&apos;an
-                    </h4>
-                    <p className="mt-1 text-xs font-semibold text-[#2d946e]">
-                      Bersama Asatidzah Pondok Tahfizh Plus Abu Dzar
-                    </p>
-                    <p className="mt-1 text-xs text-[#5c6e63]">
-                      Setiap Ba&apos;da Magrib di Ruang Utama Masjid Abu Dzar
+                  <div className="rounded-xl border border-dashed border-[#ded5c4] bg-[#fcfaf6] p-6 text-center">
+                    <p className="text-xs font-semibold text-[#5c6e63]">
+                      Belum ada jadwal kajian untuk pekan ini.
                     </p>
                   </div>
                 )}

@@ -16,6 +16,7 @@ import {
 import { BookOpen, UserCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function JadwalJumatPage() {
   const today = todayDateOnly();
@@ -64,9 +65,9 @@ export default async function JadwalJumatPage() {
 
     return {
       friday,
-      khatibName: schedule?.khatibName ?? khatib?.name ?? "Ust. Dr. Hasan Basri, Lc., M.A.",
+      khatibName: schedule?.khatibName ?? khatib?.name ?? "Belum Ditentukan",
       sermonTopic: schedule?.sermonTopic ?? null,
-      imamSubuh: imam?.name ?? "Ust. Ahmad Fauzi",
+      imamSubuh: imam?.name ?? "Belum Ditentukan",
     };
   });
 

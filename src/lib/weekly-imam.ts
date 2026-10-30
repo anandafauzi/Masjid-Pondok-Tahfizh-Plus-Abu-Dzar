@@ -10,43 +10,11 @@ import {
 export { DAYS_OF_WEEK, PRAYERS, type WeeklyImamItem };
 
 /**
- * Default starter weekly schedule (matches the mosque's real data:
- * Subuh: Ust. Abdullah Mundzir / Fatih/Hiraki
- * Zuhur: Asatidz/Musyrif / Fauzan/Fadgham
- * Asar: Asatidz/Musyrif / Albar/Muhammad
- * Magrib: Satria Rupawan / Baraka/Satria
- * Isya: Albar Abdul Malik / Fadgham/Taqiyuddin
+ * Returns empty weekly schedule by default.
+ * No dummy/sample names injected.
  */
 export function getDefaultWeeklySchedule(): WeeklyImamItem[] {
-  const items: WeeklyImamItem[] = [];
-  const todayStr = new Date().toISOString().slice(0, 10);
-
-  const defaultPrayers = [
-    { prayer: "Subuh", imam: "Ust. Abdullah Mundzir", muadzin: "Fatih / Hiraki" },
-    { prayer: "Zuhur", imam: "Asatidz / Musyrif", muadzin: "Fauzan / Fadgham" },
-    { prayer: "Asar", imam: "Asatidz / Musyrif", muadzin: "Albar / Muhammad" },
-    { prayer: "Magrib", imam: "Satria Rupawan", muadzin: "Baraka / Satria" },
-    { prayer: "Isya", imam: "Albar Abdul Malik", muadzin: "Fadgham / Taqiyuddin" },
-  ];
-
-  for (const day of [1, 2, 3, 4, 5, 6, 0]) {
-    for (const p of defaultPrayers) {
-      items.push({
-        id: `weekly-${day}-${p.prayer}`,
-        dayOfWeek: day,
-        prayerName: p.prayer,
-        imamName: p.imam,
-        muadzinName: p.muadzin,
-        isPermanent: true, // Default "Tetap Selamanya"
-        effectiveFrom: todayStr,
-        effectiveUntil: null,
-        notes: null,
-        isActive: true,
-      });
-    }
-  }
-
-  return items;
+  return [];
 }
 
 /**
@@ -63,10 +31,10 @@ export async function getWeeklyImamSettings(): Promise<WeeklyImamItem[]> {
       return theme.weeklyImam as WeeklyImamItem[];
     }
 
-    return getDefaultWeeklySchedule();
+    return [];
   } catch (error) {
     console.error("Gagal membaca weekly imam settings:", error);
-    return getDefaultWeeklySchedule();
+    return [];
   }
 }
 
@@ -111,32 +79,40 @@ export async function syncWeeklyToCalendar(
 ): Promise<number> {
   if (!weeklyItems || weeklyItems.length === 0) return 0;
 
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-
+  // Filter out items without an imamName
   const activeRules = weeklyItems.filter(
-    (w) => w.isActive && w.imamName?.trim() && w.muadzinName?.trim()
+    (item) => item.isActive && item.imamName && item.imamName.trim() !== ""
   );
   if (activeRules.length === 0) return 0;
 
-  const endDate = addDaysUTC(today, daysCount);
+  const today = new Date();
+  const todayUTC = new Date(
+    Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+  );
+  const endUTC = addDaysUTC(todayUTC, daysCount);
 
-  // Fetch existing schedules in that range in a single fast query
-  const existing = await prisma.imamMuadzinSchedule.findMany({
+  // Fetch all existing entries in this window in one single query
+  const existingEntries = await prisma.imamMuadzinSchedule.findMany({
     where: {
-      scheduleDate: { gte: today, lte: endDate },
+      scheduleDate: {
+        gte: todayUTC,
+        lte: endUTC,
+      },
     },
-    select: { scheduleDate: true, prayerName: true },
+    select: {
+      scheduleDate: true,
+      prayerName: true,
+    },
   });
 
-  const existingMap = new Set<string>();
-  for (const item of existing) {
-    existingMap.add(
-      `${item.scheduleDate.toISOString().slice(0, 10)}_${item.prayerName}`
-    );
-  }
+  // Build a lookup set for fast O(1) checks
+  const existingSet = new Set(
+    existingEntries.map(
+      (e) => `${e.scheduleDate.toISOString().slice(0, 10)}_${e.prayerName}`
+    )
+  );
 
-  const toCreate: Array<{
+  const entriesToCreate: Array<{
     scheduleDate: Date;
     prayerName: string;
     imamName: string;
@@ -145,43 +121,49 @@ export async function syncWeeklyToCalendar(
     createdBy: string;
   }> = [];
 
-  for (let i = 0; i < daysCount; i++) {
-    const targetDate = addDaysUTC(today, i);
+  for (let d = 0; d < daysCount; d++) {
+    const targetDate = addDaysUTC(todayUTC, d);
     const dayOfWeek = targetDate.getUTCDay();
     const dateStr = targetDate.toISOString().slice(0, 10);
 
-    const rulesForDay = activeRules.filter((r) => r.dayOfWeek === dayOfWeek);
+    const matchingRules = activeRules.filter((r) => r.dayOfWeek === dayOfWeek);
 
-    for (const rule of rulesForDay) {
+    for (const rule of matchingRules) {
       if (rule.effectiveFrom && dateStr < rule.effectiveFrom) continue;
       if (
         !rule.isPermanent &&
         rule.effectiveUntil &&
         dateStr > rule.effectiveUntil
-      )
+      ) {
         continue;
+      }
 
-      const key = `${dateStr}_${rule.prayerName}`;
-      if (!existingMap.has(key)) {
-        toCreate.push({
+      const lookupKey = `${dateStr}_${rule.prayerName}`;
+      if (!existingSet.has(lookupKey)) {
+        entriesToCreate.push({
           scheduleDate: targetDate,
           prayerName: rule.prayerName,
           imamName: rule.imamName.trim(),
-          muadzinName: rule.muadzinName.trim(),
-          notes: rule.notes ?? null,
+          muadzinName: rule.muadzinName ? rule.muadzinName.trim() : "",
+          notes: rule.notes || null,
           createdBy: "weekly-sync",
         });
-        existingMap.add(key);
+        existingSet.add(lookupKey);
       }
     }
   }
 
-  if (toCreate.length > 0) {
+  if (entriesToCreate.length === 0) return 0;
+
+  // Insert in batches of 50 to prevent timeouts
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < entriesToCreate.length; i += BATCH_SIZE) {
+    const batch = entriesToCreate.slice(i, i + BATCH_SIZE);
     await prisma.imamMuadzinSchedule.createMany({
-      data: toCreate,
+      data: batch,
       skipDuplicates: true,
     });
   }
 
-  return toCreate.length;
+  return entriesToCreate.length;
 }
