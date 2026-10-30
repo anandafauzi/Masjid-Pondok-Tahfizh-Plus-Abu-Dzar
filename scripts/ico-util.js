@@ -28,3 +28,4 @@ function createIco(pngBuffers) {
 }
 
 module.exports = { createIco };
+

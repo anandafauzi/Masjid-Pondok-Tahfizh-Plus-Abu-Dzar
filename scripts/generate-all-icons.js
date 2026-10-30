@@ -244,3 +244,4 @@ buildAllIcons().catch((err) => {
   console.error('Build icons error:', err);
   process.exit(1);
 });
+
