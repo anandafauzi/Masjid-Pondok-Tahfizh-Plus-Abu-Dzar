@@ -18,3 +18,4 @@ export function revalidateAllAppPaths() {
     console.warn("revalidateAllAppPaths error:", error);
   }
 }
+

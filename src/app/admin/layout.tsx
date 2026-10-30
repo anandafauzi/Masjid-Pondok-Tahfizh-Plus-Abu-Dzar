@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/api";
 import { getMosqueSettings } from "@/lib/settings";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminLoginView } from "@/components/admin/admin-login-view";
 
 export const dynamic = "force-dynamic";
 
@@ -10,11 +10,15 @@ export const metadata: Metadata = {
   title: "Panel Admin | Masjid Pondok Tahfizh Plus Abu Dzar",
   description: "Panel Administrasi Masjid Pondok Tahfizh Plus Abu Dzar",
   manifest: "/manifest-admin.json",
-  applicationName: "Admin Masjid Abu Dzar",
+  applicationName: "Admin DKM",
   appleWebApp: {
     capable: true,
-    title: "Admin Abu Dzar",
+    title: "Admin DKM",
     statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: "/icon-admin-192.png",
+    apple: "/icon-admin-192.png",
   },
 };
 
@@ -29,7 +33,12 @@ export default async function AdminLayout({
   ]);
 
   if (!user) {
-    redirect("/auth/login?callbackUrl=/admin");
+    return (
+      <AdminLoginView
+        logoUrl={mosque.logoUrl}
+        mosqueName={mosque.mosqueName}
+      />
+    );
   }
 
   return (

@@ -1,6 +1,6 @@
 {
-  "id": "/admin-pwa",
-  "name": "Admin Masjid Abu Dzar",
+  "id": "/admin",
+  "name": "Admin DKM - Masjid Abu Dzar",
   "short_name": "Admin DKM",
   "description": "Panel Administrasi Khusus Pengurus Masjid Pondok Tahfizh Plus Abu Dzar",
   "lang": "id",
@@ -9,32 +9,32 @@
   "scope": "/admin",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#faf7f2",
-  "theme_color": "#2d946e",
+  "background_color": "#0e241a",
+  "theme_color": "#163829",
   "orientation": "any",
   "categories": ["business", "utilities"],
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-admin-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-admin-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-192-maskable.png",
+      "src": "/icon-admin-192-maskable.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-512-maskable.png",
+      "src": "/icon-admin-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -46,22 +46,21 @@
       "short_name": "Dashboard",
       "description": "Ringkasan data masjid",
       "url": "/admin",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-admin-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Jadwal Imam & Muadzin",
       "short_name": "Imam",
       "description": "Kelola penugasan imam dan muadzin",
       "url": "/admin/imam",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-admin-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Khutbah Jumat",
       "short_name": "Khutbah",
       "description": "Mode layar TV khutbah Jumat",
       "url": "/admin/khutbah",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-admin-192.png", "sizes": "192x192" }]
     }
   ]
 }
-

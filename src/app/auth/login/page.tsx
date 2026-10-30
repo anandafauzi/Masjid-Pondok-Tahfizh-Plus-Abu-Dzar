@@ -33,10 +33,8 @@ function LoginForm() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
-    if (status === "authenticated") {
-      router.replace(callbackUrl);
-    }
-  }, [status, router, callbackUrl]);
+    router.replace("/admin");
+  }, [router]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {

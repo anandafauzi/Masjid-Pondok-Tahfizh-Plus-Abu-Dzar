@@ -1,17 +1,19 @@
-const CACHE = "masjid-cache-v5";
+const CACHE = "masjid-cache-v7";
 const PRECACHE = [
   "/",
   "/tv",
   "/jadwal-shalat",
   "/jadwal-imam",
   "/kiblat",
-  "/manifest.json",
-  "/manifest-admin.json",
   "/offline.html",
   "/icon-192.png",
   "/icon-512.png",
   "/icon-192-maskable.png",
   "/icon-512-maskable.png",
+  "/icon-admin-192.png",
+  "/icon-admin-512.png",
+  "/icon-admin-192-maskable.png",
+  "/icon-admin-512-maskable.png",
   "/apple-touch-icon.png",
 ];
 
@@ -44,6 +46,12 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+
+  // Manifests must ALWAYS be fetched fresh from network to prevent PWA identity collisions
+  if (url.pathname.includes("manifest")) {
+    event.respondWith(fetch(request).catch(() => caches.match(request)));
+    return;
+  }
 
   const isPrivate =
     url.pathname.startsWith("/admin") || url.pathname.startsWith("/auth");
@@ -100,14 +108,10 @@ self.addEventListener("notificationclick", (event) => {
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        for (const client of clientList) {
-          if ("focus" in client) {
-            return client.focus();
-          }
+        if (clientList.length > 0) {
+          return clientList[0].focus();
         }
-        if (self.clients.openWindow) {
-          return self.clients.openWindow("/adzan-iqamah");
-        }
+        return self.clients.openWindow("/");
       })
   );
 });
