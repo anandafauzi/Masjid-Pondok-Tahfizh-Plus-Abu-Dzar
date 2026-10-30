@@ -8,9 +8,14 @@ export function PwaRegister() {
     if (!("serviceWorker" in navigator)) return;
 
     const register = () => {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
-        // Registration failures are non-fatal.
-      });
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          reg.update();
+        })
+        .catch(() => {
+          // Registration failures are non-fatal.
+        });
     };
 
     if (document.readyState === "complete") register();

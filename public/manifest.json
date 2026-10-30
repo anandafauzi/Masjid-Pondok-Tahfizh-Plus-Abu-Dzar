@@ -61,13 +61,6 @@
       "description": "Penunjuk arah Ka'bah Makkah",
       "url": "/kiblat",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Panel Pengurus DKM",
-      "short_name": "Admin",
-      "description": "Akses khusus admin masjid",
-      "url": "/admin",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
