@@ -47,6 +47,8 @@ export interface TvData {
     adhanTarget: string;
     iqamahTarget: string;
     mode: string;
+    delayMinutes?: number;
+    fixedIqamahTime?: string | null;
   }>;
   nextIqamah: {
     label: string;
@@ -233,6 +235,8 @@ export async function buildTvData(): Promise<TvData> {
       adhanTarget: e.adhanTarget.toISOString(),
       iqamahTarget: e.iqamahTarget.toISOString(),
       mode: e.mode,
+      delayMinutes: e.delayMinutes,
+      fixedIqamahTime: e.fixedIqamahTime,
     })),
     nextIqamah: resolvedNextIqamah
       ? {

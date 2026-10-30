@@ -1025,7 +1025,9 @@ export default function TVDisplayPage() {
 
                     <div className="col-span-3 text-center border-l border-[#ded5c4]/70 pl-2">
                       <span className="inline-block rounded-md bg-[#eaf6f0] px-2.5 py-1 font-mono text-xs sm:text-sm font-bold text-[#1e6149] border border-[#bde5d2]">
-                        {e.mode === "FIXED_TIME" ? "Waktu Tetap" : `${e.label === "Magrib" ? "5" : "15-20"} Menit`}
+                        {e.mode === "FIXED_TIME"
+                          ? (e.fixedIqamahTime ? `Pukul ${e.fixedIqamahTime} WIB` : "Waktu Tetap")
+                          : `${e.delayMinutes ?? (Math.max(0, Math.round((new Date(e.iqamahTarget).getTime() - new Date(e.adhanTarget).getTime()) / 60000)) || 10)} Menit`}
                       </span>
                     </div>
                   </div>

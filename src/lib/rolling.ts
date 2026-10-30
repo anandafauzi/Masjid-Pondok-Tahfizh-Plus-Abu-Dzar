@@ -51,7 +51,7 @@ export function resolveRolling(
 ): RollingResult | null {
   const target = asUTCDate(date);
 
-  const active = settings
+  let active = settings
     .filter((s) => {
       if (!s.isActive) return false;
       const from = asUTCDate(s.effectiveFrom);
@@ -64,6 +64,13 @@ export function resolveRolling(
     })
     .sort(compareRollingSettings);
 
+  // Fallback to all active settings if strict effectiveFrom filtered them out
+  if (active.length === 0) {
+    active = settings
+      .filter((s) => s.isActive)
+      .sort(compareRollingSettings);
+  }
+
   if (active.length === 0) return null;
 
   const anchor = active.reduce((min, s) => {
@@ -71,9 +78,19 @@ export function resolveRolling(
     return Math.min(min, from);
   }, Number.POSITIVE_INFINITY);
 
-  const weeksElapsed = Math.floor(
-    (target.getTime() - anchor) / (7 * 24 * 60 * 60 * 1000)
-  );
+  let anchorMs = Number.isFinite(anchor) ? anchor : target.getTime();
+  const anchorDate = new Date(anchorMs);
+
+  // If target is Friday (day 5), align anchor to its corresponding Friday
+  if (target.getUTCDay() === 5) {
+    const anchorDay = anchorDate.getUTCDay();
+    const anchorFridayDiff = (5 - anchorDay + 7) % 7;
+    anchorDate.setUTCDate(anchorDate.getUTCDate() + anchorFridayDiff);
+    anchorMs = anchorDate.getTime();
+  }
+
+  const diffDays = Math.round((target.getTime() - anchorMs) / (24 * 60 * 60 * 1000));
+  const weeksElapsed = Math.floor(diffDays / 7);
   const index = ((weeksElapsed % active.length) + active.length) % active.length;
   const selected = active[index];
 

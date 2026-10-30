@@ -17,6 +17,8 @@ export interface IqamahEvent {
   adhanTarget: Date;
   iqamahTarget: Date;
   mode: "DELAY_MINUTES" | "FIXED_TIME";
+  delayMinutes: number;
+  fixedIqamahTime: string | null;
 }
 
 export function computeIqamahEvents(
@@ -34,12 +36,14 @@ export function computeIqamahEvents(
 
     let iqamahTarget: Date;
     let mode: "DELAY_MINUTES" | "FIXED_TIME" = "DELAY_MINUTES";
+    const delayMinutes = setting?.delayMinutes ?? 10;
+    const fixedIqamahTime = setting?.fixedIqamahTime ?? null;
 
     if (setting?.mode === "FIXED_TIME" && setting.fixedIqamahTime) {
       mode = "FIXED_TIME";
       iqamahTarget = combineDateTime(dateOnly, setting.fixedIqamahTime);
     } else {
-      iqamahTarget = addMinutes(adhanTarget, setting?.delayMinutes ?? 0);
+      iqamahTarget = addMinutes(adhanTarget, delayMinutes);
     }
 
     events.push({
@@ -50,6 +54,8 @@ export function computeIqamahEvents(
       adhanTarget,
       iqamahTarget,
       mode,
+      delayMinutes,
+      fixedIqamahTime,
     });
   }
 

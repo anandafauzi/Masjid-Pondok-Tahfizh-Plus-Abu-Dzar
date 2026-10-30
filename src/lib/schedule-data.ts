@@ -192,7 +192,50 @@ export const getKajianSafe = getUpcomingKajian;
 
 export async function getKhatibScheduleForDate(fridayDate: Date) {
   try {
-    return await prisma.khatibSchedule.findFirst({ where: { fridayDate } });
+    const manual = await prisma.khatibSchedule.findFirst({ where: { fridayDate } });
+    if (manual) {
+      return {
+        ...manual,
+        isRolling: false,
+        sequenceNumber: undefined as number | undefined,
+        totalRolling: undefined as number | undefined,
+      };
+    }
+
+    const rolling = await getKhatibRollingActive();
+    if (rolling.length > 0) {
+      const resolved = resolveRolling(
+        rolling.map((r) => ({
+          id: r.id,
+          khatibName: r.khatibName,
+          sequenceNumber: r.sequenceNumber,
+          effectiveFrom: r.effectiveFrom,
+          effectiveUntil: r.effectiveUntil,
+          isActive: r.isActive,
+          createdAt: r.createdAt,
+        })),
+        fridayDate
+      );
+
+      if (resolved && resolved.name) {
+        return {
+          id: `rolling-${dateOnlyToString(fridayDate)}`,
+          fridayDate,
+          khatibName: resolved.name,
+          sermonTopic: null,
+          backupKhatibName: null,
+          recurrenceRuleId: null,
+          notes: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isRolling: true,
+          sequenceNumber: resolved.index + 1,
+          totalRolling: resolved.total,
+        };
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }

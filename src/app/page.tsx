@@ -132,8 +132,8 @@ export default async function Home() {
   };
 
   const todayStr = formatDateOnlyLong(today);
-  const fridayStr = new Intl.DateTimeFormat("id-ID", {
-    weekday: "long",
+  const isFridayToday = today.getUTCDay() === 5;
+  const fridayFormatted = new Intl.DateTimeFormat("id-ID", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -346,23 +346,30 @@ export default async function Home() {
           {/* Card 1: Khatib Jumat Terdekat */}
           <div className="relative overflow-hidden rounded-2xl border border-[#ded5c4] bg-white p-6 shadow-xs flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#faf4e6] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#7c6630] border border-[#ecd8a6]">
                   <Sparkles className="h-3 w-3 text-[#8a6820]" />
-                  Khutbah Jumat Pekan Ini
+                  {isFridayToday ? "Khutbah Jum'at Hari Ini" : "Jadwal Khatib Jum'at"}
                 </span>
-                <span className="text-xs font-semibold text-[#5c6e63]">
-                  {fridayStr}
+                <span className="text-xs font-bold text-[#8a6820] bg-[#f5efe4] px-2.5 py-1 rounded-lg border border-[#ded5c4]">
+                  Jum&apos;at, {fridayFormatted}
                 </span>
               </div>
 
               <div className="mt-5">
                 <p className="text-[11px] uppercase tracking-wider text-[#5c6e63] font-bold">
-                  Khatib Shalat Jumat
+                  Jadwal Khatib Jum&apos;at ({fridayFormatted})
                 </p>
-                <h3 className="mt-1 text-xl sm:text-2xl font-black text-[#19261f]">
-                  {fridayKhatib?.khatibName || "Belum Ditentukan"}
-                </h3>
+                <div className="mt-1 flex items-baseline gap-2 flex-wrap">
+                  <h3 className="text-xl sm:text-2xl font-black text-[#19261f]">
+                    {fridayKhatib?.khatibName || "Belum Ditentukan"}
+                  </h3>
+                  {fridayKhatib?.sequenceNumber && (
+                    <span className="inline-flex items-center rounded-md bg-[#2d946e]/10 px-2 py-0.5 text-[11px] font-bold text-[#1e6149] border border-[#2d946e]/20">
+                      Urutan #{fridayKhatib.sequenceNumber}
+                    </span>
+                  )}
+                </div>
 
                 {fridayKhatib?.sermonTopic && (
                   <div className="mt-3 rounded-xl bg-[#fcfaf6] border border-[#ded5c4]/60 p-3">
