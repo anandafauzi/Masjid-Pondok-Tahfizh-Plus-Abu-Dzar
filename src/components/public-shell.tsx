@@ -60,16 +60,12 @@ export function PublicShell({
           {/* Logo / Mosque Title */}
           <Link href="/" className="group flex items-center gap-3">
             <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-xl text-white shadow-sm ring-1 ring-[#ded5c4] transition-transform duration-200 group-hover:scale-105">
-              {mosque.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={mosque.logoUrl}
-                  alt={mosque.shortName ?? "Logo"}
-                  className="h-full w-full object-contain p-0.5"
-                />
-              ) : (
-                <span>🕌</span>
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mosque.logoUrl || "/logo-masjid.png"}
+                alt={mosque.shortName ?? "Logo"}
+                className="h-full w-full object-contain p-0.5"
+              />
             </div>
             <div>
               <div className="flex items-center gap-1.5">

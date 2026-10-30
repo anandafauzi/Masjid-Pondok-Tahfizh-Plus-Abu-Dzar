@@ -1,4 +1,4 @@
-const CACHE = "masjid-cache-v8";
+const CACHE = "masjid-cache-v9";
 const PRECACHE = [
   "/",
   "/tv",
@@ -6,6 +6,10 @@ const PRECACHE = [
   "/jadwal-imam",
   "/kiblat",
   "/offline.html",
+  "/favicon.ico",
+  "/favicon-32x32.png",
+  "/logo-masjid.png",
+  "/logo-masjid-solid.png",
   "/icon-192.png",
   "/icon-512.png",
   "/icon-192-maskable.png",
@@ -47,9 +51,24 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
 
-  // Manifests must ALWAYS be fetched fresh from network to prevent PWA identity collisions
-  if (url.pathname.includes("manifest")) {
-    event.respondWith(fetch(request).catch(() => caches.match(request)));
+  // Manifests & App Icons must ALWAYS be fetched fresh from network to prevent stale PWA identity
+  if (
+    url.pathname.includes("manifest") ||
+    url.pathname.includes("favicon") ||
+    url.pathname.includes("icon-") ||
+    url.pathname.includes("logo-masjid")
+  ) {
+    event.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(request))
+    );
     return;
   }
 

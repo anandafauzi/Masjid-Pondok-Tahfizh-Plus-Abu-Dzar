@@ -94,16 +94,14 @@ export function HomeHero({
       <div className="pointer-events-none absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#557a64]/5 blur-3xl" />
 
       <div className="relative z-10 flex flex-col items-center text-center">
-        {logoUrl && (
-          <div className="mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-white p-2 shadow-md ring-1 ring-[#ded5c4]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={logoUrl}
-              alt={mosqueName}
-              className="h-full w-full object-contain"
-            />
-          </div>
-        )}
+        <div className="mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-white p-2 shadow-md ring-1 ring-[#ded5c4]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl || "/logo-masjid.png"}
+            alt={mosqueName}
+            className="h-full w-full object-contain"
+          />
+        </div>
 
         {/* Mosque Badge & Name */}
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d2dfd6] bg-[#f4f7f5] px-4 py-1 text-xs font-semibold tracking-wide text-[#466553]">

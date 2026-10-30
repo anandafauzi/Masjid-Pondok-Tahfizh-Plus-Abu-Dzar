@@ -28,16 +28,12 @@ export function PrintLetterhead({
       <div className="flex items-center justify-between border-b-2 border-black pb-3">
         <div className="flex items-center gap-3">
           <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-black bg-white text-3xl font-bold">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt="Logo"
-                className="h-full w-full object-contain p-1"
-              />
-            ) : (
-              <span>🕌</span>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoUrl || "/logo-masjid.png"}
+              alt="Logo"
+              className="h-full w-full object-contain p-1"
+            />
           </div>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-widest text-slate-700">

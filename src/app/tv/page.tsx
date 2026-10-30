@@ -661,12 +661,12 @@ export default function TVDisplayPage() {
         {/* Left: Mosque branding */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#3eb489] to-[#205e48] shadow-md ring-2 ring-[#8fd2b5]/30 sm:h-12 sm:w-12">
-            {data.mosque.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={data.mosque.logoUrl} alt={data.mosque.name} className="h-full w-full object-contain" />
-            ) : (
-              <span className="text-xl sm:text-2xl">🕌</span>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={data.mosque.logoUrl || "/logo-masjid.png"}
+              alt={data.mosque.name}
+              className="h-full w-full object-contain p-0.5"
+            />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">

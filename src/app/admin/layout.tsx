@@ -17,8 +17,14 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   icons: {
-    icon: "/icon-admin-192.png",
-    apple: "/icon-admin-192.png",
+    icon: [
+      { url: "/icon-admin-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-admin-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/icon-admin-192.png",
+    apple: [
+      { url: "/icon-admin-192.png", sizes: "192x192", type: "image/png" },
+    ],
   },
 };
 

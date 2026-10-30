@@ -25,7 +25,7 @@ export interface DisplaySettingsData {
 
 export const DEFAULT_MOSQUE_SETTINGS: MosqueSettingsData = {
   mosqueName: MASJID_INFO.name,
-  logoUrl: null,
+  logoUrl: "/logo-masjid.png",
   address: MASJID_INFO.address,
   latitude: MASJID_INFO.latitude,
   longitude: MASJID_INFO.longitude,

@@ -107,16 +107,12 @@ export function AdminLoginView({
           {/* Header */}
           <div className="text-center">
             <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[#1b4332] to-[#0e241a] text-2xl text-white shadow-lg ring-4 ring-[#ded5c4]">
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={logoUrl}
-                  alt="Logo Masjid"
-                  className="h-full w-full object-contain p-2"
-                />
-              ) : (
-                <ShieldCheck className="h-8 w-8 text-[#f3d37a]" />
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl || "/logo-masjid.png"}
+                alt="Logo Masjid"
+                className="h-full w-full object-contain p-1.5"
+              />
             </div>
 
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1b4332]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#1b4332] border border-[#1b4332]/20">

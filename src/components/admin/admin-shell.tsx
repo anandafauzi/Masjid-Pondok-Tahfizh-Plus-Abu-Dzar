@@ -111,16 +111,12 @@ export function AdminShell({
       {/* Brand Header */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-[#ded5c4] bg-[#faf7f2]/80">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-2xl shadow-xs ring-1 ring-[#ded5c4]">
-          {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={logoUrl}
-              alt="Logo Masjid"
-              className="h-full w-full object-contain p-1"
-            />
-          ) : (
-            <span>🕌</span>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl || "/logo-masjid.png"}
+            alt="Logo Masjid"
+            className="h-full w-full object-contain p-1"
+          />
         </div>
         <div>
           <p className="text-sm font-extrabold leading-tight text-slate-900">
