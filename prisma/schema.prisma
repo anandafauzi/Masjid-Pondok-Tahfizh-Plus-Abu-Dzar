@@ -291,3 +291,17 @@ model AuditLog {
   @@index([adminId])
   @@map("audit_logs")
 }
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ipAddress String?
+  success   Boolean  @default(false)
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@index([createdAt])
+  @@map("login_attempts")
+}
