@@ -89,6 +89,13 @@ export default function TVDisplayPage() {
   const [slide, setSlide] = useState(0);
   const [adviceIndex, setAdviceIndex] = useState(0);
   const [connected, setConnected] = useState(true);
+  const [weather, setWeather] = useState<{
+    temperature: number;
+    humidity: number;
+    condition: string;
+    icon: string;
+    locationName: string;
+  } | null>(null);
 
   // TV Controls & Wake Lock State
   const [manualExitShalatKey, setManualExitShalatKey] = useState<string | null>(null);
@@ -123,6 +130,24 @@ export default function TVDisplayPage() {
   useEffect(() => {
     const clock = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(clock);
+  }, []);
+
+  // Weather fetch (auto-refreshes every 15 minutes)
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch("/api/public/weather");
+        if (res.ok) {
+          const w = await res.json();
+          setWeather(w);
+        }
+      } catch {
+        // Non-fatal
+      }
+    };
+    fetchWeather();
+    const wTimer = setInterval(fetchWeather, 15 * 60 * 1000);
+    return () => clearInterval(wTimer);
   }, []);
 
   // 1. Screen Wake Lock API (Anti-Sleep TV Display)
@@ -282,29 +307,63 @@ export default function TVDisplayPage() {
     });
   }, [data]);
 
-  // All 5 slides are active in the rotation
+  const hasSpecialAnnouncement = Boolean(
+    data?.display?.themeSettings?.specialAnnouncement?.enabled
+  );
+
+  // Available slides (0: Jadwal, 1: Iqamah, 2: Petugas, 3: Jumat, 4: Nasihat, 5: Pengumuman Khusus)
   const availableSlides = useMemo(() => {
-    return [0, 1, 2, 3, 4];
-  }, []);
+    const s = [0, 1, 2, 3, 4];
+    if (hasSpecialAnnouncement) {
+      s.push(5);
+    }
+    return s;
+  }, [hasSpecialAnnouncement]);
 
   useEffect(() => {
     if (availableSlides.length === 0) return;
     if (!availableSlides.includes(slide)) setSlide(availableSlides[0]);
   }, [availableSlides, slide]);
 
+  // Keyboard navigation for TV Display (Remote / Keyboard)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      unlockTvAudio();
+      if (e.key === "ArrowRight" || e.key === " ") {
+        e.preventDefault();
+        setSlide((cur) => {
+          const idx = availableSlides.indexOf(cur);
+          return availableSlides[(idx + 1) % availableSlides.length];
+        });
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setSlide((cur) => {
+          const idx = availableSlides.indexOf(cur);
+          return availableSlides[(idx - 1 + availableSlides.length) % availableSlides.length];
+        });
+      } else if (e.key.toLowerCase() === "m") {
+        setAudioMuted((prev) => !prev);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [availableSlides]);
+
   useEffect(() => {
     if (!data?.display.autoRotateEnabled || khutbahVisible) return;
+    const maxSlides = hasSpecialAnnouncement ? 6 : SLIDE_COUNT;
     const timer = setInterval(() => {
       setSlide((current) => {
-        for (let i = 1; i <= SLIDE_COUNT; i++) {
-          const candidate = (current + i) % SLIDE_COUNT;
+        for (let i = 1; i <= maxSlides; i++) {
+          const candidate = (current + i) % maxSlides;
           if (availableSlides.includes(candidate)) return candidate;
         }
         return current;
       });
     }, interval);
     return () => clearInterval(timer);
-  }, [data?.display.autoRotateEnabled, interval, khutbahVisible, availableSlides]);
+  }, [data?.display.autoRotateEnabled, interval, khutbahVisible, availableSlides, hasSpecialAnnouncement]);
 
   useEffect(() => {
     if (!data || data.advice.length <= 1) return;
@@ -680,7 +739,7 @@ export default function TVDisplayPage() {
           </div>
         </div>
 
-        {/* Center: Slide indicator tabs (All 5 Slides) */}
+        {/* Center: Slide indicator tabs */}
         <div className="hidden lg:flex items-center gap-1 rounded-full border border-[#ded5c4] bg-[#f4eee2] p-1 shadow-inner">
           {[
             { id: 0, label: "Jadwal" },
@@ -688,18 +747,23 @@ export default function TVDisplayPage() {
             { id: 2, label: "Petugas" },
             { id: 3, label: "Jumat" },
             { id: 4, label: "Nasihat" },
+            ...(hasSpecialAnnouncement ? [{ id: 5, label: "Pengumuman" }] : []),
           ].map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => setSlide(s.id)}
               className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition-all ${slide === s.id
-                  ? "bg-[#2d946e] text-white shadow-sm scale-105"
-                  : "text-[#5a685e] hover:text-[#19261f] hover:bg-white/60"
+                  ? s.id === 5
+                    ? "bg-amber-600 text-white shadow-sm scale-105"
+                    : "bg-[#2d946e] text-white shadow-sm scale-105"
+                  : s.id === 5
+                    ? "text-amber-800 hover:bg-amber-100 font-extrabold"
+                    : "text-[#5a685e] hover:text-[#19261f] hover:bg-white/60"
                 }`}
             >
               <span
-                className={`h-1.5 w-1.5 rounded-full ${slide === s.id ? "bg-white" : "bg-[#c5a059]"
+                className={`h-1.5 w-1.5 rounded-full ${slide === s.id ? "bg-white" : s.id === 5 ? "bg-amber-500 animate-pulse" : "bg-[#c5a059]"
                   }`}
               />
               <span>{s.label}</span>
@@ -707,8 +771,24 @@ export default function TVDisplayPage() {
           ))}
         </div>
 
-        {/* Right: Real-time clock & dual calendar */}
-        <div className="flex shrink-0 items-center gap-2 text-right sm:gap-4 lg:gap-6">
+        {/* Right: Weather, Real-time clock & dual calendar */}
+        <div className="flex shrink-0 items-center gap-2 text-right sm:gap-4 lg:gap-5">
+          {/* Weather Widget */}
+          {weather && data.display.themeSettings?.showWeather !== false && (
+            <div className="hidden md:flex items-center gap-2 rounded-xl border border-[#ded5c4] bg-[#f7f2e8]/90 px-3 py-1 text-xs shadow-xs">
+              <span className="text-xl leading-none">{weather.icon}</span>
+              <div className="flex flex-col text-left leading-tight">
+                <div className="flex items-center gap-1 font-bold text-[#19261f]">
+                  <span>{weather.temperature}°C</span>
+                  <span className="text-[10px] font-normal text-[#5a685e] hidden xl:inline">({weather.condition})</span>
+                </div>
+                <span className="text-[9px] text-[#5a685e] font-medium truncate max-w-[120px]">
+                  {weather.locationName}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="hidden sm:block">
             {data.display.showHijriDate && (
               <div suppressHydrationWarning className="flex items-center justify-end gap-1 text-[11px] font-semibold text-[#8a6820] sm:text-xs">
@@ -850,13 +930,16 @@ export default function TVDisplayPage() {
                   {PRAYER_LIST.map(({ key, label, ar }) => {
                     const isNext =
                       !data.nextPrayer.tomorrow && key === data.nextPrayer.key;
+                    const activeGlow = data.display.themeSettings?.activePrayerGlow !== false;
                     const time = data.prayerTimes[key];
 
                     return (
                       <div
                         key={key}
                         className={`flex items-center justify-between gap-3 rounded-xl sm:rounded-2xl px-3 py-1.5 sm:px-5 sm:py-2.5 transition-all flex-1 min-h-0 ${isNext
-                            ? "border border-[#3eb489] bg-gradient-to-r from-[#eef8f3] to-white shadow-md ring-2 ring-[#3eb489]/30"
+                            ? activeGlow
+                              ? "border-2 border-[#2d946e] bg-gradient-to-r from-[#e7f7ef] via-[#f4faf6] to-white shadow-lg ring-4 ring-[#2d946e]/20"
+                              : "border border-[#3eb489] bg-gradient-to-r from-[#eef8f3] to-white shadow-md ring-2 ring-[#3eb489]/30"
                             : "border border-[#ded5c4]/60 bg-[#fbf9f4] hover:bg-white"
                           }`}
                       >
@@ -1266,6 +1349,143 @@ export default function TVDisplayPage() {
             </div>
           </div>
         )}
+
+        {/* SLIDE 5: SPECIAL ANNOUNCEMENT (DUKA CITA / TABLIGH AKBAR / TARAWIH / UMUM) */}
+        {slide === 5 && hasSpecialAnnouncement && (() => {
+          const ann = data.display.themeSettings?.specialAnnouncement;
+          if (!ann || !ann.enabled) return null;
+
+          if (ann.type === "duka") {
+            return (
+              <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
+                <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-amber-500/40 bg-gradient-to-br from-[#0c1a13] via-[#08130d] to-[#040a07] p-6 sm:p-10 lg:p-12 text-center text-white shadow-2xl flex flex-col items-center justify-between overflow-hidden relative">
+                  <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-amber-500/10 via-transparent to-transparent" />
+
+                  {/* Arabic Kaligrafi */}
+                  <div className="relative z-10 font-arabic text-3xl sm:text-5xl lg:text-6xl text-[#eddcb2] leading-relaxed font-bold tracking-wide">
+                    إِنَّا لِلَّٰهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ
+                  </div>
+
+                  <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4 overflow-hidden">
+                    <span className="inline-block rounded-full bg-amber-400/15 border border-amber-400/40 px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-amber-300">
+                      {ann.subtitle || "BERITA DUKA CITA"}
+                    </span>
+
+                    {ann.personName && (
+                      <h2 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight break-words">
+                        {ann.personName}
+                      </h2>
+                    )}
+
+                    {ann.details && (
+                      <div className="mt-4 max-w-3xl rounded-2xl bg-white/5 border border-white/10 p-4 sm:p-6 backdrop-blur-md">
+                        <p className="whitespace-pre-line text-base sm:text-xl lg:text-2xl font-medium text-slate-200 leading-relaxed">
+                          {ann.details}
+                        </p>
+                      </div>
+                    )}
+
+                    {ann.notes && (
+                      <p className="mt-4 text-xs sm:text-base italic text-[#b8d4c5] max-w-2xl">
+                        &ldquo;{ann.notes}&rdquo;
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="relative z-10 shrink-0 w-full flex items-center justify-between text-xs text-[#8ca898] border-t border-white/10 pt-2 px-1">
+                    <span>{data.mosque.name}</span>
+                    <span className="text-amber-300 font-semibold">Semoga Husnul Khatimah</span>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (ann.type === "kajian") {
+            return (
+              <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
+                <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-[#2d946e]/40 bg-gradient-to-br from-[#fdfbf7] via-[#f3f9f5] to-[#e8f5ee] p-6 sm:p-10 lg:p-12 text-center text-[#19261f] shadow-2xl flex flex-col items-center justify-between overflow-hidden">
+                  <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4 overflow-hidden">
+                    <span className="inline-block rounded-full bg-[#2d946e] px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-white shadow-md">
+                      {ann.subtitle || "TABLIGH AKBAR & KAJIAN SPESIAL"}
+                    </span>
+
+                    <h2 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-black text-[#19261f] tracking-tight">
+                      {ann.title}
+                    </h2>
+
+                    {ann.personName && (
+                      <p className="mt-3 text-xl sm:text-3xl lg:text-4xl font-extrabold text-[#1e6149]">
+                        Bersama: {ann.personName}
+                      </p>
+                    )}
+
+                    {ann.details && (
+                      <div className="mt-4 max-w-3xl rounded-2xl bg-white border border-[#ded5c4] p-4 sm:p-6 shadow-sm">
+                        <p className="whitespace-pre-line text-sm sm:text-lg lg:text-xl font-semibold text-[#3a4c41] leading-relaxed">
+                          {ann.details}
+                        </p>
+                      </div>
+                    )}
+
+                    {ann.notes && (
+                      <p className="mt-3 text-xs sm:text-sm font-medium text-[#5a685e]">
+                        {ann.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4] pt-2 px-1">
+                    <span>{data.mosque.name}</span>
+                    <span className="text-[#2d946e] font-bold">Terbuka Untuk Umum</span>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Umum / Buka Puasa
+          return (
+            <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
+              <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-teal-500/40 bg-gradient-to-br from-[#fcfbf9] via-[#edf7f4] to-[#e4f3ee] p-6 sm:p-10 lg:p-12 text-center text-[#19261f] shadow-2xl flex flex-col items-center justify-between overflow-hidden">
+                <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4 overflow-hidden">
+                  <span className="inline-block rounded-full bg-teal-700 px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-white shadow-md">
+                    {ann.subtitle || "PENGUMUMAN DKM"}
+                  </span>
+
+                  <h2 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-black text-[#19261f] tracking-tight">
+                    {ann.title}
+                  </h2>
+
+                  {ann.personName && (
+                    <p className="mt-2 text-xl sm:text-2xl lg:text-3xl font-bold text-[#1e6149]">
+                      {ann.personName}
+                    </p>
+                  )}
+
+                  {ann.details && (
+                    <div className="mt-4 max-w-3xl rounded-2xl bg-white border border-[#ded5c4] p-4 sm:p-6 shadow-sm">
+                      <p className="whitespace-pre-line text-sm sm:text-lg lg:text-xl font-semibold text-[#3a4c41] leading-relaxed">
+                        {ann.details}
+                      </p>
+                    </div>
+                  )}
+
+                  {ann.notes && (
+                    <p className="mt-3 text-xs sm:text-sm font-medium text-[#5a685e]">
+                      {ann.notes}
+                    </p>
+                  )}
+                </div>
+
+                <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4] pt-2 px-1">
+                  <span>{data.mosque.name}</span>
+                  <span className="text-teal-700 font-bold">Pengurus DKM</span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </main>
 
       {/* Bottom Running Text Ticker */}

@@ -15,12 +15,30 @@ export interface MosqueSettingsData {
   prayerAdjustments: Record<string, number> | null;
 }
 
+export interface SpecialAnnouncement {
+  enabled: boolean;
+  type: "duka" | "kajian" | "tarawih" | "umum";
+  title: string;
+  subtitle?: string;
+  personName?: string;
+  details?: string;
+  notes?: string;
+}
+
+export interface TvThemeSettings {
+  showWeather?: boolean;
+  weatherCity?: string;
+  activePrayerGlow?: boolean;
+  specialAnnouncement?: SpecialAnnouncement;
+}
+
 export interface DisplaySettingsData {
   slideIntervalSeconds: number;
   autoRotateEnabled: boolean;
   tickerSpeed: number;
   tickerEnabled: boolean;
   showHijriDate: boolean;
+  themeSettings?: TvThemeSettings | null;
 }
 
 export const DEFAULT_MOSQUE_SETTINGS: MosqueSettingsData = {
@@ -42,6 +60,20 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettingsData = {
   tickerSpeed: 50,
   tickerEnabled: true,
   showHijriDate: true,
+  themeSettings: {
+    showWeather: true,
+    weatherCity: "Rumpin, Bogor",
+    activePrayerGlow: true,
+    specialAnnouncement: {
+      enabled: false,
+      type: "duka",
+      title: "Inna lillahi wa inna ilayhi raji'un",
+      subtitle: "Telah berpulang ke Rahmatullah",
+      personName: "",
+      details: "",
+      notes: "Semoga Allah mengampuni segala dosa almarhum/almarhumah dan menempatkannya di tempat terbaik.",
+    },
+  },
 };
 
 export const DEFAULT_IQAMAH_SETTINGS: IqamahSettingLike[] = [
@@ -83,12 +115,19 @@ export async function getDisplaySettings(): Promise<DisplaySettingsData> {
   try {
     const settings = await prisma.displaySetting.findFirst();
     if (!settings) return DEFAULT_DISPLAY_SETTINGS;
+
+    let theme: TvThemeSettings | null = null;
+    if (settings.themeSettings && typeof settings.themeSettings === "object") {
+      theme = settings.themeSettings as unknown as TvThemeSettings;
+    }
+
     return {
       slideIntervalSeconds: settings.slideIntervalSeconds,
       autoRotateEnabled: settings.autoRotateEnabled,
       tickerSpeed: settings.tickerSpeed,
       tickerEnabled: settings.tickerEnabled,
       showHijriDate: settings.showHijriDate,
+      themeSettings: theme ?? DEFAULT_DISPLAY_SETTINGS.themeSettings,
     };
   } catch {
     return DEFAULT_DISPLAY_SETTINGS;

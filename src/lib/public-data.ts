@@ -4,6 +4,7 @@ import {
   getDisplaySettings,
   getIqamahSettings,
   getMosqueSettings,
+  type TvThemeSettings,
 } from "@/lib/settings";
 import { getActiveKhutbah } from "@/lib/khutbah";
 import { resolveRolling } from "@/lib/rolling";
@@ -97,6 +98,7 @@ export interface TvData {
     tickerSpeed: number;
     tickerEnabled: boolean;
     showHijriDate: boolean;
+    themeSettings?: TvThemeSettings | null;
   };
   khutbah: {
     id: string;
