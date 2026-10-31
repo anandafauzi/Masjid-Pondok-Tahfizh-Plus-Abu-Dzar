@@ -28,8 +28,8 @@ Sesuaikan minimal:
 docker compose up -d --build
 ```
 
-Saat container start, entrypoint otomatis menjalankan `prisma db push` dan
-seed (keduanya idempotent). Jadi tidak ada langkah migrasi manual.
+Saat container start, entrypoint otomatis menjalankan `prisma migrate deploy`
+dan seed (keduanya idempotent). Jadi tidak ada langkah migrasi manual.
 
 3. Cek status:
 
@@ -56,8 +56,8 @@ docker compose logs -f db
 # Jalankan seed manual
 docker compose exec app node prisma/seed.js
 
-# Sinkronkan skema manual
-docker compose exec app node node_modules/prisma/build/index.js db push --skip-generate
+# Terapkan migrasi manual
+docker compose exec app node node_modules/prisma/build/index.js migrate deploy
 
 # Backup database
 docker compose exec db pg_dump -U postgres masjid_abu_dzar > backup.sql
@@ -76,7 +76,7 @@ git pull
 docker compose up -d --build
 ```
 
-Entrypoint akan menyinkronkan skema dan menjalankan seed lagi secara aman.
+Entrypoint akan menerapkan migrasi dan menjalankan seed lagi secara aman.
 
 #### Menonaktifkan migrasi/seed otomatis
 

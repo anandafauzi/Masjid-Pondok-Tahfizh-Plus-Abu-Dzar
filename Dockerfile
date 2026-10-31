@@ -46,14 +46,14 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
 
-# Entrypoint: sinkronkan skema + seed (idempotent) sebelum server start.
+# Entrypoint: terapkan migrasi Prisma + seed (idempotent) sebelum server start.
 # Bisa dilewati dengan RUN_MIGRATIONS=false / RUN_SEED=false.
 RUN printf '%s\n' \
     '#!/bin/sh' \
     'set -e' \
     'if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then' \
-    '  echo "[entrypoint] Sinkronisasi skema database..."' \
-    '  node node_modules/prisma/build/index.js db push --skip-generate' \
+    '  echo "[entrypoint] Menjalankan migrasi database..."' \
+    '  node node_modules/prisma/build/index.js migrate deploy' \
     '  if [ "${RUN_SEED:-true}" = "true" ]; then' \
     '    echo "[entrypoint] Menjalankan seed..."' \
     '    node prisma/seed.js' \
