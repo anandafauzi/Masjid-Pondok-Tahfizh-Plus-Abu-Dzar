@@ -10,6 +10,7 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { TIMEZONE } from "@/lib/datetime";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,9 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return unauthorized();
   try {
-    const settings = await prisma.mosqueSettings.findFirst();
+    const settings = await prisma.mosqueSettings.findFirst({
+      orderBy: { id: "asc" },
+    });
     return ok(settings);
   } catch (error) {
     console.error(error);
@@ -67,12 +70,12 @@ export async function PUT(request: NextRequest) {
 
     const timezone =
       body.timezone !== undefined ? String(body.timezone).trim() : undefined;
-    if (timezone) {
-      try {
-        new Intl.DateTimeFormat("en-US", { timeZone: timezone });
-      } catch {
-        return badRequest("Zona waktu tidak valid");
-      }
+    if (timezone && timezone !== TIMEZONE) {
+      // Perhitungan shalat, countdown, dan tampilan saat ini dipatok ke WIB.
+      // Menyimpan zona lain akan menyesatkan, jadi tolak dengan jelas.
+      return badRequest(
+        "Saat ini aplikasi hanya mendukung zona waktu Asia/Jakarta (WIB)"
+      );
     }
 
     let prayerAdjustments:
@@ -121,7 +124,9 @@ export async function PUT(request: NextRequest) {
       prayerAdjustments,
     };
 
-    const existing = await prisma.mosqueSettings.findFirst();
+    const existing = await prisma.mosqueSettings.findFirst({
+      orderBy: { id: "asc" },
+    });
     const settings = existing
       ? await prisma.mosqueSettings.update({
           where: { id: existing.id },

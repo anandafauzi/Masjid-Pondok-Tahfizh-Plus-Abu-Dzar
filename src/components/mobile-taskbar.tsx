@@ -129,13 +129,21 @@ export function MobilePrayerTaskbar() {
 
   const serverNow = now + offset;
 
+  // Pada hari Jumat, Zuhur diganti Shalat Jumat sehingga tidak punya iqamah.
+  const visibleIqamahEvents = useMemo(() => {
+    if (!data) return [];
+    return data.isFriday
+      ? data.iqamahEvents.filter((e) => e.key !== "dhuhr")
+      : data.iqamahEvents;
+  }, [data]);
+
   // 2. Compute dynamic countdown state (Adzan vs Iqamah)
   const prayerState = useMemo(() => {
-    if (!data || !data.iqamahEvents || data.iqamahEvents.length === 0) {
+    if (!data || visibleIqamahEvents.length === 0) {
       return null;
     }
 
-    const events = data.iqamahEvents;
+    const events = visibleIqamahEvents;
 
     // Check if we are currently between adzan & iqamah for any prayer
     const activeIqamahEvent = events.find((e) => {
@@ -196,7 +204,7 @@ export function MobilePrayerTaskbar() {
       badgeText: "Shalat Esok Hari",
       isFajr: true,
     };
-  }, [data, serverNow]);
+  }, [data, serverNow, visibleIqamahEvents]);
 
   // 3. Find Imam and Muadzin for the active/next prayer
   const nextImamSchedule = useMemo(() => {
@@ -232,7 +240,7 @@ export function MobilePrayerTaskbar() {
     if (!data || !prayerState || !mounted) return;
 
     // Check each prayer event to see if current time just crossed adhanTarget (within a 60-second window)
-    for (const e of data.iqamahEvents) {
+    for (const e of visibleIqamahEvents) {
       const adhanMs = new Date(e.adhanTarget).getTime();
       const diff = serverNow - adhanMs;
       // Window: between 0 and 59 seconds after adzan time
@@ -263,7 +271,7 @@ export function MobilePrayerTaskbar() {
         }
       }
     }
-  }, [data, prayerState, serverNow, mounted, settings]);
+  }, [data, prayerState, serverNow, mounted, settings, visibleIqamahEvents]);
 
   // Audio Play / Preview Handlers
   const handleToggleAudio = () => {
@@ -577,7 +585,7 @@ export function MobilePrayerTaskbar() {
                 </h4>
 
                 <div className="space-y-2">
-                  {data.iqamahEvents.map((item) => {
+                  {visibleIqamahEvents.map((item) => {
                     const adhanMs = new Date(item.adhanTarget).getTime();
                     const iqamahMs = new Date(item.iqamahTarget).getTime();
                     const isPassed = serverNow >= iqamahMs;

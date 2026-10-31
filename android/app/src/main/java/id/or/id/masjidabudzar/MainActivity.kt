@@ -14,6 +14,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var swipeRefresh: SwipeRefreshLayout
     private val appUrl = "https://masjid-pondok-tahfizh-plus-abu-dzar.vercel.app"
+    private val appHost = "masjid-pondok-tahfizh-plus-abu-dzar.vercel.app"
+
+    private fun isAppOrigin(origin: String): Boolean {
+        return try {
+            val uri = android.net.Uri.parse(origin)
+            uri.scheme == "https" && uri.host == appHost
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,8 +44,10 @@ class MainActivity : AppCompatActivity() {
                 loadWithOverviewMode = true
                 mediaPlaybackRequiresUserGesture = false // Auto play adzan
                 setGeolocationEnabled(true)
-                allowFileAccess = true
-                allowContentAccess = true
+                // Aplikasi hanya menampilkan konten web; jangan izinkan
+                // akses ke file lokal / content provider perangkat.
+                allowFileAccess = false
+                allowContentAccess = false
             }
 
             webChromeClient = object : WebChromeClient() {
@@ -43,7 +55,9 @@ class MainActivity : AppCompatActivity() {
                     origin: String?,
                     callback: GeolocationPermissions.Callback?
                 ) {
-                    callback?.invoke(origin, true, false)
+                    // Hanya berikan lokasi ke origin aplikasi sendiri.
+                    val allowed = origin != null && isAppOrigin(origin)
+                    callback?.invoke(origin, allowed, false)
                 }
             }
 

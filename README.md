@@ -80,8 +80,12 @@ khatib Jumat, kajian, countdown adzan–iqamah, dan panel admin lengkap.
 
 ## Akun Admin Awal
 
-- Email: `admin@masjidabudzar.com`
-- Password: `admin123`
+- Email: `fauzi@abudzar.sch.id`
+- Password: `masjidabudzar`
+
+> Kredensial di atas hanya dipakai saat akun pertama kali dibuat. Menjalankan
+> `npm run db:seed` lagi **tidak** mereset password. Untuk mengganti email atau
+> password awal, set `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` sebelum seed.
 
 > Segera ubah password setelah login pertama melalui menu **Pengguna**.
 

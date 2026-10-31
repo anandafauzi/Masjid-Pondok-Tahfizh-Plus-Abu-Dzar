@@ -28,10 +28,19 @@ export const PRAYER_NAMES_ARABIC = {
   isha: "العشاء",
 } as const;
 
-export const COLORS = {
-  primary: "#0b132b", // midnight navy
-  accent: "#10b981", // emerald-500
-  gold: "#f59e0b", // amber-500
-  background: "#f8fafc",
-  secondary: "#64748b",
+/** Map nama shalat berbahasa Indonesia ke key PRAYER_NAMES_ARABIC. */
+const PRAYER_KEY_BY_LABEL: Record<string, keyof typeof PRAYER_NAMES_ARABIC> = {
+  imsak: "imsak",
+  subuh: "fajr",
+  terbit: "sunrise",
+  zuhur: "dhuhr",
+  asar: "asr",
+  magrib: "maghrib",
+  isya: "isha",
 };
+
+/** Nama Arab untuk label shalat ("Subuh", "Zuhur", dst). */
+export function getPrayerArabicName(name: string): string {
+  const key = PRAYER_KEY_BY_LABEL[name.trim().toLowerCase()];
+  return key ? PRAYER_NAMES_ARABIC[key] : "";
+}

@@ -30,6 +30,17 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { role: true, isActive: true },
+    });
+    if (!target) {
+      return NextResponse.json(
+        { error: "Pengguna tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
     if (id === user.id) {
       if (body.isActive === false) {
         return badRequest("Tidak dapat menonaktifkan akun sendiri");
@@ -49,9 +60,35 @@ export async function PUT(
     if (body.password !== undefined && String(body.password).length < 6) {
       return badRequest("Password minimal 6 karakter");
     }
+    if (body.name !== undefined && !String(body.name).trim()) {
+      return badRequest("Nama pengguna wajib diisi");
+    }
+
+    const nextRole = body.role !== undefined ? body.role : target.role;
+    const nextIsActive =
+      body.isActive !== undefined ? Boolean(body.isActive) : target.isActive;
+    const losesSuperAdminAccess =
+      target.role === "SUPER_ADMIN" &&
+      target.isActive &&
+      (nextRole !== "SUPER_ADMIN" || !nextIsActive);
+
+    if (losesSuperAdminAccess) {
+      const otherActiveSuperAdmins = await prisma.user.count({
+        where: {
+          role: "SUPER_ADMIN",
+          isActive: true,
+          id: { not: id },
+        },
+      });
+      if (otherActiveSuperAdmins === 0) {
+        return badRequest(
+          "Tidak dapat menurunkan atau menonaktifkan Super Admin aktif terakhir"
+        );
+      }
+    }
 
     const data: Record<string, unknown> = {
-      name: body.name ?? undefined,
+      name: body.name !== undefined ? String(body.name).trim() : undefined,
       role: body.role ?? undefined,
       isActive:
         body.isActive !== undefined ? Boolean(body.isActive) : undefined,
@@ -103,6 +140,33 @@ export async function DELETE(
         { status: 400 }
       );
     }
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { role: true, isActive: true },
+    });
+    if (!target) {
+      return NextResponse.json(
+        { error: "Pengguna tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+
+    if (target.role === "SUPER_ADMIN" && target.isActive) {
+      const otherActiveSuperAdmins = await prisma.user.count({
+        where: {
+          role: "SUPER_ADMIN",
+          isActive: true,
+          id: { not: id },
+        },
+      });
+      if (otherActiveSuperAdmins === 0) {
+        return badRequest(
+          "Tidak dapat menghapus Super Admin aktif terakhir"
+        );
+      }
+    }
+
     await prisma.user.delete({ where: { id } });
     await writeAudit({
       adminId: user.id,

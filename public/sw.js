@@ -1,4 +1,4 @@
-const CACHE = "masjid-cache-v9";
+const CACHE = "masjid-cache-v10";
 const PRECACHE = [
   "/",
   "/tv",
@@ -115,7 +115,14 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() => cached);
+        .catch(
+          () =>
+            cached ||
+            new Response("Offline", {
+              status: 503,
+              headers: { "Content-Type": "text/plain" },
+            })
+        );
       return cached || network;
     })
   );
@@ -123,14 +130,28 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+
+  const targetUrl = new URL(
+    (event.notification.data && event.notification.data.url) || "/",
+    self.location.origin
+  ).href;
+
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        if (clientList.length > 0) {
-          return clientList[0].focus();
+        // Fokuskan tab aplikasi yang sudah terbuka, lalu arahkan ke URL
+        // notifikasi (mis. halaman adzan/iqamah).
+        const client = clientList.find((c) => c.url.startsWith(self.location.origin));
+        if (client) {
+          return client.focus().then((focused) => {
+            if (focused && "navigate" in focused) {
+              return focused.navigate(targetUrl).catch(() => focused);
+            }
+            return focused;
+          });
         }
-        return self.clients.openWindow("/");
+        return self.clients.openWindow(targetUrl);
       })
   );
 });

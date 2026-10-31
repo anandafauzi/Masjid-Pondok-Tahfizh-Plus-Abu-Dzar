@@ -2,16 +2,35 @@ import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 
+/** Parse satu nilai .env: dukung tanda kutip dan komentar inline. */
+function parseEnvValue(raw: string): string {
+  const value = raw.trim();
+  if (value.length >= 2) {
+    const first = value[0];
+    const last = value[value.length - 1];
+    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+      return value.slice(1, -1);
+    }
+  }
+  // Buang komentar inline pada nilai tanpa tanda kutip: KEY=value # komentar
+  const commentIndex = value.search(/\s#/);
+  return (commentIndex >= 0 ? value.slice(0, commentIndex) : value).trim();
+}
+
 // Ensure DATABASE_URL is loaded even if environment variables weren't passed to process at startup
 if (!process.env.DATABASE_URL) {
   try {
     const envPath = path.resolve(process.cwd(), ".env");
     if (fs.existsSync(envPath)) {
       const content = fs.readFileSync(envPath, "utf8");
-      for (const line of content.split("\n")) {
-        const m = line.match(/^\s*([\w_]+)\s*=\s*(.*)?\s*$/);
+      for (const line of content.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const m = trimmed.match(
+          /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/
+        );
         if (m && !process.env[m[1]]) {
-          process.env[m[1]] = m[2].trim();
+          process.env[m[1]] = parseEnvValue(m[2] ?? "");
         }
       }
     }

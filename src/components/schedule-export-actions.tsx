@@ -72,7 +72,9 @@ export function ScheduleExportActions({
           return sDate === todayYmd;
         });
 
-        const dateStr = formatDateOnlyLong(new Date());
+        const dateStr = formatDateOnlyLong(
+          new Date(`${todayYmd}T00:00:00.000Z`)
+        );
 
         let text = `🕌 *JADWAL IMAM & MUADZIN HARI INI*\n`;
         text += `*${mosqueName}*\n`;
@@ -148,7 +150,12 @@ export function ScheduleExportActions({
     } else {
       // Type === "shalat"
       if (sharePeriod === "today") {
-        const dateStr = formatDateOnlyLong(new Date());
+        const todayYmd = new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Jakarta",
+        }).format(new Date());
+        const dateStr = formatDateOnlyLong(
+          new Date(`${todayYmd}T00:00:00.000Z`)
+        );
         let text = `🕌 *JADWAL WAKTU SHALAT & IQAMAH HARI INI*\n`;
         text += `*${mosqueName}*\n`;
         text += `📅 *${dateStr}*\n\n`;

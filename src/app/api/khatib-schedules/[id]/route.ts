@@ -28,6 +28,9 @@ export async function PUT(
     if (body.fridayDate !== undefined) {
       const parsed = parseDateOnly(body.fridayDate);
       if (!parsed) return badRequest("Tanggal Jumat tidak valid");
+      if (parsed.getUTCDay() !== 5) {
+        return badRequest("Jadwal khatib hanya untuk hari Jumat");
+      }
       fridayDate = parsed;
     }
 

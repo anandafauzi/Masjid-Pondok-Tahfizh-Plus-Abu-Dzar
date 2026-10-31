@@ -41,6 +41,11 @@ export default async function JadwalShalatPage() {
 
   const todayTimes = days[0].times;
   const todayIqamah = computeIqamahEvents(today, todayTimes, iqamahSettings);
+  const isFridayToday = today.getUTCDay() === 5;
+  // Hari Jumat tidak ada iqamah Zuhur karena diganti Shalat Jumat.
+  const todayIqamahCards = isFridayToday
+    ? todayIqamah.filter((e) => e.key !== "dhuhr")
+    : todayIqamah;
 
   const startDateStr = formatDateOnlyLong(today);
   const endDateStr = formatDateOnlyLong(days[days.length - 1].date);
@@ -184,19 +189,31 @@ export default async function JadwalShalatPage() {
         {/* Today's Prayers Spotlight Cards */}
         <section className="mb-10 rounded-2xl border border-[#d2dfd6] bg-[#fbfdfc] p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-[#557a64]" />
-              <h2 className="text-base font-bold text-slate-900">
-                Jadwal Adzan &amp; Iqamah Hari Ini
-              </h2>
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[#557a64]" />
+                <h2 className="text-base font-bold text-slate-900">
+                  Jadwal Adzan &amp; Iqamah Hari Ini
+                </h2>
+              </div>
+              {isFridayToday && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Hari Jumat: shalat Zuhur diganti Shalat Jumat, sehingga tidak
+                  ada iqamah Zuhur.
+                </p>
+              )}
             </div>
             <span className="text-xs font-semibold text-[#466553] bg-[#f4f7f5] border border-[#d2dfd6] px-2.5 py-0.5 rounded-full">
               WIB (UTC+7)
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {todayIqamah.map((e) => {
+          <div
+            className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${
+              isFridayToday ? "lg:grid-cols-4" : "lg:grid-cols-5"
+            }`}
+          >
+            {todayIqamahCards.map((e) => {
               const ar = PRAYER_NAMES_ARABIC[e.key as keyof typeof PRAYER_NAMES_ARABIC] ?? "";
               return (
                 <div

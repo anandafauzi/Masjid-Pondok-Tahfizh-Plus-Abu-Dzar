@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const fridayDate = parseDateOnly(body.fridayDate);
     if (!fridayDate) return badRequest("Tanggal Jumat tidak valid");
+    if (fridayDate.getUTCDay() !== 5) {
+      return badRequest("Jadwal khatib hanya untuk hari Jumat");
+    }
     if (!body.khatibName || !String(body.khatibName).trim()) {
       return badRequest("Nama khatib wajib diisi");
     }

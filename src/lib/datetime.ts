@@ -1,4 +1,4 @@
-import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
@@ -11,11 +11,6 @@ export function formatTZ(
   options?: { locale?: typeof localeId }
 ) {
   return formatInTimeZone(date, TIMEZONE, pattern, options as never);
-}
-
-/** Current wall-clock time in WIB, represented as a Date (shifted). */
-export function nowInTZ() {
-  return toZonedTime(new Date(), TIMEZONE);
 }
 
 /** yyyy-MM-dd for the given instant in WIB. */
@@ -62,13 +57,6 @@ export function formatDateOnlyShort(date: Date): string {
   });
 }
 
-/** Add days to a date (returns a new Date). */
-export function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
 /** Add days to a @db.Date value using UTC arithmetic (calendar-safe). */
 export function addDaysUTC(date: Date, days: number): Date {
   const d = new Date(date);
@@ -76,31 +64,18 @@ export function addDaysUTC(date: Date, days: number): Date {
   return d;
 }
 
+/** Next Friday (today if it is Friday), as a @db.Date UTC-midnight value. */
+export function nextFriday(dateOnly: Date = todayDateOnly()): Date {
+  const d = new Date(dateOnly);
+  const day = d.getUTCDay(); // 0 Sun .. 6 Sat
+  const diff = (5 - day + 7) % 7;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d;
+}
+
 /** Add minutes to a Date (returns a new Date). */
 export function addMinutes(date: Date, minutes: number): Date {
   return new Date(date.getTime() + minutes * 60 * 1000);
-}
-
-/** Difference in whole seconds (positive if target is in the future). */
-export function secondsUntil(target: Date, now: Date = new Date()): number {
-  return Math.floor((target.getTime() - now.getTime()) / 1000);
-}
-
-/** Parse "HH:mm" into minutes from midnight. */
-export function timeToMinutes(hhmm: string): number {
-  const [h, m] = hhmm.split(":").map(Number);
-  return h * 60 + m;
-}
-
-/** Format remaining seconds as HH:mm:ss (or MM:ss optionally). */
-export function formatCountdown(totalSeconds: number, forceHours = false): string {
-  const safe = Math.max(0, totalSeconds);
-  const h = Math.floor(safe / 3600);
-  const m = Math.floor((safe % 3600) / 60);
-  const s = safe % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  if (h > 0 || forceHours) return `${pad(h)}:${pad(m)}:${pad(s)}`;
-  return `${pad(m)}:${pad(s)}`;
 }
 
 export { format, localeId };

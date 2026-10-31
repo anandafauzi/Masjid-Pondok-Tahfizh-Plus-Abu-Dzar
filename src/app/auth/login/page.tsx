@@ -18,6 +18,18 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+function getSafeRedirectTarget(callbackUrl: string): string {
+  try {
+    const url = new URL(callbackUrl, window.location.origin);
+    if (url.origin === window.location.origin) {
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+  } catch {
+    // URL tidak valid, jatuh ke halaman admin.
+  }
+  return "/admin";
+}
+
 function LoginForm() {
   const { status } = useSession();
   const [email, setEmail] = useState("");
@@ -32,9 +44,12 @@ function LoginForm() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState(false);
 
+  // Hanya alihkan setelah sesi benar-benar terautentikasi. Sebelumnya halaman
+  // ini langsung me-redirect ke /admin sehingga form login tidak pernah tampil.
   useEffect(() => {
-    router.replace("/admin");
-  }, [router]);
+    if (status !== "authenticated") return;
+    router.replace(getSafeRedirectTarget(callbackUrl));
+  }, [status, callbackUrl, router]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -87,7 +102,7 @@ function LoginForm() {
         toast.error("Email atau kata sandi tidak sesuai. Silakan periksa kembali.");
       } else {
         toast.success("Login berhasil! Mengalihkan ke dashboard...");
-        router.push(callbackUrl);
+        router.push(getSafeRedirectTarget(callbackUrl));
         router.refresh();
       }
     } catch {

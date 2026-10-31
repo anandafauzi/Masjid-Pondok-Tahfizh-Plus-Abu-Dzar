@@ -80,6 +80,7 @@ export async function startKhutbah(input: StartKhutbahInput) {
 
       const existing = await tx.khutbahSession.findFirst({
         where: { status: "ACTIVE" },
+        orderBy: { startedAt: "desc" },
       });
 
       if (existing) {
@@ -141,11 +142,5 @@ export async function cancelKhutbah(id: string, endedById?: string | null) {
   return prisma.khutbahSession.update({
     where: { id: session.id },
     data: { status: "CANCELLED", endedAt: now, endedById: endedById ?? null },
-  });
-}
-
-export async function getLatestKhutbahSession() {
-  return prisma.khutbahSession.findFirst({
-    orderBy: { createdAt: "desc" },
   });
 }

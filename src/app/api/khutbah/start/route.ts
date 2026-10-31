@@ -12,7 +12,12 @@ import {
   serverError,
   unauthorized,
 } from "@/lib/api";
-import { todayDateOnly } from "@/lib/datetime";
+import {
+  dateOnlyToString,
+  nextFriday,
+  toDateOnlyString,
+  todayDateOnly,
+} from "@/lib/datetime";
 import { resolveRolling } from "@/lib/rolling";
 import { writeAudit } from "@/lib/audit";
 
@@ -50,13 +55,29 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
 
+    const startMode = body.startMode === "AUTO" ? "AUTO" : "MANUAL";
+
     const parsedFriday = body.fridayDate
       ? parseDateOnly(String(body.fridayDate))
       : null;
     if (body.fridayDate && !parsedFriday) {
       return badRequest("Tanggal Jumat tidak valid");
     }
-    const fridayDate = parsedFriday ?? todayDateOnly();
+    if (parsedFriday && parsedFriday.getUTCDay() !== 5) {
+      return badRequest("Tanggal khutbah harus hari Jumat");
+    }
+
+    const today = todayDateOnly();
+    if (!parsedFriday && startMode === "MANUAL" && today.getUTCDay() !== 5) {
+      return badRequest(
+        "Khutbah Jumat hanya dapat dimulai pada hari Jumat"
+      );
+    }
+    const fridayDate = parsedFriday ?? nextFriday(today);
+
+    if (startMode === "MANUAL" && fridayDate.getTime() !== today.getTime()) {
+      return badRequest("Khutbah manual hanya dapat dimulai untuk hari ini");
+    }
 
     const khatibName =
       (typeof body.khatibName === "string" && body.khatibName.trim()) ||
@@ -66,8 +87,6 @@ export async function POST(request: NextRequest) {
       Number.isFinite(Number(body.durationMinutes)) && Number(body.durationMinutes) > 0
         ? Math.min(Math.max(Math.trunc(Number(body.durationMinutes)), 1), 180)
         : 40;
-
-    const startMode = body.startMode === "AUTO" ? "AUTO" : "MANUAL";
 
     let scheduledStartAt: Date | null = null;
     if (startMode === "AUTO") {
@@ -80,6 +99,11 @@ export async function POST(request: NextRequest) {
       }
       if (parsed.getTime() < Date.now() - 60_000) {
         return badRequest("Waktu mulai terjadwal harus di masa depan");
+      }
+      if (toDateOnlyString(parsed) !== dateOnlyToString(fridayDate)) {
+        return badRequest(
+          "Waktu mulai terjadwal harus pada tanggal Jumat yang dipilih"
+        );
       }
       scheduledStartAt = parsed;
     }

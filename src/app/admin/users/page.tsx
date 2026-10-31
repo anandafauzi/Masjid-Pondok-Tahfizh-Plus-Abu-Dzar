@@ -53,6 +53,13 @@ export default function AdminUsersPage() {
   const [role, setRole] = useState<User["role"]>("ADMIN");
 
   const isSuper = session?.user?.role === "SUPER_ADMIN";
+  const activeSuperAdminCount = items.filter(
+    (u) => u.role === "SUPER_ADMIN" && u.isActive
+  ).length;
+
+  function isLastActiveSuperAdmin(u: User) {
+    return u.role === "SUPER_ADMIN" && u.isActive && activeSuperAdminCount <= 1;
+  }
 
   async function load() {
     try {
@@ -270,14 +277,21 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
                         <button
-                          className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700"
+                          className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                           onClick={() => update(u, { isActive: !u.isActive })}
-                          title={u.isActive ? "Nonaktifkan" : "Aktifkan"}
+                          disabled={isLastActiveSuperAdmin(u)}
+                          title={
+                            isLastActiveSuperAdmin(u)
+                              ? "Super Admin aktif terakhir tidak boleh dinonaktifkan"
+                              : u.isActive
+                                ? "Nonaktifkan"
+                                : "Aktifkan"
+                          }
                         >
                           <Power className="h-4 w-4" />
                         </button>
                         <button
-                          className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-amber-100 hover:text-amber-700"
+                          className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-amber-100 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                           onClick={() =>
                             update(u, {
                               role:
@@ -286,10 +300,13 @@ export default function AdminUsersPage() {
                                   : "SUPER_ADMIN",
                             })
                           }
+                          disabled={isLastActiveSuperAdmin(u)}
                           title={
-                            u.role === "SUPER_ADMIN"
-                              ? "Jadikan Admin"
-                              : "Jadikan Super Admin"
+                            isLastActiveSuperAdmin(u)
+                              ? "Super Admin aktif terakhir tidak boleh diturunkan"
+                              : u.role === "SUPER_ADMIN"
+                                ? "Jadikan Admin"
+                                : "Jadikan Super Admin"
                           }
                         >
                           <ShieldCheck className="h-4 w-4" />
@@ -302,9 +319,14 @@ export default function AdminUsersPage() {
                           <KeyRound className="h-4 w-4" />
                         </button>
                         <button
-                          className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-rose-100 hover:text-rose-600"
+                          className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-rose-100 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                           onClick={() => remove(u)}
-                          title="Hapus"
+                          disabled={isLastActiveSuperAdmin(u)}
+                          title={
+                            isLastActiveSuperAdmin(u)
+                              ? "Super Admin aktif terakhir tidak boleh dihapus"
+                              : "Hapus"
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

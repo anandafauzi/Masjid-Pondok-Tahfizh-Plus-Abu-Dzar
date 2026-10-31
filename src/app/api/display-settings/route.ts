@@ -10,7 +10,9 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return unauthorized();
   try {
-    const settings = await prisma.displaySetting.findFirst();
+    const settings = await prisma.displaySetting.findFirst({
+      orderBy: { id: "asc" },
+    });
     return ok(settings);
   } catch (error) {
     console.error(error);
@@ -50,7 +52,9 @@ export async function PUT(request: NextRequest) {
         body.themeSettings !== undefined ? body.themeSettings : undefined,
     };
 
-    const existing = await prisma.displaySetting.findFirst();
+    const existing = await prisma.displaySetting.findFirst({
+      orderBy: { id: "asc" },
+    });
     const settings = existing
       ? await prisma.displaySetting.update({
           where: { id: existing.id },

@@ -273,11 +273,15 @@ export default function AdminImamPage() {
   async function delRolling(id: string) {
     if (!confirm("Hapus imam dari daftar rotasi?")) return;
     try {
-      await fetch(`/api/imam-rolling/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/imam-rolling/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Gagal menghapus");
+      }
       await load();
       toast.success("Imam rotasi dihapus");
-    } catch {
-      toast.error("Gagal menghapus");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menghapus");
     }
   }
 
@@ -352,12 +356,16 @@ export default function AdminImamPage() {
   async function delSchedule(id: string) {
     if (!confirm("Hapus jadwal tanggal ini?")) return;
     try {
-      await fetch(`/api/imam-schedules/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/imam-schedules/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Gagal menghapus");
+      }
       if (editingId === id) resetScheduleForm();
       await load();
       toast.success("Jadwal dihapus");
-    } catch {
-      toast.error("Gagal menghapus");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menghapus");
     }
   }
 

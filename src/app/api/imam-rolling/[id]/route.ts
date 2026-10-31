@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  notFound,
   ok,
   parseDateOnly,
   parseIntOr,
@@ -10,6 +11,7 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { isValidEffectiveRange } from "@/lib/rolling";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +48,20 @@ export async function PUT(
         if (!parsed) return badRequest("Tanggal berlaku sampai tidak valid");
         effectiveUntil = parsed;
       }
+    }
+
+    const existing = await prisma.imamRollingSetting.findUnique({
+      where: { id },
+    });
+    if (!existing) return notFound("Imam rolling tidak ditemukan");
+
+    const nextFrom = effectiveFrom ?? existing.effectiveFrom;
+    const nextUntil =
+      effectiveUntil !== undefined ? effectiveUntil : existing.effectiveUntil;
+    if (!isValidEffectiveRange(nextFrom, nextUntil)) {
+      return badRequest(
+        "Tanggal berlaku sampai tidak boleh sebelum tanggal mulai"
+      );
     }
 
     const item = await prisma.imamRollingSetting.update({

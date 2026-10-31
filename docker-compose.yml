@@ -24,10 +24,11 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD wajib diisi di .env}
       POSTGRES_DB: masjid_abu_dzar
     ports:
-      - "5432:5432"
+      # Hanya bind ke localhost agar database tidak terbuka dari jaringan luar.
+      - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:

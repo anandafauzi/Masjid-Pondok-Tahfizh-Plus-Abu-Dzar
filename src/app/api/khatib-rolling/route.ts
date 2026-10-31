@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { todayDateOnly } from "@/lib/datetime";
+import { isValidEffectiveRange } from "@/lib/rolling";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,11 @@ export async function POST(request: NextRequest) {
     }
 
     const effectiveFrom = parsedFrom ?? todayDateOnly();
+    if (!isValidEffectiveRange(effectiveFrom, parsedUntil)) {
+      return badRequest(
+        "Tanggal berlaku sampai tidak boleh sebelum tanggal mulai"
+      );
+    }
     const last = await prisma.khatibRollingSetting.findFirst({
       orderBy: { sequenceNumber: "desc" },
       select: { sequenceNumber: true },

@@ -29,6 +29,15 @@ export function compareRollingSettings(
   return a.id.localeCompare(b.id);
 }
 
+/** Rentang berlaku valid bila tanggal selesai tidak mendahului tanggal mulai. */
+export function isValidEffectiveRange(
+  from: Date | string | null | undefined,
+  until: Date | string | null | undefined
+): boolean {
+  if (!from || !until) return true;
+  return asUTCDate(until).getTime() >= asUTCDate(from).getTime();
+}
+
 function asUTCDate(value: Date | string): Date {
   const ymd = typeof value === "string" ? value.slice(0, 10) : dateOnlyToString(value);
   return new Date(`${ymd}T00:00:00.000Z`);

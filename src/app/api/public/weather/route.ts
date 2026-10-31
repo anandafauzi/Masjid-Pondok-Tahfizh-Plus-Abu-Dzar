@@ -1,24 +1,40 @@
 import { NextResponse } from "next/server";
 import { getMosqueSettings, getDisplaySettings } from "@/lib/settings";
+import { TIMEZONE } from "@/lib/datetime";
 import { getWeatherDescription, type WeatherInfo } from "@/lib/weather";
 
 export const revalidate = 900; // Cache 15 menit
 
+const FALLBACK_LAT = -6.442126;
+const FALLBACK_LON = 106.640654;
+
+function isValidLatitude(value: number): boolean {
+  return Number.isFinite(value) && value >= -90 && value <= 90;
+}
+
+function isValidLongitude(value: number): boolean {
+  return Number.isFinite(value) && value >= -180 && value <= 180;
+}
+
 export async function GET() {
+  const [mosque, display] = await Promise.all([
+    getMosqueSettings(),
+    getDisplaySettings(),
+  ]);
+
+  const theme = display.themeSettings;
+  const locationName = theme?.weatherCity?.trim() || "Rumpin, Bogor";
+
+  // Jangan pakai `||` di sini: latitude/longitude 0 adalah koordinat valid.
+  const lat = isValidLatitude(mosque.latitude) ? mosque.latitude : FALLBACK_LAT;
+  const lon = isValidLongitude(mosque.longitude)
+    ? mosque.longitude
+    : FALLBACK_LON;
+  const timezone = mosque.timezone || TIMEZONE;
+
   try {
-    const [mosque, display] = await Promise.all([
-      getMosqueSettings(),
-      getDisplaySettings(),
-    ]);
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,weather_code&timezone=${encodeURIComponent(timezone)}`;
 
-    const theme = display.themeSettings;
-    const locationName = theme?.weatherCity || "Rumpin, Bogor";
-
-    const lat = mosque.latitude || -6.442126;
-    const lon = mosque.longitude || 106.640654;
-
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,is_day,weather_code&timezone=Asia%2FJakarta`;
-    
     const res = await fetch(url, {
       next: { revalidate: 900 },
       headers: { "User-Agent": "MasjidAbuDzar-TV/1.0" },
@@ -29,7 +45,7 @@ export async function GET() {
     }
 
     const data = await res.json();
-    const current = data.current;
+    const current = data?.current ?? {};
 
     const { condition, icon } = getWeatherDescription(
       current.weather_code ?? 1,
@@ -52,9 +68,8 @@ export async function GET() {
       humidity: 75,
       condition: "Cerah Berawan",
       icon: "🌤️",
-      locationName: "Rumpin, Bogor",
+      locationName,
     };
     return NextResponse.json(fallback);
   }
 }
-

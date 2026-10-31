@@ -47,8 +47,13 @@ export default function AdzanIqamahPage() {
 
   const serverNow = now + offset;
 
+  const isFriday = data?.isFriday ?? false;
+  const visibleEvents = data
+    ? data.iqamahEvents.filter((e) => !(isFriday && e.key === "dhuhr"))
+    : [];
+
   const nextEvent =
-    data?.iqamahEvents.find(
+    visibleEvents.find(
       (e) => new Date(e.iqamahTarget).getTime() > serverNow
     ) ?? null;
 
@@ -150,7 +155,9 @@ export default function AdzanIqamahPage() {
 
                   <div className="my-8 rounded-3xl border border-sage-200/80 bg-sage-50/40 px-8 py-6 shadow-inner sm:px-14 sm:py-8">
                     <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 block mb-2">
-                      Sisa Waktu Menuju Iqamah
+                      {upcoming.isBetweenAdhanAndIqamah
+                        ? "Sisa Waktu Menuju Iqamah"
+                        : "Sisa Waktu Menuju Adzan"}
                     </span>
                     <p
                       suppressHydrationWarning
@@ -158,7 +165,9 @@ export default function AdzanIqamahPage() {
                     >
                       {mounted
                         ? countdown(
-                            new Date(upcoming.iqamahTarget).getTime(),
+                            upcoming.isBetweenAdhanAndIqamah
+                              ? new Date(upcoming.iqamahTarget).getTime()
+                              : new Date(upcoming.adhanTarget).getTime(),
                             serverNow
                           )
                         : "--:--:--"}
@@ -191,6 +200,12 @@ export default function AdzanIqamahPage() {
               <h3 className="font-bold text-slate-900 text-base">
                 Rincian Jadwal Adzan &amp; Iqamah Hari Ini
               </h3>
+              {isFriday && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Hari Jumat: shalat Zuhur diganti Shalat Jumat, sehingga iqamah
+                  Zuhur tidak ditampilkan.
+                </p>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -204,7 +219,7 @@ export default function AdzanIqamahPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {data.iqamahEvents.map((e) => {
+                  {visibleEvents.map((e) => {
                     const iqamahMs = new Date(e.iqamahTarget).getTime();
                     const passed = iqamahMs <= serverNow;
                     const isCurrent = upcoming?.key === e.key;

@@ -138,14 +138,18 @@ export default function AdminPetugasPage() {
     const updated = petugas.filter((p) => p.id !== id);
     setPetugas(updated);
     try {
-      await fetch("/api/petugas", {
+      const res = await fetch("/api/petugas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: updated }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Gagal menghapus");
+      }
       toast.success("Petugas berhasil dihapus");
-    } catch {
-      toast.error("Gagal menghapus");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menghapus");
       await load();
     }
   }
@@ -156,12 +160,17 @@ export default function AdminPetugasPage() {
     );
     setPetugas(updated);
     try {
-      await fetch("/api/petugas", {
+      const res = await fetch("/api/petugas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items: updated }),
       });
-    } catch {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Gagal memperbarui status");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal memperbarui status");
       await load();
     }
   }

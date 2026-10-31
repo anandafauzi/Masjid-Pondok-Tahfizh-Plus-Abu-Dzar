@@ -1078,7 +1078,10 @@ export default function TVDisplayPage() {
 
               {/* Rows */}
               <div className="flex-1 flex flex-col justify-between gap-1.5 sm:gap-2.5 min-h-0 overflow-hidden">
-                {data.iqamahEvents.map((e) => (
+                {(isFriday
+                  ? data.iqamahEvents.filter((e) => e.key !== "dhuhr")
+                  : data.iqamahEvents
+                ).map((e) => (
                   <div
                     key={e.key}
                     className="grid grid-cols-12 gap-2 sm:gap-4 items-center flex-1 min-h-0 rounded-xl sm:rounded-2xl border border-[#ded5c4] bg-[#fbf9f4] px-4 py-2 sm:px-6 sm:py-3 hover:bg-white transition-colors shadow-sm"

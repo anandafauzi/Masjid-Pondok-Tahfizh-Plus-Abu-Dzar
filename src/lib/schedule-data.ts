@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { dateOnlyToString, addDaysUTC } from "@/lib/datetime";
+import { dateOnlyToString, addDaysUTC, nextFriday } from "@/lib/datetime";
 import { getWeeklyImamSettings, PRAYERS } from "@/lib/weekly-imam";
 import { resolveRolling } from "@/lib/rolling";
 
@@ -263,11 +263,4 @@ export async function getKhatibRollingActive() {
   }
 }
 
-/** Next Friday (today if it is Friday), as a @db.Date UTC-midnight value. */
-export function nextFriday(dateOnly: Date): Date {
-  const d = new Date(dateOnly);
-  const day = d.getUTCDay(); // 0 Sun .. 6 Sat
-  const diff = (5 - day + 7) % 7;
-  d.setUTCDate(d.getUTCDate() + diff);
-  return d;
-}
+export { nextFriday };

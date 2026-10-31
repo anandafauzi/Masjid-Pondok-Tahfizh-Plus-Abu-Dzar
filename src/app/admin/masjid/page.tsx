@@ -140,7 +140,11 @@ export default function AdminMasjidPage() {
       const res = await fetch("/api/mosque-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, prayerAdjustments: adjustments }),
+        body: JSON.stringify({
+          ...form,
+          timezone: "Asia/Jakarta",
+          prayerAdjustments: adjustments,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
@@ -300,11 +304,13 @@ export default function AdminMasjidPage() {
                   <Label htmlFor="timezone">Zona Waktu</Label>
                   <Input
                     id="timezone"
-                    value={form.timezone}
-                    onChange={(e) => update("timezone", e.target.value)}
+                    value="Asia/Jakarta"
+                    readOnly
+                    className="bg-slate-50 text-slate-600"
                   />
                   <p className="mt-1 text-xs text-slate-500">
-                    Perhitungan saat ini dipatok ke Asia/Jakarta (WIB).
+                    Perhitungan shalat dipatok ke Asia/Jakarta (WIB) dan tidak
+                    dapat diubah.
                   </p>
                 </div>
                 <div>

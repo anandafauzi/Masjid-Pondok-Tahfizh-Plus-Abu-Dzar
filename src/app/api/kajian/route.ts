@@ -36,6 +36,12 @@ export async function POST(request: NextRequest) {
       return badRequest("Waktu mulai tidak valid");
     }
     const endDateTime = body.endDateTime ? new Date(body.endDateTime) : null;
+    if (endDateTime && Number.isNaN(endDateTime.getTime())) {
+      return badRequest("Waktu selesai tidak valid");
+    }
+    if (endDateTime && endDateTime.getTime() < startDateTime.getTime()) {
+      return badRequest("Waktu selesai tidak boleh sebelum waktu mulai");
+    }
 
     const item = await prisma.kajianSchedule.create({
       data: {
@@ -43,10 +49,7 @@ export async function POST(request: NextRequest) {
         speakerName: String(body.speakerName).trim(),
         bookOrTopic: body.bookOrTopic ?? null,
         startDateTime,
-        endDateTime:
-          endDateTime && !Number.isNaN(endDateTime.getTime())
-            ? endDateTime
-            : null,
+        endDateTime,
         location: body.location ?? "Masjid",
         description: body.description ?? null,
         isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,

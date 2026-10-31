@@ -13,7 +13,7 @@ import {
   Select,
 } from "@/components/ui";
 import { Save, Timer } from "lucide-react";
-import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
+import { getPrayerArabicName } from "@/utils/constants";
 
 interface IqamahSetting {
   id?: string;
@@ -115,9 +115,7 @@ export default function AdminIqamahPage() {
               >
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white font-arabic text-sm text-amber-600 ring-1 ring-slate-200">
-                    {PRAYER_NAMES_ARABIC[
-                      item.prayerName.toLowerCase() as keyof typeof PRAYER_NAMES_ARABIC
-                    ] ?? ""}
+                    {getPrayerArabicName(item.prayerName)}
                   </span>
                   <span className="text-sm font-bold text-slate-900">
                     {item.prayerName}

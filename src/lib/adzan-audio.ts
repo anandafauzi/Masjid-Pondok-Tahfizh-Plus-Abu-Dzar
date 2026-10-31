@@ -109,10 +109,6 @@ export function stopAdzanSound(): void {
   }
 }
 
-export function isAdzanPlaying(): boolean {
-  return Boolean(globalAudio && !globalAudio.paused && !globalAudio.ended);
-}
-
 export async function requestAdzanNotificationPermission(): Promise<boolean> {
   if (typeof window === "undefined" || !("Notification" in window)) {
     return false;
@@ -141,22 +137,28 @@ export function showAdzanNotification(
       muadzinName ?? "Muadzin"
     }.`;
 
-    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then((reg) => {
-        const options: NotificationOptions & { vibrate?: number[] } = {
-          body,
-          icon: "/icon-192.png",
-          badge: "/icon-192.png",
-          vibrate: [200, 100, 200, 100, 400],
-          tag: `adzan-${prayerName}-${Date.now()}`,
-        };
-        reg.showNotification(title, options as NotificationOptions);
-      }).catch(() => {
-        new Notification(title, {
-          body,
-          icon: "/icon-192.png",
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready
+        .then((reg) => {
+          const options: NotificationOptions & {
+            vibrate?: number[];
+            data?: { url?: string };
+          } = {
+            body,
+            icon: "/icon-192.png",
+            badge: "/icon-192.png",
+            vibrate: [200, 100, 200, 100, 400],
+            tag: `adzan-${prayerName}-${Date.now()}`,
+            data: { url: "/adzan-iqamah" },
+          };
+          return reg.showNotification(title, options as NotificationOptions);
+        })
+        .catch(() => {
+          new Notification(title, {
+            body,
+            icon: "/icon-192.png",
+          });
         });
-      });
     } else {
       new Notification(title, {
         body,

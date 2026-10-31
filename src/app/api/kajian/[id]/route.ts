@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  notFound,
   ok,
   serverError,
   unauthorized,
@@ -54,6 +55,18 @@ export async function PUT(
       return badRequest("Waktu selesai tidak valid");
     }
 
+    const existing = await prisma.kajianSchedule.findUnique({ where: { id } });
+    if (!existing) return notFound("Kajian tidak ditemukan");
+
+    const nextStart = startDateTime ?? existing.startDateTime;
+    const nextEnd =
+      body.endDateTime === null
+        ? null
+        : (endDateTime ?? existing.endDateTime);
+    if (nextEnd && nextEnd.getTime() < nextStart.getTime()) {
+      return badRequest("Waktu selesai tidak boleh sebelum waktu mulai");
+    }
+
     const item = await prisma.kajianSchedule.update({
       where: { id },
       data: {
@@ -61,16 +74,9 @@ export async function PUT(
         speakerName,
         bookOrTopic:
           body.bookOrTopic !== undefined ? body.bookOrTopic : undefined,
-        startDateTime:
-          startDateTime && !Number.isNaN(startDateTime.getTime())
-            ? startDateTime
-            : undefined,
+        startDateTime: startDateTime ?? undefined,
         endDateTime:
-          endDateTime && !Number.isNaN(endDateTime.getTime())
-            ? endDateTime
-            : body.endDateTime === null
-              ? null
-              : undefined,
+          body.endDateTime === null ? null : (endDateTime ?? undefined),
         location: body.location ?? undefined,
         description:
           body.description !== undefined ? body.description : undefined,

@@ -29,6 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 { email: `${rawEmail}@masjidabudzar.com` },
               ],
             },
+            orderBy: { createdAt: "asc" },
           });
 
           if (!user || !user.isActive) {
@@ -37,21 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
 
           const rawPassword = String(credentials.password);
-          let isValid = await bcrypt.compare(rawPassword, user.password);
-
-          // Friendly fallback for mobile keyboard auto-capitalization (e.g. "Masjidabudzar" -> "masjidabudzar")
-          if (!isValid && rawPassword.length > 0) {
-            const lowerFirst =
-              rawPassword.charAt(0).toLowerCase() + rawPassword.slice(1);
-            if (lowerFirst !== rawPassword) {
-              isValid = await bcrypt.compare(lowerFirst, user.password);
-            }
-          }
-
-          // Case-insensitive password check fallback
-          if (!isValid) {
-            isValid = await bcrypt.compare(rawPassword.toLowerCase(), user.password);
-          }
+          const isValid = await bcrypt.compare(rawPassword, user.password);
 
           if (!isValid) {
             console.warn(`[AUTH] Login failed: Password mismatch for '${rawEmail}'.`);
@@ -73,11 +60,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: {
     strategy: "jwt",
-    maxAge: 365 * 24 * 60 * 60, // Sesi login bertahan 365 hari (1 tahun penuh)
+    maxAge: 7 * 24 * 60 * 60, // Sesi login berlaku 7 hari
     updateAge: 24 * 60 * 60, // Perbarui usia token setiap 24 jam
   },
   jwt: {
-    maxAge: 365 * 24 * 60 * 60, // Token JWT berlaku 365 hari
+    maxAge: 7 * 24 * 60 * 60, // Token JWT berlaku 7 hari
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -98,6 +85,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/auth/login",
   },
-  secret: process.env.NEXTAUTH_SECRET || "cfMtRhc2e06xjJj4KFbrErYebnhfrvn8NTXdklXuLPQ=",
+  // Jangan pernah memakai secret hardcoded. Jika kosong, Auth.js akan mencoba
+  // AUTH_SECRET; bila keduanya kosong, request ditolak dengan MissingSecret.
+  secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
 });

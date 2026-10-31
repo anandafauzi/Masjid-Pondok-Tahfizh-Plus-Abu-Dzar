@@ -1,12 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { saveDisplayThemePatch } from "@/lib/settings";
 import { PetugasItem } from "@/types/petugas";
-
-export const DEFAULT_PETUGAS_LIST: PetugasItem[] = [];
 
 export async function getPetugasList(): Promise<PetugasItem[]> {
   try {
     const display = await prisma.displaySetting.findFirst({
+      orderBy: { id: "asc" },
       select: { themeSettings: true },
     });
 
@@ -23,21 +22,5 @@ export async function getPetugasList(): Promise<PetugasItem[]> {
 }
 
 export async function savePetugasList(items: PetugasItem[]): Promise<void> {
-  const display = await prisma.displaySetting.findFirst({
-    select: { id: true, themeSettings: true },
-  });
-
-  const existingTheme =
-    (display?.themeSettings as Record<string, unknown>) ?? {};
-  const newTheme = {
-    ...existingTheme,
-    petugas: items,
-  };
-
-  if (display) {
-    await prisma.displaySetting.update({
-      where: { id: display.id },
-      data: { themeSettings: newTheme as unknown as Prisma.InputJsonValue },
-    });
-  }
+  await saveDisplayThemePatch({ petugas: items });
 }

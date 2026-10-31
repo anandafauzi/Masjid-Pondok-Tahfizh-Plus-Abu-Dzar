@@ -13,7 +13,7 @@ import {
   todayDateOnly,
 } from "@/lib/datetime";
 import { Users, Sparkles, UserCheck, Mic } from "lucide-react";
-import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
+import { getPrayerArabicName } from "@/utils/constants";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -273,7 +273,7 @@ export default async function JadwalImamPage() {
                           >
                             <td className="px-6 py-3.5 font-bold text-slate-900 flex items-center gap-2">
                               <span className="font-arabic text-xs text-[#557a64]">
-                                {PRAYER_NAMES_ARABIC[s.prayerName.toLowerCase() as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
+                                {getPrayerArabicName(s.prayerName)}
                               </span>
                               <span>{s.prayerName}</span>
                             </td>

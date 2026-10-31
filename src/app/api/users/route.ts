@@ -39,23 +39,26 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json();
-    if (!body.name || !body.email || !body.password) {
+    const name = String(body.name ?? "").trim();
+    const email = String(body.email ?? "").trim().toLowerCase();
+    const password = String(body.password ?? "");
+    if (!name || !email || !password) {
       return badRequest("Nama, email, dan password wajib diisi");
     }
-    if (String(body.password).length < 6) {
+    if (password.length < 6) {
       return badRequest("Password minimal 6 karakter");
     }
 
     const existing = await prisma.user.findUnique({
-      where: { email: String(body.email).toLowerCase().trim() },
+      where: { email },
     });
     if (existing) return badRequest("Email sudah terdaftar");
 
     const created = await prisma.user.create({
       data: {
-        name: String(body.name).trim(),
-        email: String(body.email).toLowerCase().trim(),
-        password: await bcrypt.hash(String(body.password), 10),
+        name,
+        email,
+        password: await bcrypt.hash(password, 10),
         role: body.role === "SUPER_ADMIN" ? "SUPER_ADMIN" : "ADMIN",
         isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
       },

@@ -72,15 +72,17 @@ async function main() {
     });
   }
 
-  const hashedPassword = await bcrypt.hash("masjidabudzar", 10);
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || "fauzi@abudzar.sch.id";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "masjidabudzar";
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
   await prisma.user.upsert({
-    where: { email: "fauzi@abudzar.sch.id" },
-    update: {
-      password: hashedPassword,
-    },
+    where: { email: adminEmail },
+    // Jangan menimpa akun yang sudah ada. Seed hanya membuat akun awal;
+    // reset password harus dilakukan lewat panel admin.
+    update: {},
     create: {
       name: "Fauzi",
-      email: "fauzi@abudzar.sch.id",
+      email: adminEmail,
       password: hashedPassword,
       role: "SUPER_ADMIN",
       isActive: true,

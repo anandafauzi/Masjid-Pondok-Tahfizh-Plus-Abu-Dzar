@@ -130,10 +130,17 @@ export default function AdminKhatibPage() {
   async function delRolling(id: string) {
     if (!confirm("Hapus khatib dari daftar rolling?")) return;
     try {
-      await fetch(`/api/khatib-rolling/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/khatib-rolling/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Gagal menghapus");
+      }
       await load();
-    } catch {
-      toast.error("Gagal menghapus");
+      toast.success("Khatib rotasi dihapus");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menghapus");
     }
   }
 
@@ -205,11 +212,18 @@ export default function AdminKhatibPage() {
   async function delSchedule(id: string) {
     if (!confirm("Hapus jadwal khatib ini?")) return;
     try {
-      await fetch(`/api/khatib-schedules/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/khatib-schedules/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Gagal menghapus");
+      }
       if (editingId === id) resetScheduleForm();
       await load();
-    } catch {
-      toast.error("Gagal menghapus");
+      toast.success("Jadwal khatib dihapus");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menghapus");
     }
   }
 
