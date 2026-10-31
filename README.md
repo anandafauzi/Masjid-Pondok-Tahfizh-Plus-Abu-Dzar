@@ -78,6 +78,19 @@ khatib Jumat, kajian, countdown adzan–iqamah, dan panel admin lengkap.
 
    Buka <http://localhost:3000>.
 
+## Menjalankan dengan Docker
+
+Cara tercepat untuk produksi:
+
+```bash
+cp .env.example .env   # lalu isi POSTGRES_PASSWORD & NEXTAUTH_SECRET
+docker compose up -d --build
+```
+
+Skema database dan seed dijalankan otomatis saat container start.
+Panduan lengkap (update, backup, restore, troubleshooting) ada di
+[`DEPLOYMENT.md`](./DEPLOYMENT.md).
+
 ## Akun Admin Awal
 
 - Email: `fauzi@abudzar.sch.id`

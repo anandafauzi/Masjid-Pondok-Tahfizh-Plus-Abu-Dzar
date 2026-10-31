@@ -3,20 +3,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: masjid-abu-dzar:local
     container_name: masjid-pondok-app
     restart: unless-stopped
+    init: true
     ports:
       - "3000:3000"
     env_file:
       - .env
     environment:
-      - NODE_ENV=production
-      - NEXT_TELEMETRY_DISABLED=1
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Selalu arahkan ke service `db`, bukan localhost dari .env.
+      # Password diambil dari POSTGRES_PASSWORD agar konsisten dengan database.
+      DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD wajib diisi di .env}@db:5432/masjid_abu_dzar?schema=public"
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./public:/app/public:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    stop_grace_period: 30s
 
   db:
     image: postgres:16-alpine
