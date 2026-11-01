@@ -44,6 +44,11 @@ next-env.d.ts
 # scratch files
 scratch/
 
+# backups
+/backups/
+*.sql
+*.sql.gz
+
 # desktop build outputs
 *.exe
 
