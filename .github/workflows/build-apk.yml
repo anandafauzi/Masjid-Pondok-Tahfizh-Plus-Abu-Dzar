@@ -43,17 +43,29 @@ jobs:
           fi
           ./gradlew --version
 
-      - name: Build Debug APK
+      - name: Build Release APK (signed if secrets present)
         working-directory: android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -o pipefail
-          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee build.log
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > app/masjid-release.keystore
+            chmod +x gradlew
+            ./gradlew assembleRelease --stacktrace --no-daemon -Pandroid.injected.signing.store.file=$PWD/app/masjid-release.keystore -Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD -Pandroid.injected.signing.key.alias=$KEY_ALIAS -Pandroid.injected.signing.key.password=$KEY_PASSWORD 2>&1 | tee build.log
+          else
+            echo "No signing secrets found, building debug APK..."
+            ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee build.log
+          fi
           status=$?
           if [ "$status" -ne 0 ]; then
             {
-              echo "### Gradle build failed (last 60 lines)"
+              echo "### Gradle build failed (last 80 lines)"
               echo '```'
-              tail -n 60 build.log
+              tail -n 80 build.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -63,5 +75,8 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: Masjid-Abu-Dzar-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 30
