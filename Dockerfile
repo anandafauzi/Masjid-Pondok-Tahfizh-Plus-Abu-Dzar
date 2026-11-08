@@ -17,6 +17,7 @@ RUN npm ci --include=dev
 # ---------- Builder ----------
 FROM base AS builder
 ENV NODE_ENV=production
+ENV BUILD_STANDALONE=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate

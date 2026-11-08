@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
+const isVercel = Boolean(process.env.VERCEL);
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: isVercel ? undefined : (process.env.BUILD_STANDALONE ? "standalone" : undefined),
   poweredByHeader: false,
   async headers() {
     return [
@@ -45,6 +47,24 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value: "no-cache",
+          },
+        ],
+      },
+      {
+        source: "/tv",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          },
+        ],
+      },
+      {
+        source: "/api/public/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
           },
         ],
       },

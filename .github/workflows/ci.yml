@@ -17,7 +17,6 @@ jobs:
       contents: read
 
     env:
-      NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
       # Dummy URL cukup buat generate Prisma & build Next.js
       DATABASE_URL: "postgresql://user:pass@localhost:5432/dummy"
@@ -35,7 +34,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Generate Prisma Client
         run: npx prisma generate

@@ -1,7 +1,6 @@
-const CACHE = "masjid-cache-v10";
+const CACHE = "masjid-cache-v11";
 const PRECACHE = [
   "/",
-  "/tv",
   "/jadwal-shalat",
   "/jadwal-imam",
   "/kiblat",

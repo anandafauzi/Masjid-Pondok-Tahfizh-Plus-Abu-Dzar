@@ -1,5 +1,8 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TvData } from "@/lib/public-data";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
@@ -124,15 +127,21 @@ export default function TVDisplayPage() {
       if (!res.ok) throw new Error("bad status");
       const d = (await res.json()) as TvData;
       setData((prev) => {
+        let nextData = d;
         // Jangan timpa imamToday yang valid dengan array kosong jika terjadi kegagalan sementara
         if (
           prev?.imamToday &&
           prev.imamToday.length > 0 &&
           (!d.imamToday || d.imamToday.length === 0)
         ) {
-          return { ...d, imamToday: prev.imamToday };
+          nextData = { ...d, imamToday: prev.imamToday };
         }
-        return d;
+        try {
+          localStorage.setItem("masjid_tv_cached_data", JSON.stringify(nextData));
+        } catch {
+          // ignore
+        }
+        return nextData;
       });
       setOffset(new Date(d.serverTime).getTime() - Date.now());
       setConnected(true);
@@ -142,6 +151,17 @@ export default function TVDisplayPage() {
   }, []);
 
   useEffect(() => {
+    try {
+      const cached = localStorage.getItem("masjid_tv_cached_data");
+      if (cached) {
+        const parsed = JSON.parse(cached) as TvData;
+        if (parsed && parsed.prayerTimes) {
+          setData(parsed);
+        }
+      }
+    } catch {
+      // Non-fatal
+    }
     load();
     const poll = setInterval(load, 20000);
     return () => clearInterval(poll);
@@ -320,13 +340,24 @@ export default function TVDisplayPage() {
     return prayers.map((pName) => {
       const found = list.find((item) => item.prayerName.toLowerCase() === pName.toLowerCase());
       if (found && (found.imamName || found.muadzinName)) {
-        return found;
+        return {
+          id: found.id || pName.toLowerCase(),
+          prayerName: pName,
+          imamName:
+            found.imamName?.trim() && found.imamName !== "Belum Ditentukan"
+              ? found.imamName
+              : "Asatidzah Pondok",
+          muadzinName:
+            found.muadzinName?.trim() && found.muadzinName !== "-"
+              ? found.muadzinName
+              : "Santri Bertugas",
+        };
       }
       return {
         id: pName.toLowerCase(),
         prayerName: pName,
-        imamName: found?.imamName || "Belum Ditentukan",
-        muadzinName: found?.muadzinName || "-",
+        imamName: "Asatidzah Pondok",
+        muadzinName: "Santri Bertugas",
       };
     });
   }, [data]);
