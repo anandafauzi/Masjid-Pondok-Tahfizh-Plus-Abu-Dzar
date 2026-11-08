@@ -82,6 +82,16 @@ const PRAYER_LIST = [
   { key: "isha", label: "Isya", ar: "العشاء" },
 ] as const;
 
+function cleanKhatibName(name?: string | null): string {
+  if (!name) return "Belum Ditentukan";
+  return (
+    name
+      .replace(/^(?:urutan\s*)?#\s*\d+\s*[-:–—]*\s*/i, "")
+      .replace(/\s*\(?(?:urutan\s*)?#\s*\d+\)?$/i, "")
+      .trim() || "Belum Ditentukan"
+  );
+}
+
 export default function TVDisplayPage() {
   const [data, setData] = useState<TvData | null>(null);
   const [offset, setOffset] = useState(0);
@@ -113,7 +123,17 @@ export default function TVDisplayPage() {
       const res = await fetch("/api/public/tv-data", { cache: "no-store" });
       if (!res.ok) throw new Error("bad status");
       const d = (await res.json()) as TvData;
-      setData(d);
+      setData((prev) => {
+        // Jangan timpa imamToday yang valid dengan array kosong jika terjadi kegagalan sementara
+        if (
+          prev?.imamToday &&
+          prev.imamToday.length > 0 &&
+          (!d.imamToday || d.imamToday.length === 0)
+        ) {
+          return { ...d, imamToday: prev.imamToday };
+        }
+        return d;
+      });
       setOffset(new Date(d.serverTime).getTime() - Date.now());
       setConnected(true);
     } catch {
@@ -310,6 +330,39 @@ export default function TVDisplayPage() {
       };
     });
   }, [data]);
+
+  // Menentukan shalat fardhu berikutnya antara Subuh s/d Isya
+  const upcomingPrayerName = useMemo(() => {
+    if (!data?.nextPrayer?.key) return "Subuh";
+    const k = data.nextPrayer.key.toLowerCase();
+    if (k === "fajr" || k === "subuh") return "Subuh";
+    if (k === "sunrise" || k === "syuruq" || k === "dhuha") return "Zuhur";
+    if (k === "dhuhr" || k === "zuhur") return "Zuhur";
+    if (k === "asr" || k === "asar") return "Asar";
+    if (k === "maghrib" || k === "magrib") return "Magrib";
+    if (k === "isha" || k === "isya") return "Isya";
+    return "Subuh";
+  }, [data?.nextPrayer?.key]);
+
+  // Petugas (Imam & Muadzin) yang bertugas pada shalat yang akan datang
+  const upcomingPetugas = useMemo(() => {
+    const list = data?.imamToday ?? [];
+    const target = upcomingPrayerName.toLowerCase();
+    const found = list.find((item) => {
+      const p = item.prayerName.toLowerCase();
+      return p === target || p.includes(target);
+    });
+    return {
+      imam:
+        found?.imamName?.trim() && found.imamName !== "Belum Ditentukan"
+          ? found.imamName
+          : "Asatidzah Pondok",
+      muadzin:
+        found?.muadzinName?.trim() && found.muadzinName !== "-"
+          ? found.muadzinName
+          : "Santri Bertugas",
+    };
+  }, [data?.imamToday, upcomingPrayerName]);
 
   const hasSpecialAnnouncement = Boolean(
     data?.display?.themeSettings?.specialAnnouncement?.enabled
@@ -561,10 +614,10 @@ export default function TVDisplayPage() {
     tickerText ||
     "Selamat Datang di Masjid Pondok Tahfizh Plus Abu Dzar - Rumpin, Kabupaten Bogor";
   const tickerSpeed = Math.max(10, data.display.tickerSpeed || 50);
-  const tickerDuration = Math.max(
-    16,
-    Math.round((tickerContent.length / 4) * (50 / tickerSpeed))
-  );
+  // Total jarak gerak dari luar kanan (100vw ~1920px) hingga keluar penuh di kiri
+  const totalDistancePx = 1920 + Math.max(600, tickerContent.length * 10);
+  const pxPerSecond = (tickerSpeed / 50) * 85;
+  const tickerDuration = Math.max(16, Math.round(totalDistancePx / pxPerSecond));
 
   // KHUTBAH JUMAT FULLSCREEN MODE (Tampil hening dan khusyuk tanpa countdown / hitung mundur)
   if (khutbahVisible && activeKhutbah) {
@@ -741,38 +794,6 @@ export default function TVDisplayPage() {
               {data.mosque.address ?? "Rumpin, Kabupaten Bogor, Jawa Barat"}
             </p>
           </div>
-        </div>
-
-        {/* Center: Slide indicator tabs */}
-        <div className="hidden lg:flex items-center gap-1 rounded-full border border-[#ded5c4] bg-[#f4eee2] p-1 shadow-inner">
-          {[
-            { id: 0, label: "Jadwal" },
-            { id: 1, label: "Iqamah" },
-            { id: 2, label: "Petugas" },
-            { id: 3, label: "Jumat" },
-            { id: 4, label: "Nasihat" },
-            ...(hasSpecialAnnouncement ? [{ id: 5, label: "Pengumuman" }] : []),
-          ].map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setSlide(s.id)}
-              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition-all ${slide === s.id
-                  ? s.id === 5
-                    ? "bg-amber-600 text-white shadow-sm scale-105"
-                    : "bg-[#2d946e] text-white shadow-sm scale-105"
-                  : s.id === 5
-                    ? "text-amber-800 hover:bg-amber-100 font-extrabold"
-                    : "text-[#5a685e] hover:text-[#19261f] hover:bg-white/60"
-                }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${slide === s.id ? "bg-white" : s.id === 5 ? "bg-amber-500 animate-pulse" : "bg-[#c5a059]"
-                  }`}
-              />
-              <span>{s.label}</span>
-            </button>
-          ))}
         </div>
 
         {/* Right: Weather, Real-time clock & dual calendar */}
@@ -1021,37 +1042,36 @@ export default function TVDisplayPage() {
                   </div>
                 </div>
 
-                {/* Imam & Muadzin Today Snippet (5 Waktu Shalat Fardhu Lengkap) */}
-                <div className="rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-2.5 sm:p-3.5 shadow-xl flex flex-col justify-between text-[#19261f] shrink-0 overflow-hidden">
-                  <div className="flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-1">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#19261f] sm:text-sm">
-                      <Users className="h-3.5 w-3.5 text-[#2d946e]" />
-                      <span>Petugas Shalat Hari Ini</span>
+                {/* Petugas Shalat Yang Akan Datang (Subuh-Isya) */}
+                <div className="rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3.5 sm:p-5 shadow-xl flex flex-col justify-between text-[#19261f] shrink-0 overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#19261f] sm:text-sm">
+                      <Users className="h-4 w-4 text-[#2d946e]" />
+                      <span>Petugas Shalat {upcomingPrayerName}</span>
                     </div>
-                    <span className="text-[9px] font-semibold text-[#1e6149] bg-[#eaf6f0] px-2 py-0.5 rounded-full border border-[#bde5d2]">
-                      5 Waktu Fardhu
+                    <span className="text-[10px] font-bold text-[#1e6149] bg-[#eaf6f0] px-2.5 py-0.5 rounded-full border border-[#bde5d2]">
+                      Shalat Berikutnya
                     </span>
                   </div>
 
-                  <div className="mt-1.5 space-y-0.5 sm:space-y-1">
-                    {displayImamList.map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex items-center justify-between gap-2 rounded-lg bg-[#fbf9f4] border border-[#ded5c4]/60 px-2.5 py-0.5 sm:py-1 text-xs"
-                      >
-                        <span className="w-14 shrink-0 font-bold text-[#8a6820]">
-                          {s.prayerName}
-                        </span>
-                        <div className="min-w-0 flex items-center justify-end gap-1.5 text-right">
-                          <span className="font-bold text-[#19261f]">
-                            {s.imamName}
-                          </span>
-                          <span className="text-[10px] text-[#5a685e]">
-                            ({s.muadzinName})
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mt-3 space-y-2.5">
+                    <div className="flex items-center justify-between rounded-xl bg-[#fbf9f4] border border-[#ded5c4]/60 px-3.5 py-2.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#8a6820]">
+                        Imam:
+                      </span>
+                      <span className="text-sm sm:text-base lg:text-lg font-black text-[#19261f]">
+                        {upcomingPetugas.imam}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-xl bg-[#fbf9f4] border border-[#ded5c4]/60 px-3.5 py-2.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#5a685e]">
+                        Muadzin:
+                      </span>
+                      <span className="text-sm sm:text-base lg:text-lg font-bold text-[#1e6149]">
+                        {upcomingPetugas.muadzin}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1239,18 +1259,20 @@ export default function TVDisplayPage() {
                       Khatib Jumat
                     </p>
                     <h3 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-black text-[#19261f] break-words leading-tight">
-                      {data.jumat.khatibName || "Belum Ditentukan"}
+                      {cleanKhatibName(data.jumat.khatibName)}
                     </h3>
                   </div>
 
-                  <div className="mt-4 rounded-2xl bg-white/80 p-3 sm:p-4 border border-[#ded3be]">
-                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#8a6820]">
-                      Tema Khutbah
-                    </p>
-                    <p className="mt-1 text-sm sm:text-base lg:text-lg font-semibold text-[#19261f] break-words">
-                      {data.jumat.sermonTopic && data.jumat.sermonTopic.trim() !== "" ? `“${data.jumat.sermonTopic}”` : "Belum ada tema khusus"}
-                    </p>
-                  </div>
+                  {data.jumat.sermonTopic && data.jumat.sermonTopic.trim() !== "" && (
+                    <div className="mt-4 rounded-2xl bg-white/80 p-3 sm:p-4 border border-[#ded3be]">
+                      <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#8a6820]">
+                        Tema Khutbah
+                      </p>
+                      <p className="mt-1 text-sm sm:text-base lg:text-lg font-semibold text-[#19261f] break-words">
+                        “{data.jumat.sermonTopic}”
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-3 flex items-center justify-between border-t border-[#ded3be] pt-3 text-xs sm:text-sm">
@@ -1498,14 +1520,15 @@ export default function TVDisplayPage() {
       {/* Bottom Running Text Ticker */}
       {data.display.tickerEnabled && (
         <footer className="relative z-10 shrink-0 overflow-hidden border-t border-[#ded5c4] bg-[#fbf9f4] py-1.5 backdrop-blur sm:py-2 text-[#19261f]">
-          <div className="flex items-center">
+          <div className="flex items-center w-full">
             <div className="z-10 flex shrink-0 items-center gap-1.5 bg-[#2d946e] px-2.5 py-0.5 text-[9px] font-bold uppercase text-white shadow-sm sm:px-3 sm:py-1 sm:text-xs">
               <Sparkles className="h-3 w-3 text-white sm:h-3.5 sm:w-3.5" />
               <span>INFO MASJID</span>
             </div>
-            <div className="overflow-hidden whitespace-nowrap text-xs font-medium text-[#3f5045] sm:text-sm">
+            <div className="flex-1 overflow-hidden min-w-0 relative flex items-center">
               <span
-                className="inline-block animate-marquee"
+                key={tickerContent}
+                className="inline-block whitespace-nowrap animate-marquee-tv pl-4"
                 style={{ animationDuration: `${tickerDuration}s` }}
               >
                 {tickerContent}

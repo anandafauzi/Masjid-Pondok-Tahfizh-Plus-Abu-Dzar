@@ -364,11 +364,6 @@ export default async function Home() {
                   <h3 className="text-xl sm:text-2xl font-black text-[#19261f]">
                     {fridayKhatib?.khatibName || "Belum Ditentukan"}
                   </h3>
-                  {fridayKhatib?.sequenceNumber && (
-                    <span className="inline-flex items-center rounded-md bg-[#2d946e]/10 px-2 py-0.5 text-[11px] font-bold text-[#1e6149] border border-[#2d946e]/20">
-                      Urutan #{fridayKhatib.sequenceNumber}
-                    </span>
-                  )}
                 </div>
 
                 {fridayKhatib?.sermonTopic && (

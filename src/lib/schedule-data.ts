@@ -44,10 +44,10 @@ export async function getImamSchedulesBetween(from: Date, to: Date) {
       getImamRollingActive().catch(() => []),
     ]);
 
-    // Map existing records by `YYYY-MM-DD_PrayerName`
+    // Map existing records by `YYYY-MM-DD_prayerName` (case-insensitive)
     const existingMap = new Map<string, (typeof dbSchedules)[number]>();
     for (const item of dbSchedules) {
-      const key = `${dateOnlyToString(item.scheduleDate)}_${item.prayerName}`;
+      const key = `${dateOnlyToString(item.scheduleDate)}_${item.prayerName.toLowerCase().trim()}`;
       existingMap.set(key, item);
     }
 
@@ -83,7 +83,7 @@ export async function getImamSchedulesBetween(from: Date, to: Date) {
       }
 
       for (const prayer of PRAYERS) {
-        const key = `${ymd}_${prayer}`;
+        const key = `${ymd}_${prayer.toLowerCase().trim()}`;
         const isFridaySubuh = dayOfWeek === 5 && prayer.toLowerCase() === "subuh";
 
         if (existingMap.has(key)) {

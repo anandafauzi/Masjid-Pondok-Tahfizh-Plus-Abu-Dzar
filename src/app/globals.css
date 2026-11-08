@@ -183,6 +183,22 @@ body {
   animation: marquee 35s linear infinite;
 }
 
+@keyframes marquee-tv {
+  0% {
+    transform: translate3d(100vw, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+.animate-marquee-tv {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee-tv linear infinite;
+  will-change: transform;
+}
+
 @keyframes pulse-gentle {
   0%, 100% {
     opacity: 1;

@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
@@ -27,6 +28,20 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const interval = Number(body.slideIntervalSeconds);
     const speed = Number(body.tickerSpeed);
+    const existing = await prisma.displaySetting.findFirst({
+      orderBy: { id: "asc" },
+    });
+
+    const existingTheme =
+      existing?.themeSettings && typeof existing.themeSettings === "object"
+        ? (existing.themeSettings as Record<string, unknown>)
+        : {};
+
+    const mergedTheme =
+      body.themeSettings !== undefined
+        ? { ...existingTheme, ...(body.themeSettings as Record<string, unknown>) }
+        : undefined;
+
     const data = {
       slideIntervalSeconds:
         body.slideIntervalSeconds !== undefined && Number.isFinite(interval)
@@ -48,13 +63,9 @@ export async function PUT(request: NextRequest) {
         body.showHijriDate !== undefined
           ? Boolean(body.showHijriDate)
           : undefined,
-      themeSettings:
-        body.themeSettings !== undefined ? body.themeSettings : undefined,
+      themeSettings: mergedTheme !== undefined ? (mergedTheme as Prisma.InputJsonValue) : undefined,
     };
 
-    const existing = await prisma.displaySetting.findFirst({
-      orderBy: { id: "asc" },
-    });
     const settings = existing
       ? await prisma.displaySetting.update({
           where: { id: existing.id },

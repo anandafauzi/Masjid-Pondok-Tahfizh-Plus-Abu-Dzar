@@ -20,3 +20,4 @@ describe("qibla calculation", () => {
     expect(fallback).toBe(295.28);
   });
 });
+
