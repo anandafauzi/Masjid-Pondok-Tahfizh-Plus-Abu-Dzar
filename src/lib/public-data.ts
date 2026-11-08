@@ -190,9 +190,14 @@ export async function buildTvData(): Promise<TvData> {
 
   const isFridayToday = today.getUTCDay() === 5;
   const dhuhrStart = combineDateTime(today, prayerTimes.dhuhr);
-  const dhuhrEnd = new Date(dhuhrStart.getTime() + 40 * 60 * 1000); // 40 menit durasi Khutbah Jumat
 
-  // Otomatis aktifkan mode Khutbah Jumat selama 40 menit di waktu sholat Jumat
+  // Jika ada sesi khutbah dari database, gunakan endsAt sesi tersebut.
+  // Jika tidak ada, gunakan durasi default 40 menit dari adzan Zuhur.
+  const dhuhrEnd = khutbah
+    ? new Date(khutbah.endsAt)
+    : new Date(dhuhrStart.getTime() + 40 * 60 * 1000);
+
+  // Otomatis aktifkan mode Khutbah Jumat selama window shalat Jumat
   let resolvedKhutbah = khutbah;
   if (!resolvedKhutbah && isFridayToday && now >= dhuhrStart && now < dhuhrEnd) {
     resolvedKhutbah = {
@@ -204,9 +209,12 @@ export async function buildTvData(): Promise<TvData> {
     } as typeof khutbah;
   }
 
-  // Pada hari Jumat waktu Zuhur, sembunyikan countdown iqamah agar tidak tumpang tindih
+  // Pada hari Jumat, sembunyikan countdown iqamah Zuhur HANYA saat window Khutbah Jumat aktif
   let resolvedNextIqamah = nextIqamah;
-  if (isFridayToday && resolvedNextIqamah?.label?.toLowerCase().includes("zuhur")) {
+  const isKhutbahActiveNow = Boolean(
+    isFridayToday && (resolvedKhutbah || (now >= dhuhrStart && now < dhuhrEnd))
+  );
+  if (isKhutbahActiveNow && resolvedNextIqamah?.label?.toLowerCase().includes("zuhur")) {
     resolvedNextIqamah = null;
   }
 

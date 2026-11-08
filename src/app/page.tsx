@@ -516,7 +516,7 @@ export default async function Home() {
                       <h3 className="text-base font-bold text-[#19261f] group-hover:text-[#2d946e] transition-colors">
                         {card.title}
                       </h3>
-                      <p className="text-[11px] text-[#5c6e63]">Abu Dzar</p>
+                      <p className="text-[11px] text-[#5c6e63]">{mosque.mosqueName}</p>
                     </div>
                   </div>
 

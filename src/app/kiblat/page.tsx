@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { PublicShell } from "@/components/public-shell";
 import { QiblaCompass } from "@/components/qibla-compass";
 import { getMosqueSettings } from "@/lib/settings";
+import { formatQiblaBearing } from "@/lib/qibla";
 import { Compass } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,7 @@ export default async function KiblatPage() {
           <div className="rounded-2xl border border-slate-200/80 bg-[#fbfdfc] p-4 shadow-sm text-right shrink-0">
             <span className="text-xs text-slate-500 font-semibold block">Arah Kiblat Masjid</span>
             <span className="text-base font-bold text-[#466553]">
-              295.28° Barat Laut
+              {formatQiblaBearing(mosque.latitude, mosque.longitude)}
             </span>
           </div>
         </div>

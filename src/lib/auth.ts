@@ -1,7 +1,13 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { isLoginRateLimited, recordLoginAttempt } from "@/lib/login-rate-limit";
+
+export class RateLimitedError extends CredentialsSignin {
+  code = "rate_limited";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -19,6 +25,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           ? rawEmail
           : `${rawEmail}@abudzar.sch.id`;
 
+        const reqHeaders = await headers().catch(() => null);
+        const userAgent = reqHeaders?.get("user-agent") ?? null;
+
+        // 1. Cek rate limiting sebelum query kredensial
+        const rateLimit = await isLoginRateLimited(rawEmail, reqHeaders);
+        if (rateLimit.limited) {
+          console.warn(`[AUTH] Login blocked: Rate limit exceeded for '${rawEmail}'.`);
+          throw new RateLimitedError();
+        }
+
         try {
           const user = await prisma.user.findFirst({
             where: {
@@ -34,6 +50,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (!user || !user.isActive) {
             console.warn(`[AUTH] Login failed: User '${rawEmail}' not found or inactive.`);
+            await recordLoginAttempt(rawEmail, false, reqHeaders, userAgent);
             return null;
           }
 
@@ -42,8 +59,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           if (!isValid) {
             console.warn(`[AUTH] Login failed: Password mismatch for '${rawEmail}'.`);
+            await recordLoginAttempt(rawEmail, false, reqHeaders, userAgent);
             return null;
           }
+
+          // Catat percobaan berhasil
+          await recordLoginAttempt(rawEmail, true, reqHeaders, userAgent);
 
           return {
             id: user.id,
@@ -52,6 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: user.role,
           };
         } catch (error) {
+          if (error instanceof RateLimitedError) throw error;
           console.error("[AUTH] Database error during authorize:", error);
           return null;
         }

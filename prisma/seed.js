@@ -72,6 +72,13 @@ async function main() {
     });
   }
 
+  const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction && (!process.env.SEED_ADMIN_EMAIL || !process.env.SEED_ADMIN_PASSWORD)) {
+    throw new Error(
+      "[SEED] Keamanan Produksi: SEED_ADMIN_EMAIL dan SEED_ADMIN_PASSWORD wajib diatur di env vars!"
+    );
+  }
+
   const adminEmail = process.env.SEED_ADMIN_EMAIL || "fauzi@abudzar.sch.id";
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || "masjidabudzar";
   const hashedPassword = await bcrypt.hash(adminPassword, 10);

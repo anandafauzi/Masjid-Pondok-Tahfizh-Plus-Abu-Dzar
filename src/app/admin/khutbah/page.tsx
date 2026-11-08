@@ -82,7 +82,9 @@ export default function AdminKhutbahPage() {
   const active =
     sessions.find(
       (s) =>
-        s.status === "ACTIVE" && new Date(s.startedAt).getTime() <= now
+        s.status === "ACTIVE" &&
+        new Date(s.startedAt).getTime() <= now &&
+        new Date(s.endsAt).getTime() > now
     ) ?? null;
   const scheduled =
     sessions.find(
@@ -228,6 +230,7 @@ export default function AdminKhutbahPage() {
                   {new Date(active.endsAt).toLocaleTimeString("id-ID", {
                     hour: "2-digit",
                     minute: "2-digit",
+                    timeZone: "Asia/Jakarta",
                   })}{" "}
                   WIB
                 </p>
@@ -399,12 +402,14 @@ export default function AdminKhutbahPage() {
                       {new Date(s.startedAt).toLocaleString("id-ID", {
                         dateStyle: "short",
                         timeStyle: "short",
+                        timeZone: "Asia/Jakarta",
                       })}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500">
                       {new Date(s.endsAt).toLocaleTimeString("id-ID", {
                         hour: "2-digit",
                         minute: "2-digit",
+                        timeZone: "Asia/Jakarta",
                       })}
                     </td>
                   </tr>

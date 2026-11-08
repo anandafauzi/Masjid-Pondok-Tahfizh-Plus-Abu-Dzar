@@ -3,27 +3,32 @@ import { prisma } from "@/lib/prisma";
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 15;
 
-function getClientIp(request?: Request | null): string | null {
-  if (!request) return null;
-  const headers = request.headers;
-  const forwarded = headers.get("x-forwarded-for");
-  if (forwarded) {
-    const ip = forwarded.split(",")[0].trim();
-    if (ip) return ip;
-  }
-  const realIp = headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
+function getClientIp(headersOrRequest?: Request | Headers | null): string | null {
+  if (!headersOrRequest) return null;
+  const headers =
+    "headers" in headersOrRequest ? headersOrRequest.headers : headersOrRequest;
+
+  // Platform-specific headers first (trusted reverse proxies like Cloudflare/Vercel)
   const cfConnectingIp = headers.get("cf-connecting-ip");
   if (cfConnectingIp) return cfConnectingIp.trim();
+
+  const realIp = headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
+
+  const forwarded = headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
   return null;
 }
 
 export async function isLoginRateLimited(
   email: string,
-  request?: Request | null
+  headersOrRequest?: Request | Headers | null
 ): Promise<{ limited: boolean; retryAfterSeconds?: number }> {
   const normalizedEmail = email.toLowerCase().trim();
-  const ip = getClientIp(request);
+  const ip = getClientIp(headersOrRequest);
   const windowStart = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000);
 
   const [emailCount, ipCount] = await Promise.all([
@@ -71,12 +76,12 @@ export async function isLoginRateLimited(
 export async function recordLoginAttempt(
   email: string,
   success: boolean,
-  request?: Request | null,
+  headersOrRequest?: Request | Headers | null,
   userAgent?: string | null
 ): Promise<void> {
   try {
     const normalizedEmail = email.toLowerCase().trim();
-    const ip = getClientIp(request);
+    const ip = getClientIp(headersOrRequest);
     await prisma.loginAttempt.create({
       data: {
         email: normalizedEmail,

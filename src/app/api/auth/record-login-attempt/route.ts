@@ -1,20 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { recordLoginAttempt } from "@/lib/login-rate-limit";
+import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json().catch(() => ({}));
-    const email = typeof body.email === "string" ? body.email : "";
-    const success = Boolean(body.success);
-    const userAgent = request.headers.get("user-agent");
-    if (email) {
-      await recordLoginAttempt(email, success, request, userAgent);
-    }
-    return NextResponse.json({ ok: true }, { status: 200 });
-  } catch (error) {
-    console.error("[RECORD_LOGIN] Failed:", error);
-    return NextResponse.json({ ok: true }, { status: 200 });
-  }
+/**
+ * DEPRECATED & DISABLED:
+ * Pencatatan login attempt kini dilakukan langsung di server-side (authorize() di src/lib/auth.ts)
+ * untuk mencegah DoS lockout eksploitasi oleh pihak ketiga yang tidak terautentikasi.
+ */
+export async function POST() {
+  return NextResponse.json(
+    { message: "Endpoint ini telah dinonaktifkan demi keamanan. Login attempt dicatat server-side." },
+    { status: 200 }
+  );
 }

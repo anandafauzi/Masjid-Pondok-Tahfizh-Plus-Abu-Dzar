@@ -106,7 +106,7 @@ export async function getImamSchedulesBetween(from: Date, to: Date) {
         }
 
         // Synthesize missing prayers from weekly rules or Friday rolling
-        const rule = weeklyRules.find(
+        const rawRule = weeklyRules.find(
           (r) =>
             r.dayOfWeek === dayOfWeek &&
             r.prayerName.toLowerCase() === prayer.toLowerCase() &&
@@ -114,6 +114,13 @@ export async function getImamSchedulesBetween(from: Date, to: Date) {
             r.imamName &&
             r.imamName.trim() !== ""
         );
+
+        const isRuleValid = rawRule
+          ? (!rawRule.effectiveFrom || ymd >= rawRule.effectiveFrom) &&
+            (rawRule.isPermanent || !rawRule.effectiveUntil || ymd <= rawRule.effectiveUntil)
+          : false;
+
+        const rule = isRuleValid ? rawRule : undefined;
 
         // For Friday Subuh, if rolling imam exists, it takes precedence over static weekly rule
         const imamName = isFridaySubuh && fridaySubuhRollingName
@@ -123,24 +130,13 @@ export async function getImamSchedulesBetween(from: Date, to: Date) {
         const muadzinName = rule?.muadzinName || "";
 
         if (imamName) {
-          // Check validity if rule has dates
-          if (rule && rule.effectiveFrom && ymd < rule.effectiveFrom) continue;
-          if (
-            rule &&
-            !rule.isPermanent &&
-            rule.effectiveUntil &&
-            ymd > rule.effectiveUntil
-          ) {
-            continue;
-          }
-
           merged.push({
             id: `weekly-${dayOfWeek}-${prayer}-${ymd}`,
             scheduleDate: currentDate,
             prayerName: prayer,
             imamName,
             muadzinName,
-            recurrenceRuleId: "weekly-rule",
+            recurrenceRuleId: isFridaySubuh && fridaySubuhRollingName ? "friday-rolling" : "weekly-rule",
             notes: isFridaySubuh && fridaySubuhRollingName ? "Rotasi Subuh Jumat" : rule?.notes ?? null,
             createdBy: "weekly-recurring",
             updatedAt: new Date(),

@@ -119,19 +119,12 @@ function LoginForm() {
         redirect: false,
       });
 
-      // Catat percobaan login untuk rate limiting
-      try {
-        await fetch("/api/auth/record-login-attempt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, success: !result?.error }),
-        });
-      } catch {
-        // Abaikan jika gagal mencatat
-      }
-
       if (result?.error) {
-        toast.error("Email atau kata sandi tidak sesuai. Silakan periksa kembali.");
+        if (result.error.toLowerCase().includes("rate_limited")) {
+          toast.error("Terlalu banyak percobaan gagal. Silakan tunggu 15 menit.");
+        } else {
+          toast.error("Email atau kata sandi tidak sesuai. Silakan periksa kembali.");
+        }
       } else {
         toast.success("Login berhasil! Mengalihkan ke dashboard...");
         router.push(getSafeRedirectTarget(callbackUrl));

@@ -685,7 +685,7 @@ export function MobilePrayerTaskbar() {
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-900">Kompas Arah Kiblat Digital</p>
-                    <p className="text-[10px] text-slate-500">295.28° Barat Laut (Ka&apos;bah Makkah)</p>
+                    <p className="text-[10px] text-slate-500">Penunjuk Arah Ka&apos;bah Makkah Presisi</p>
                   </div>
                 </div>
                 <Link

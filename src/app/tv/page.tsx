@@ -245,22 +245,26 @@ export default function TVDisplayPage() {
       dhuhrStartMs = new Date(dhuhrEvent.adhanTarget).getTime();
     } else if (data.prayerTimes?.dhuhr) {
       const [h, m] = data.prayerTimes.dhuhr.split(":").map((v) => parseInt(v, 10));
-      const d = new Date(serverNow);
-      d.setHours(h, m, 0, 0);
-      dhuhrStartMs = d.getTime();
+      // Tentukan waktu Zuhur WIB (+07:00) secara deterministik tanpa bergantung timezone lokal browser
+      const nowWib = new Date(serverNow + 7 * 3600 * 1000);
+      const ymd = nowWib.toISOString().slice(0, 10);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      dhuhrStartMs = new Date(`${ymd}T${pad(h)}:${pad(m)}:00+07:00`).getTime();
     } else {
       return null;
     }
 
-    const dhuhrEndMs = dhuhrStartMs + 40 * 60 * 1000; // Tepat 40 menit durasi Khutbah Jumat
+    const dhuhrEndMs = data.khutbah
+      ? new Date(data.khutbah.endsAt).getTime()
+      : dhuhrStartMs + 40 * 60 * 1000;
     const isActive = serverNow >= dhuhrStartMs && serverNow < dhuhrEndMs;
 
     return {
       isActive,
       startsAt: dhuhrStartMs,
       endsAt: dhuhrEndMs,
-      khatibName: data.jumat?.khatibName || "Khatib Jumat",
-      sermonTopic: data.jumat?.sermonTopic || null,
+      khatibName: data.khutbah?.khatibName || data.jumat?.khatibName || "Khatib Jumat",
+      sermonTopic: data.khutbah?.sermonTopic || data.jumat?.sermonTopic || null,
     };
   }, [data, isFriday, serverNow]);
 
@@ -378,28 +382,28 @@ export default function TVDisplayPage() {
     if (khutbahVisible) return null;
     const next = data?.nextIqamah;
     if (!next) return null;
-    if (isFriday && next.label.toLowerCase().includes("zuhur")) return null;
+    if (isFriday && autoFridayKhutbah?.isActive && next.label.toLowerCase().includes("zuhur")) return null;
     const adhan = new Date(next.adhanTarget).getTime();
     const iqamah = new Date(next.iqamahTarget).getTime();
     if (adhan <= serverNow && iqamah > serverNow) return next;
     return null;
-  }, [data, serverNow, khutbahVisible, isFriday]);
+  }, [data, serverNow, khutbahVisible, isFriday, autoFridayKhutbah]);
 
   const prayerTimeReached = useMemo((): { event: NonNullable<TvData["iqamahEvents"]>[number] } | null => {
     if (khutbahVisible) return null;
     if (!data?.nextPrayer) return null;
-    if (isFriday && data.nextPrayer.key === "dhuhr") return null;
+    if (isFriday && autoFridayKhutbah?.isActive && data.nextPrayer.key === "dhuhr") return null;
     const target = new Date(data.nextPrayer.target).getTime();
     if (target <= serverNow && !iqamahActive) {
       const ev = data.iqamahEvents?.find((e) => e.key === data.nextPrayer.key);
       if (ev) {
-        if (isFriday && ev.key === "dhuhr") return null;
+        if (isFriday && autoFridayKhutbah?.isActive && ev.key === "dhuhr") return null;
         const iq = new Date(ev.iqamahTarget).getTime();
         if (iq > serverNow) return { event: ev };
       }
     }
     return null;
-  }, [data, serverNow, iqamahActive, khutbahVisible, isFriday]);
+  }, [data, serverNow, iqamahActive, khutbahVisible, isFriday, autoFridayKhutbah]);
 
   // 3. Beep Countdown Synthesizer (Hening saat Khutbah Jumat berlangsung)
   useEffect(() => {
