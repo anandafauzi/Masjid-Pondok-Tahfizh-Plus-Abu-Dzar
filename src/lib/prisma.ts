@@ -56,7 +56,14 @@ function getOptimizedDatabaseUrl(): string | undefined {
       parsed.searchParams.set("pgbouncer", "true");
       parsed.searchParams.set("sslmode", "require");
       if (!parsed.searchParams.has("connection_limit")) {
-        parsed.searchParams.set("connection_limit", "1");
+        // Jangan 1: pooler transaksi Supabase sanggup banyak koneksi pendek.
+        // Dengan limit 1, semua query yang berjalan paralel (Promise.all di
+        // halaman publik & TV) akan diantrikan satu per satu sehingga latensi
+        // serverless menumpuk.
+        parsed.searchParams.set("connection_limit", "5");
+      }
+      if (!parsed.searchParams.has("pool_timeout")) {
+        parsed.searchParams.set("pool_timeout", "20");
       }
       return parsed.toString();
     }
