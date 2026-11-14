@@ -24,6 +24,24 @@ const ADJUSTMENT_KEYS = new Set([
   "isha",
 ]);
 
+const ALLOWED_CALCULATION_METHODS = new Set([
+  "KEMENAG",
+  "Kemenag",
+  "Indonesia",
+  "SIHAT",
+  "Singapore",
+  "MWL",
+  "Makkah",
+  "Egypt",
+  "ISNA",
+  "Karachi",
+  "Dubai",
+  "Turkey",
+  "Tehran",
+]);
+
+const ALLOWED_ASR_METHODS = new Set(["STANDARD", "HANAFI"]);
+
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return unauthorized();
@@ -70,12 +88,29 @@ export async function PUT(request: NextRequest) {
 
     const timezone =
       body.timezone !== undefined ? String(body.timezone).trim() : undefined;
-    if (timezone && timezone !== TIMEZONE) {
+    if (timezone !== undefined && timezone !== TIMEZONE) {
       // Perhitungan shalat, countdown, dan tampilan saat ini dipatok ke WIB.
-      // Menyimpan zona lain akan menyesatkan, jadi tolak dengan jelas.
+      // Menyimpan zona lain (atau string kosong) akan menyesatkan.
       return badRequest(
         "Saat ini aplikasi hanya mendukung zona waktu Asia/Jakarta (WIB)"
       );
+    }
+
+    const prayerCalculationMethod =
+      body.prayerCalculationMethod !== undefined
+        ? String(body.prayerCalculationMethod).trim()
+        : undefined;
+    if (
+      prayerCalculationMethod !== undefined &&
+      !ALLOWED_CALCULATION_METHODS.has(prayerCalculationMethod)
+    ) {
+      return badRequest("Metode perhitungan waktu shalat tidak dikenal");
+    }
+
+    const asrMethod =
+      body.asrMethod !== undefined ? String(body.asrMethod).trim() : undefined;
+    if (asrMethod !== undefined && !ALLOWED_ASR_METHODS.has(asrMethod)) {
+      return badRequest("Metode Asar harus STANDARD atau HANAFI");
     }
 
     let prayerAdjustments:
@@ -119,8 +154,8 @@ export async function PUT(request: NextRequest) {
       longitude,
       timezone,
       mapUrl: body.mapUrl ?? undefined,
-      prayerCalculationMethod: body.prayerCalculationMethod ?? undefined,
-      asrMethod: body.asrMethod ?? undefined,
+      prayerCalculationMethod,
+      asrMethod,
       prayerAdjustments,
     };
 

@@ -14,6 +14,9 @@ const amiri = Amiri({
   subsets: ["arabic", "latin"],
   variable: "--font-arabic",
   display: "swap",
+  // Font Arab hanya dipakai untuk teks dekoratif, jadi jangan memblokir
+  // permintaan awal/First Paint halaman publik dan TV.
+  preload: false,
 });
 
 export const metadata: Metadata = {

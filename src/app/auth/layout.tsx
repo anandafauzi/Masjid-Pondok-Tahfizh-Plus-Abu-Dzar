@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AuthSessionProvider } from "@/components/session-provider";
 
 export const metadata: Metadata = {
   title: "Login Admin | Masjid Pondok Tahfizh Plus Abu Dzar",
@@ -17,6 +18,6 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <AuthSessionProvider>{children}</AuthSessionProvider>;
 }
 

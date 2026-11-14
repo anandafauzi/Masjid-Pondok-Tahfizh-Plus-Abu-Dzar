@@ -92,10 +92,14 @@ function cleanKhatibName(name?: string | null): string {
   );
 }
 
-export function TvDisplay() {
-  const [data, setData] = useState<TvData | null>(null);
+export function TvDisplay({ initialData = null }: { initialData?: TvData | null }) {
+  const [data, setData] = useState<TvData | null>(initialData);
   const [offset, setOffset] = useState(0);
-  const [now, setNow] = useState(Date.now());
+  // Nilai awal clock memakai waktu server agar render SSR dan hidrasi klien
+  // identik (mencegah hydration mismatch), lalu di-update tiap detik.
+  const [now, setNow] = useState(() =>
+    initialData ? new Date(initialData.serverTime).getTime() : Date.now()
+  );
   const [slide, setSlide] = useState(0);
   const [adviceIndex, setAdviceIndex] = useState(0);
   const [connected, setConnected] = useState(true);
@@ -119,17 +123,24 @@ export function TvDisplay() {
   const lastChimeKeyRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      const res = await fetch("/api/public/tv-data", { cache: "no-store" });
+      const res = await fetch("/api/public/tv-data", {
+        cache: "no-store",
+        signal: controller.signal,
+      });
       if (!res.ok) throw new Error("bad status");
       const d = (await res.json()) as TvData;
       setData((prev) => {
         let nextData = d;
-        // Jangan timpa imamToday yang valid dengan array kosong jika terjadi kegagalan sementara
+        // Jangan timpa data petugas yang valid dengan array kosong bila
+        // terjadi kegagalan query sementara di server.
         if (
           prev?.imamToday &&
           prev.imamToday.length > 0 &&
-          (!d.imamToday || d.imamToday.length === 0)
+          (!d.imamToday || d.imamToday.length === 0) &&
+          prev.today === d.today
         ) {
           nextData = { ...d, imamToday: prev.imamToday };
         }
@@ -144,25 +155,50 @@ export function TvDisplay() {
       setConnected(true);
     } catch {
       setConnected(false);
+    } finally {
+      clearTimeout(timeout);
     }
   }, []);
 
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem("masjid_tv_cached_data");
-      if (cached) {
-        const parsed = JSON.parse(cached) as TvData;
-        if (parsed && parsed.prayerTimes) {
-          setData(parsed);
+    if (initialData) {
+      setOffset(new Date(initialData.serverTime).getTime() - Date.now());
+    } else {
+      // Fallback offline hanya dipakai bila server tidak mengirim data awal.
+      try {
+        const cached = localStorage.getItem("masjid_tv_cached_data");
+        if (cached) {
+          const parsed = JSON.parse(cached) as TvData;
+          if (parsed && parsed.prayerTimes) {
+            setData(parsed);
+          }
         }
+      } catch {
+        // Non-fatal
       }
-    } catch {
-      // Non-fatal
     }
+
     load();
-    const poll = setInterval(load, 20000);
-    return () => clearInterval(poll);
-  }, [load]);
+
+    // Data publik jarang berubah. Polling 60 detik + berhenti saat tab
+    // tersembunyi membuat TV jauh lebih ringan.
+    const poll = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      load();
+    }, 60000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [load, initialData]);
 
   useEffect(() => {
     const clock = setInterval(() => setNow(Date.now()), 1000);
@@ -801,7 +837,7 @@ export function TvDisplay() {
       <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-[#c5a059]/10 blur-[120px]" />
 
       {/* Top Header Bar */}
-      <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-[#ded5c4] bg-[#fbf9f4]/95 px-3 py-1.5 backdrop-blur-xl sm:px-6 sm:py-2 lg:px-8 lg:py-2.5">
+      <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-[#ded5c4] bg-[#fbf9f4] px-3 py-1.5 sm:px-6 sm:py-2 lg:px-8 lg:py-2.5">
         {/* Left: Mosque branding */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#3eb489] to-[#205e48] shadow-md ring-2 ring-[#8fd2b5]/30 sm:h-12 sm:w-12">
@@ -887,7 +923,7 @@ export function TvDisplay() {
             return (
               <div
                 suppressHydrationWarning
-                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#0d1e15]/98 p-6 text-center animate-fade-in backdrop-blur-3xl sm:p-12 select-none"
+                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#0d1e15]/98 p-6 text-center animate-fade-in sm:p-12 select-none"
               >
                 <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/30 via-transparent to-transparent" />
 
@@ -920,7 +956,7 @@ export function TvDisplay() {
           const imamName = imamInfo?.imamName ?? "Asatidzah Pondok";
 
           return (
-            <div suppressHydrationWarning className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#11231a]/98 p-4 text-center animate-fade-in backdrop-blur-2xl sm:p-8">
+            <div suppressHydrationWarning className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#11231a]/98 p-4 text-center animate-fade-in sm:p-8">
               <div
                 className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${isFinalCountdown
                     ? "bg-amber-400 text-slate-950 ring-4 ring-amber-400/50 animate-pulse font-black"
@@ -978,7 +1014,7 @@ export function TvDisplay() {
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
             <div className="grid h-full min-h-0 gap-2 sm:gap-4 lg:grid-cols-12 lg:gap-6 items-stretch overflow-hidden">
               {/* Left Column: 7 Prayers Master Cards (No Slide Title) */}
-              <div className="lg:col-span-7 h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 backdrop-blur-2xl shadow-xl overflow-hidden">
+              <div className="lg:col-span-7 h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 shadow-xl overflow-hidden">
                 <div className="flex-1 flex flex-col justify-between gap-1.5 sm:gap-2 min-h-0 overflow-hidden">
                   {PRAYER_LIST.map(({ key, label, ar }) => {
                     const isNext =
@@ -1029,7 +1065,7 @@ export function TvDisplay() {
               {/* Right Column: Next Prayer Spotlight + Imam Info */}
               <div className="lg:col-span-5 h-full min-h-0 flex flex-col justify-between gap-2 sm:gap-4 overflow-hidden">
                 {/* Next Prayer Glowing Card */}
-                <div className="flex-1 min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#eef8f3] via-[#f7fbf8] to-[#e8f6ef] p-4 sm:p-5 text-[#19261f] backdrop-blur-2xl shadow-xl overflow-hidden">
+                <div className="flex-1 min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#eef8f3] via-[#f7fbf8] to-[#e8f6ef] p-4 sm:p-5 text-[#19261f] shadow-xl overflow-hidden">
                   <div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold uppercase tracking-wider text-[#7c6630]">
@@ -1110,7 +1146,7 @@ export function TvDisplay() {
         {/* SLIDE 1: PRAYER & IQAMAH MATRIX (No Slide Title) */}
         {slide === 1 && (
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
-            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 backdrop-blur-2xl shadow-xl flex flex-col justify-between overflow-hidden">
+            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 shadow-xl flex flex-col justify-between overflow-hidden">
               {/* Symmetrical Table Header */}
               <div className="shrink-0 mb-2.5 grid grid-cols-12 gap-2 sm:gap-4 rounded-xl border border-[#ded5c4] bg-[#f4eee2] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#7c6630]">
                 <div className="col-span-3 flex items-center gap-2">
@@ -1184,7 +1220,7 @@ export function TvDisplay() {
         {/* SLIDE 2: IMAM & MUADZIN ROSTER (No Slide Title, 100% Symmetrical) */}
         {slide === 2 && (
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
-            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 backdrop-blur-2xl shadow-xl flex flex-col justify-between overflow-hidden">
+            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 shadow-xl flex flex-col justify-between overflow-hidden">
               {/* Symmetrical Table Header */}
               <div className="shrink-0 mb-2.5 grid grid-cols-12 gap-2 sm:gap-4 rounded-xl border border-[#ded5c4] bg-[#f4eee2] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#7c6630]">
                 <div className="col-span-3 flex items-center gap-2">
@@ -1268,7 +1304,7 @@ export function TvDisplay() {
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
             <div className="grid h-full min-h-0 gap-2 sm:gap-4 lg:grid-cols-2 lg:gap-6 items-stretch overflow-hidden">
               {/* Left: Friday Khatib */}
-              <div className="h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#ded3be] bg-gradient-to-br from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] p-4 sm:p-6 backdrop-blur-2xl shadow-xl overflow-hidden">
+              <div className="h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#ded3be] bg-gradient-to-br from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] p-4 sm:p-6 shadow-xl overflow-hidden">
                 <div>
                   <div className="flex items-center justify-between border-b border-[#ded3be] pb-2">
                     <span className="text-xs sm:text-sm font-bold text-[#8a6820]">
@@ -1312,7 +1348,7 @@ export function TvDisplay() {
               </div>
 
               {/* Right: Upcoming Kajian */}
-              <div className="h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#f8fdfb] via-[#edf7f3] to-[#e4f3ec] p-4 sm:p-6 backdrop-blur-2xl shadow-xl overflow-hidden">
+              <div className="h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#f8fdfb] via-[#edf7f3] to-[#e4f3ec] p-4 sm:p-6 shadow-xl overflow-hidden">
                 <div className="overflow-hidden flex flex-col">
                   <div className="flex items-center justify-between gap-2 border-b border-[#bde5d2] pb-2 shrink-0">
                     <div className="flex items-center gap-2 text-sm sm:text-base font-bold text-[#19261f]">
@@ -1547,7 +1583,7 @@ export function TvDisplay() {
 
       {/* Bottom Running Text Ticker */}
       {data.display.tickerEnabled && (
-        <footer className="relative z-10 shrink-0 overflow-hidden border-t border-[#ded5c4] bg-[#fbf9f4] py-1.5 backdrop-blur sm:py-2 text-[#19261f]">
+        <footer className="relative z-10 shrink-0 overflow-hidden border-t border-[#ded5c4] bg-[#fbf9f4] py-1.5 sm:py-2 text-[#19261f]">
           <div className="flex items-center w-full">
             <div className="z-10 flex shrink-0 items-center gap-1.5 bg-[#2d946e] px-2.5 py-0.5 text-[9px] font-bold uppercase text-white shadow-sm sm:px-3 sm:py-1 sm:text-xs">
               <Sparkles className="h-3 w-3 text-white sm:h-3.5 sm:w-3.5" />

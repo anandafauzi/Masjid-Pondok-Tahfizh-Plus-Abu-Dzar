@@ -40,6 +40,63 @@ function calculateDistanceKm(lat: number, lng: number): number {
   return Math.round(R * c);
 }
 
+const CARDINAL_LABELS = [
+  "Utara",
+  "Timur Laut",
+  "Timur",
+  "Tenggara",
+  "Selatan",
+  "Barat Daya",
+  "Barat",
+  "Barat Laut",
+] as const;
+
+/** Ubah bearing (0° = Utara, searah jarum jam) menjadi label mata angin. */
+function cardinalLabel(bearing: number): string {
+  const normalized = ((bearing % 360) + 360) % 360;
+  return CARDINAL_LABELS[Math.round(normalized / 45) % 8];
+}
+
+/**
+ * Hitung arah kompas (0° = Utara, searah jarum jam) dari alpha/beta/gamma.
+ * Hanya valid bila `alpha` bersifat absolut (relatif terhadap utara magnet bumi).
+ */
+function headingFromOrientation(
+  alpha: number,
+  beta: number,
+  gamma: number
+): number {
+  // Saat HP datar, rumus rotasi 3D menghasilkan 0/0. Alpha absolut sendiri
+  // sudah menunjukkan arah: alpha bertambah berlawanan jarum jam.
+  if (Math.abs(beta) < 8 && Math.abs(gamma) < 8) {
+    return (360 - alpha) % 360;
+  }
+
+  const degToRad = Math.PI / 180;
+  const x = beta * degToRad;
+  const y = gamma * degToRad;
+  const z = alpha * degToRad;
+  const sX = Math.sin(x);
+  const cY = Math.cos(y);
+  const sY = Math.sin(y);
+  const cZ = Math.cos(z);
+  const sZ = Math.sin(z);
+
+  const vx = -cZ * sY - sZ * sX * cY;
+  const vy = -sZ * sY + cZ * sX * cY;
+  const heading = Math.atan2(vx, vy) * (180 / Math.PI);
+  return (heading + 360) % 360;
+}
+
+function screenOrientationAngle(): number {
+  if (typeof window === "undefined") return 0;
+  const angle =
+    window.screen?.orientation?.angle ??
+    (window as unknown as { orientation?: number }).orientation ??
+    0;
+  return Number.isFinite(angle) ? angle : 0;
+}
+
 export function QiblaCompass({
   defaultLat = DEFAULT_LAT,
   defaultLng = DEFAULT_LNG,
@@ -65,6 +122,8 @@ export function QiblaCompass({
 
   // Smooth angle interpolation ref
   const lastHeadingRef = useRef<number>(0);
+  // Jenis event sensor yang sudah terpasang (untuk cleanup yang presisi).
+  const attachedListenersRef = useRef<string[]>([]);
 
   // Compute Qibla angle & distance
   const qiblaAngle = Number(Qibla(new Coordinates(coords.lat, coords.lng)).toFixed(1));
@@ -77,68 +136,81 @@ export function QiblaCompass({
 
   // Handle device orientation events
   const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
-    let currentHeading: number | null = null;
+    const anyEvent = event as DeviceOrientationEvent & {
+      webkitCompassHeading?: number;
+    };
 
-    // iOS Safari
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const anyEvent = event as any;
+    let currentHeading: number | null = null;
+    // `webkitCompassHeading` (iOS) sudah memperhitungkan orientasi layar,
+    // sedangkan alpha absolut belum. Kompensasi hanya untuk yang terakhir.
+    let needsScreenCompensation = false;
+
     if (
       typeof anyEvent.webkitCompassHeading === "number" &&
-      !isNaN(anyEvent.webkitCompassHeading)
+      Number.isFinite(anyEvent.webkitCompassHeading)
     ) {
+      // iOS Safari: sudah berupa arah kompas absolut (0° = Utara).
       currentHeading = anyEvent.webkitCompassHeading;
-    } else if (event.alpha !== null && !isNaN(event.alpha)) {
-      // Android / Standard Chrome with 3D tilt compensation
-      const { alpha, beta, gamma } = event;
-      if (
-        beta !== null &&
-        gamma !== null &&
-        (Math.abs(beta) >= 8 || Math.abs(gamma) >= 8)
-      ) {
-        const degToRad = Math.PI / 180;
-        const a = alpha * degToRad;
-        const b = beta * degToRad;
-        const g = gamma * degToRad;
+    } else {
+      // `deviceorientation` biasa memberi alpha relatif terhadap orientasi awal
+      // perangkat — bukan utara — sehingga tidak bisa dipakai sebagai kompas.
+      const isAbsolute =
+        anyEvent.absolute === true ||
+        event.type === "deviceorientationabsolute";
+      if (!isAbsolute) return;
+      if (event.alpha === null || !Number.isFinite(event.alpha)) return;
 
-        const cA = Math.cos(a),
-          sA = Math.sin(a);
-        const cG = Math.cos(g),
-          sG = Math.sin(g);
-        const sB = Math.sin(b);
-
-        const yX = -cA * sG - sA * sB * cG;
-        const yY = -sA * sG + cA * sB * cG;
-
-        const h = Math.atan2(yX, yY) * (180 / Math.PI);
-        currentHeading = (h + 360) % 360;
-      } else {
-        currentHeading = (360 - alpha) % 360;
-      }
-
-      // Screen rotation adjustment if any
-      const screenAngle =
-        window.screen?.orientation?.angle ??
-        (window as unknown as { orientation?: number }).orientation ??
-        0;
-      if (screenAngle) {
-        currentHeading = (currentHeading + screenAngle + 360) % 360;
-      }
+      currentHeading = headingFromOrientation(
+        event.alpha,
+        event.beta ?? 0,
+        event.gamma ?? 0
+      );
+      needsScreenCompensation = true;
     }
 
-    if (currentHeading !== null) {
-      setSensorActive(true);
-      setSensorSupported(true);
+    if (currentHeading === null) return;
 
-      // Smooth heading (prevent 359 -> 0 jumping)
-      let smoothed = currentHeading;
-      const prev = lastHeadingRef.current;
-      const delta = ((smoothed - prev + 540) % 360) - 180;
-      smoothed = (prev + delta * 0.4 + 360) % 360;
-      lastHeadingRef.current = smoothed;
-
-      setHeading(Math.round(smoothed));
+    if (needsScreenCompensation) {
+      currentHeading = (currentHeading + screenOrientationAngle() + 360) % 360;
     }
+
+    setSensorActive(true);
+    setSensorSupported(true);
+
+    // Smooth heading (prevent 359 -> 0 jumping)
+    const prev = lastHeadingRef.current;
+    const delta = ((currentHeading - prev + 540) % 360) - 180;
+    const smoothed = (prev + delta * 0.4 + 360) % 360;
+    lastHeadingRef.current = smoothed;
+
+    setHeading(Math.round(smoothed));
   }, []);
+
+  const detachOrientation = useCallback(() => {
+    if (typeof window === "undefined") return;
+    for (const type of attachedListenersRef.current) {
+      window.removeEventListener(
+        type as keyof WindowEventMap,
+        handleOrientation as EventListener,
+        true
+      );
+    }
+    attachedListenersRef.current = [];
+  }, [handleOrientation]);
+
+  const attachOrientation = useCallback(
+    (type: "deviceorientation" | "deviceorientationabsolute") => {
+      if (typeof window === "undefined") return;
+      if (attachedListenersRef.current.includes(type)) return;
+      window.addEventListener(
+        type as keyof WindowEventMap,
+        handleOrientation as EventListener,
+        true
+      );
+      attachedListenersRef.current.push(type);
+    },
+    [handleOrientation]
+  );
 
   // Request sensor permission (especially required on iOS 13+)
   async function requestSensorAccess() {
@@ -149,20 +221,23 @@ export function QiblaCompass({
         const response = await win.DeviceOrientationEvent.requestPermission();
         if (response === "granted") {
           setPermissionState("granted");
-          win.addEventListener("deviceorientation", handleOrientation, true);
+          attachOrientation("deviceorientation");
+          attachOrientation("deviceorientationabsolute");
           setSensorActive(true);
+          setSensorSupported(true);
         } else {
           setPermissionState("denied");
           setIsManualSim(true);
         }
-      } else if ("ondeviceorientationabsolute" in win) {
-        win.addEventListener("deviceorientationabsolute", handleOrientation, true);
+      } else if (
+        "ondeviceorientationabsolute" in win ||
+        "DeviceOrientationEvent" in win
+      ) {
+        attachOrientation("deviceorientationabsolute");
+        attachOrientation("deviceorientation");
         setSensorActive(true);
         setPermissionState("granted");
-      } else if ("DeviceOrientationEvent" in win) {
-        win.addEventListener("deviceorientation", handleOrientation, true);
-        setSensorActive(true);
-        setPermissionState("granted");
+        setSensorSupported(true);
       } else {
         setSensorSupported(false);
         setIsManualSim(true);
@@ -174,25 +249,25 @@ export function QiblaCompass({
     }
   }
 
-  // Setup passive sensor listener on mount if permission already granted
+  // Setup passive sensor listener on mount (iOS butuh gesture, jadi dilewati).
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const win = window as any;
-    if (typeof win.DeviceOrientationEvent?.requestPermission !== "function") {
-      if ("ondeviceorientationabsolute" in win) {
-        win.addEventListener("deviceorientationabsolute", handleOrientation, true);
-      } else if ("DeviceOrientationEvent" in win) {
-        win.addEventListener("deviceorientation", handleOrientation, true);
-      }
+    const needsPermission =
+      typeof win.DeviceOrientationEvent?.requestPermission === "function";
+
+    if (!needsPermission) {
+      // Dengarkan keduanya; handler hanya memakai event yang absolut.
+      attachOrientation("deviceorientationabsolute");
+      attachOrientation("deviceorientation");
     }
 
     return () => {
-      win.removeEventListener("deviceorientation", handleOrientation);
-      win.removeEventListener("deviceorientationabsolute", handleOrientation);
+      detachOrientation();
     };
-  }, [handleOrientation]);
+  }, [attachOrientation, detachOrientation]);
 
   // Haptic feedback when facing Qibla
   useEffect(() => {
@@ -272,10 +347,13 @@ export function QiblaCompass({
             Derajat Arah Kiblat
           </span>
           <p className="mt-1 font-mono text-3xl font-black text-slate-900">
-            {qiblaAngle}° <span className="text-sm font-semibold text-[#557a64]">NW</span>
+            {qiblaAngle}°{" "}
+            <span className="text-sm font-semibold text-[#557a64]">
+              {cardinalLabel(qiblaAngle)}
+            </span>
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Barat Laut ({qiblaAngle}° dari Utara searah jarum jam)
+            {cardinalLabel(qiblaAngle)} ({qiblaAngle}° dari Utara searah jarum jam)
           </p>
         </div>
 

@@ -11,6 +11,13 @@ const STORAGE_KEY = "abu_dzar_adzan_settings";
 
 let globalAudio: HTMLAudioElement | null = null;
 let isAudioUnlocked = false;
+let onAudioEnded: (() => void) | null = null;
+
+function finishAudio(): void {
+  const callback = onAudioEnded;
+  onAudioEnded = null;
+  callback?.();
+}
 
 export function getStoredAdzanSettings(): AdzanSettings {
   if (typeof window === "undefined") return DEFAULT_ADZAN_SETTINGS;
@@ -61,12 +68,14 @@ export function unlockAudioContext(): void {
 export function playAdzanSound(
   muadzinId?: string,
   isFajr = false,
-  volume = 0.8
+  volume = 0.8,
+  onEnded?: () => void
 ): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
 
   try {
     stopAdzanSound();
+    onAudioEnded = onEnded ?? null;
 
     let targetMuadzin: MuadzinOption;
     if (isFajr) {
@@ -87,11 +96,32 @@ export function playAdzanSound(
     audio.volume = Math.max(0, Math.min(1, volume));
     globalAudio = audio;
 
+    // Reset state pemutar di UI ketika audio benar-benar selesai/gagal.
+    audio.addEventListener(
+      "ended",
+      () => {
+        if (globalAudio === audio) globalAudio = null;
+        finishAudio();
+      },
+      { once: true }
+    );
+    audio.addEventListener(
+      "error",
+      () => {
+        if (globalAudio === audio) globalAudio = null;
+        finishAudio();
+      },
+      { once: true }
+    );
+
     return audio.play().catch((err) => {
       console.warn("Autoplay audio blocked or error:", err);
+      if (globalAudio === audio) globalAudio = null;
+      finishAudio();
     });
   } catch (error) {
     console.error("Gagal memutar audio adzan:", error);
+    finishAudio();
     return Promise.resolve();
   }
 }
@@ -107,6 +137,7 @@ export function stopAdzanSound(): void {
     }
     globalAudio = null;
   }
+  finishAudio();
 }
 
 export async function requestAdzanNotificationPermission(): Promise<boolean> {

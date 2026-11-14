@@ -88,8 +88,20 @@ export function MobilePrayerTaskbar() {
     setSettings(getStoredAdzanSettings());
     loadData();
 
-    const dataPoll = setInterval(loadData, 30000);
+    // Data publik jarang berubah; polling 60 detik cukup dan jauh lebih
+    // ringan untuk server maupun baterai perangkat.
+    const dataPoll = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      loadData();
+    }, 60000);
     const clock = setInterval(() => setNow(Date.now()), 1000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") loadData();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
 
     // Global tap unlock for audio
     const handleFirstTouch = () => {
@@ -119,6 +131,7 @@ export function MobilePrayerTaskbar() {
     return () => {
       clearInterval(dataPoll);
       clearInterval(clock);
+      document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("touchstart", handleFirstTouch);
       window.removeEventListener("click", handleFirstTouch);
       if (handleBeforeInstall) {
@@ -136,6 +149,9 @@ export function MobilePrayerTaskbar() {
       ? data.iqamahEvents.filter((e) => e.key !== "dhuhr")
       : data.iqamahEvents;
   }, [data]);
+
+  // Adzan tetap dikumandangkan untuk SEMUA shalat, termasuk Zuhur/Jumat.
+  const adzanEvents = useMemo(() => data?.iqamahEvents ?? [], [data]);
 
   // 2. Compute dynamic countdown state (Adzan vs Iqamah)
   const prayerState = useMemo(() => {
@@ -167,8 +183,9 @@ export function MobilePrayerTaskbar() {
       };
     }
 
-    // Otherwise, find the next upcoming prayer today
-    const upcomingEvent = events.find((e) => {
+    // Otherwise, find the next upcoming prayer today. Pakai daftar adzan
+    // lengkap agar Jumat (Zuhur) tetap muncul walau tidak punya iqamah.
+    const upcomingEvent = adzanEvents.find((e) => {
       const adhanMs = new Date(e.adhanTarget).getTime();
       return adhanMs > serverNow;
     });
@@ -178,9 +195,15 @@ export function MobilePrayerTaskbar() {
       return {
         phase: "ADZAN" as const,
         prayerKey: upcomingEvent.key,
-        prayerLabel: upcomingEvent.label,
+        prayerLabel:
+          data.isFriday && upcomingEvent.key === "dhuhr"
+            ? "Jumat"
+            : upcomingEvent.label,
         adhanTime: upcomingEvent.adhanTime,
-        iqamahTime: upcomingEvent.iqamahTime,
+        iqamahTime:
+          data.isFriday && upcomingEvent.key === "dhuhr"
+            ? "—"
+            : upcomingEvent.iqamahTime,
         targetMs: adhanMs,
         countdownStr: formatCountdown(adhanMs, serverNow),
         badgeText: "Menuju Waktu Shalat",
@@ -204,7 +227,7 @@ export function MobilePrayerTaskbar() {
       badgeText: "Shalat Esok Hari",
       isFajr: true,
     };
-  }, [data, serverNow, visibleIqamahEvents]);
+  }, [data, serverNow, visibleIqamahEvents, adzanEvents]);
 
   // 3. Find Imam and Muadzin for the active/next prayer
   const nextImamSchedule = useMemo(() => {
@@ -240,7 +263,7 @@ export function MobilePrayerTaskbar() {
     if (!data || !prayerState || !mounted) return;
 
     // Check each prayer event to see if current time just crossed adhanTarget (within a 60-second window)
-    for (const e of visibleIqamahEvents) {
+    for (const e of adzanEvents) {
       const adhanMs = new Date(e.adhanTarget).getTime();
       const diff = serverNow - adhanMs;
       // Window: between 0 and 59 seconds after adzan time
@@ -259,9 +282,11 @@ export function MobilePrayerTaskbar() {
             playAdzanSound(
               settings.selectedMuadzinId,
               e.key === "fajr",
-              settings.volume
+              settings.volume,
+              () => setIsPlayingAudio(false)
             );
             setIsPlayingAudio(true);
+            setPreviewingId(settings.selectedMuadzinId);
           }
 
           // Show Push / Screen Notification if enabled
@@ -271,7 +296,7 @@ export function MobilePrayerTaskbar() {
         }
       }
     }
-  }, [data, prayerState, serverNow, mounted, settings, visibleIqamahEvents]);
+  }, [data, prayerState, serverNow, mounted, settings, adzanEvents]);
 
   // Audio Play / Preview Handlers
   const handleToggleAudio = () => {
@@ -281,7 +306,10 @@ export function MobilePrayerTaskbar() {
       setPreviewingId(null);
     } else {
       unlockAudioContext();
-      playAdzanSound(settings.selectedMuadzinId, false, settings.volume);
+      playAdzanSound(settings.selectedMuadzinId, false, settings.volume, () => {
+        setIsPlayingAudio(false);
+        setPreviewingId(null);
+      });
       setIsPlayingAudio(true);
       setPreviewingId(settings.selectedMuadzinId);
     }
@@ -294,7 +322,10 @@ export function MobilePrayerTaskbar() {
       setIsPlayingAudio(false);
       setPreviewingId(null);
     } else {
-      playAdzanSound(id, isFajr, settings.volume);
+      playAdzanSound(id, isFajr, settings.volume, () => {
+        setIsPlayingAudio(false);
+        setPreviewingId(null);
+      });
       setIsPlayingAudio(true);
       setPreviewingId(id);
     }

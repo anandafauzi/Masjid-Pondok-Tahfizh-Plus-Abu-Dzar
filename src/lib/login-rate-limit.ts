@@ -3,6 +3,18 @@ import { prisma } from "@/lib/prisma";
 const MAX_ATTEMPTS = 5;
 const WINDOW_MINUTES = 15;
 
+/**
+ * Samakan identifier yang setara: `admin`, `ADMIN`, dan
+ * `admin@abudzar.sch.id` harus berbagi satu kuota rate limit agar tidak
+ * bisa di-bypass dengan mengganti format email.
+ */
+export function normalizeLoginIdentifier(identifier: string): string {
+  const value = identifier.toLowerCase().trim();
+  if (!value) return "";
+  const [localPart] = value.split("@");
+  return localPart || value;
+}
+
 function getClientIp(headersOrRequest?: Request | Headers | null): string | null {
   if (!headersOrRequest) return null;
   const headers =
@@ -27,7 +39,8 @@ export async function isLoginRateLimited(
   email: string,
   headersOrRequest?: Request | Headers | null
 ): Promise<{ limited: boolean; retryAfterSeconds?: number }> {
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeLoginIdentifier(email);
+  if (!normalizedEmail) return { limited: false };
   const ip = getClientIp(headersOrRequest);
   const windowStart = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000);
 
@@ -51,14 +64,31 @@ export async function isLoginRateLimited(
   ]);
 
   if (emailCount >= MAX_ATTEMPTS || ipCount >= MAX_ATTEMPTS) {
-    // Estimate retry after based on oldest attempt in window
-    const oldest = await prisma.loginAttempt.findFirst({
-      where: {
-        OR: [
-          { email: normalizedEmail, success: false, createdAt: { gte: windowStart } },
-          ip ? { ipAddress: ip, success: false, createdAt: { gte: windowStart } } : {},
-        ],
+    // Estimate retry after based on oldest attempt in window. Susun kondisi
+    // secara eksplisit: `{}` tidak boleh masuk ke OR karena akan cocok dengan
+    // baris apa pun dan menghasilkan waktu tunggu yang salah.
+    const conditions: Array<{
+      email?: string;
+      ipAddress?: string;
+      success: boolean;
+      createdAt: { gte: Date };
+    }> = [
+      {
+        email: normalizedEmail,
+        success: false,
+        createdAt: { gte: windowStart },
       },
+    ];
+    if (ip) {
+      conditions.push({
+        ipAddress: ip,
+        success: false,
+        createdAt: { gte: windowStart },
+      });
+    }
+
+    const oldest = await prisma.loginAttempt.findFirst({
+      where: { OR: conditions },
       orderBy: { createdAt: "asc" },
     });
     if (oldest) {
@@ -80,7 +110,8 @@ export async function recordLoginAttempt(
   userAgent?: string | null
 ): Promise<void> {
   try {
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = normalizeLoginIdentifier(email);
+    if (!normalizedEmail) return;
     const ip = getClientIp(headersOrRequest);
     await prisma.loginAttempt.create({
       data: {

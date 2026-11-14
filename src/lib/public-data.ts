@@ -20,6 +20,8 @@ import {
   getUpcomingKhatibSchedules,
   nextFriday,
 } from "@/lib/schedule-data";
+import { getWeeklyImamSettings } from "@/lib/weekly-imam";
+import { getPublicDataVersion } from "@/lib/public-cache";
 
 export interface TvData {
   serverTime: string;
@@ -109,13 +111,149 @@ export interface TvData {
   } | null;
 }
 
+export type PublicBundle = {
+  mosque: Awaited<ReturnType<typeof getMosqueSettings>>;
+  iqamahSettings: Awaited<ReturnType<typeof getIqamahSettings>>;
+  display: Awaited<ReturnType<typeof getDisplaySettings>>;
+  runningTexts: Awaited<ReturnType<typeof getRunningTextsSafe>>;
+  advice: Awaited<ReturnType<typeof getAdviceSafe>>;
+  kajian: Awaited<ReturnType<typeof getKajianSafe>>;
+  khutbah: Awaited<ReturnType<typeof getActiveKhutbah>> | null;
+  khatibUpcoming: Awaited<ReturnType<typeof getUpcomingKhatibSchedules>>;
+  khatibRolling: Awaited<ReturnType<typeof getKhatibRollingActive>>;
+  imamRolling: Awaited<ReturnType<typeof getImamRollingActive>>;
+  weeklyImam: Awaited<ReturnType<typeof getWeeklyImamSettings>>;
+  imamToday: Awaited<ReturnType<typeof getImamSchedulesBetween>>;
+  fridaySchedule: Awaited<ReturnType<typeof getKhatibScheduleForDate>>;
+};
+
+// Data dasar (pengaturan, jadwal, kajian) jarang berubah. Cache singkat ini
+// mencegah puluhan query database yang sama dijalankan ulang oleh setiap TV,
+// taskbar mobile, dan halaman publik.
+const BUNDLE_TTL_MS = 20_000;
+// Jika pembacaan jadwal gagal sementara, pertahankan daftar petugas terakhir
+// yang valid agar nama imam/muadzin tidak "hilang" lalu muncul lagi.
+const IMAM_LAST_GOOD_TTL_MS = 6 * 60 * 60 * 1000;
+
+let bundleCache: {
+  at: number;
+  version: number;
+  today: string;
+  bundle: PublicBundle;
+} | null = null;
+
+let imamLastGood: {
+  at: number;
+  version: number;
+  today: string;
+  list: PublicBundle["imamToday"];
+} | null = null;
+
+/**
+ * Ambil paket data publik (pengaturan, jadwal imam hari ini, jadwal Jumat,
+ * kajian, nasihat, teks berjalan) dengan cache singkat.
+ *
+ * Dipakai bersama oleh halaman beranda dan endpoint TV sehingga query yang
+ * sama tidak dieksekusi berulang-ulang dalam satu waktu.
+ */
+export async function getPublicBundle(): Promise<PublicBundle> {
+  const now = new Date();
+  const today = todayDateOnly();
+  return loadPublicBundle(now, today, nextFriday(today));
+}
+
+async function loadPublicBundle(
+  now: Date,
+  today: Date,
+  friday: Date
+): Promise<PublicBundle> {
+  const ymd = dateOnlyToString(today);
+  const version = getPublicDataVersion();
+
+  if (
+    bundleCache &&
+    bundleCache.version === version &&
+    bundleCache.today === ymd &&
+    Date.now() - bundleCache.at < BUNDLE_TTL_MS
+  ) {
+    return bundleCache.bundle;
+  }
+
+  const [
+    mosque,
+    iqamahSettings,
+    display,
+    runningTexts,
+    advice,
+    kajian,
+    khutbah,
+    khatibUpcoming,
+    khatibRolling,
+    imamRolling,
+    weeklyImam,
+  ] = await Promise.all([
+    getMosqueSettings(),
+    getIqamahSettings(),
+    getDisplaySettings(),
+    getRunningTextsSafe(),
+    getAdviceSafe(),
+    getKajianSafe(now, 5),
+    getActiveKhutbah(now).catch(() => null),
+    getUpcomingKhatibSchedules(today, 4),
+    getKhatibRollingActive(),
+    getImamRollingActive(),
+    getWeeklyImamSettings().catch(() => []),
+  ]);
+
+  const [imamTodayRaw, fridaySchedule] = await Promise.all([
+    getImamSchedulesBetween(today, today, {
+      weeklyRules: weeklyImam,
+      rollingImams: imamRolling,
+    }),
+    getKhatibScheduleForDate(friday, khatibRolling),
+  ]);
+
+  let imamToday = imamTodayRaw;
+  if (imamToday.length === 0) {
+    if (
+      imamLastGood &&
+      imamLastGood.version === version &&
+      imamLastGood.today === ymd &&
+      Date.now() - imamLastGood.at < IMAM_LAST_GOOD_TTL_MS
+    ) {
+      imamToday = imamLastGood.list;
+    }
+  } else {
+    imamLastGood = { at: Date.now(), version, today: ymd, list: imamToday };
+  }
+
+  const bundle: PublicBundle = {
+    mosque,
+    iqamahSettings,
+    display,
+    runningTexts,
+    advice,
+    kajian,
+    khutbah,
+    khatibUpcoming,
+    khatibRolling,
+    imamRolling,
+    weeklyImam,
+    imamToday,
+    fridaySchedule,
+  };
+
+  bundleCache = { at: Date.now(), version, today: ymd, bundle };
+  return bundle;
+}
+
 export async function buildTvData(): Promise<TvData> {
   const now = new Date();
   const today = todayDateOnly();
   const friday = nextFriday(today);
 
-  // Concurrently fetch all database dependencies in parallel
-  const [
+  const bundle = await loadPublicBundle(now, today, friday);
+  const {
     mosque,
     iqamahSettings,
     display,
@@ -128,20 +266,7 @@ export async function buildTvData(): Promise<TvData> {
     imamRolling,
     imamToday,
     fridaySchedule,
-  ] = await Promise.all([
-    getMosqueSettings(),
-    getIqamahSettings(),
-    getDisplaySettings(),
-    getRunningTextsSafe(),
-    getAdviceSafe(),
-    getKajianSafe(now, 5),
-    getActiveKhutbah(now).catch(() => null),
-    getUpcomingKhatibSchedules(today, 4),
-    getKhatibRollingActive(),
-    getImamRollingActive(),
-    getImamSchedulesBetween(today, today),
-    getKhatibScheduleForDate(friday),
-  ]);
+  } = bundle;
 
   const prayerTimes = calculatePrayerTimes(today, {
     method: mosque.prayerCalculationMethod,

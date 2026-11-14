@@ -2,8 +2,18 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import { buildTvData } from "@/lib/public-data";
 import { TvDisplay } from "./TvDisplay";
 
-export default function TVPage() {
-  return <TvDisplay />;
+export default async function TVPage() {
+  // Render data awal di server supaya layar TV tidak kosong sambil menunggu
+  // fetch client. Client tetap melakukan polling untuk pembaruan berkala.
+  let initialData = null;
+  try {
+    initialData = await buildTvData();
+  } catch (error) {
+    console.error("[TV] Gagal menyiapkan data awal:", error);
+  }
+
+  return <TvDisplay initialData={initialData} />;
 }

@@ -18,6 +18,8 @@ interface HomeHeroProps {
   mosqueName: string;
   mosqueAddress: string | null;
   logoUrl?: string | null;
+  /** Waktu server saat render, dipakai agar countdown tidak terpengaruh jam perangkat. */
+  serverTime?: string;
 }
 
 const PRAYERS_LIST = [
@@ -40,18 +42,25 @@ export function HomeHero({
   mosqueName,
   mosqueAddress,
   logoUrl,
+  serverTime,
 }: HomeHeroProps) {
-  const [now, setNow] = useState(Date.now());
-  const [mounted, setMounted] = useState(false);
+  // `now` sengaja null saat render pertama (SSR) agar tidak terjadi hydration
+  // mismatch; setelah mount, waktu dihitung memakai offset jam server.
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
-    setMounted(true);
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const offset = serverTime ? new Date(serverTime).getTime() - Date.now() : 0;
+    const tick = () => setNow(Date.now() + offset);
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [serverTime]);
+
+  const mounted = now !== null;
+  const currentMs = now ?? 0;
 
   const targetMs = new Date(nextPrayer.target).getTime();
-  const diffSec = Math.max(0, Math.floor((targetMs - now) / 1000));
+  const diffSec = Math.max(0, Math.floor((targetMs - currentMs) / 1000));
   const hours = Math.floor(diffSec / 3600);
   const minutes = Math.floor((diffSec % 3600) / 60);
   const seconds = diffSec % 60;
@@ -65,7 +74,7 @@ export function HomeHero({
     minute: "2-digit",
     second: "2-digit",
     timeZone: "Asia/Jakarta",
-  }).format(new Date(now));
+  }).format(new Date(currentMs));
 
   const dateString = new Intl.DateTimeFormat("id-ID", {
     weekday: "long",
@@ -73,7 +82,7 @@ export function HomeHero({
     month: "long",
     year: "numeric",
     timeZone: "Asia/Jakarta",
-  }).format(new Date(now));
+  }).format(new Date(currentMs));
 
   let hijriString = "";
   try {
@@ -82,7 +91,7 @@ export function HomeHero({
       month: "long",
       year: "numeric",
       timeZone: "Asia/Jakarta",
-    }).format(new Date(now));
+    }).format(new Date(currentMs));
   } catch {
     hijriString = "";
   }
@@ -197,7 +206,9 @@ export function HomeHero({
           </p>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
             {PRAYERS_LIST.map(({ key, label }) => {
-              const isNext = key === nextPrayer.key;
+              // Jika shalat berikutnya jatuh besok (mis. setelah Isya), jangan
+              // tandai jadwal Subuh hari ini sebagai "Aktif".
+              const isNext = !nextPrayer.tomorrow && key === nextPrayer.key;
               const time = prayerTimes[key as keyof PrayerTimesStrings] ?? "--:--";
               const arabic = PRAYER_NAMES_ARABIC[key as keyof typeof PRAYER_NAMES_ARABIC];
 

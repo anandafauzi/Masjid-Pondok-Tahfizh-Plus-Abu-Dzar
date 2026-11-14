@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { dateOnlyToString, addDaysUTC, nextFriday } from "@/lib/datetime";
 import { getWeeklyImamSettings, PRAYERS } from "@/lib/weekly-imam";
+import type { WeeklyImamItem } from "@/types/weekly-imam";
 import { resolveRolling } from "@/lib/rolling";
 
 export async function getRunningTextsSafe() {
@@ -33,15 +34,33 @@ const PRAYER_ORDER: Record<string, number> = {
   Isya: 5,
 };
 
-export async function getImamSchedulesBetween(from: Date, to: Date) {
+export async function getImamSchedulesBetween(
+  from: Date,
+  to: Date,
+  preloaded?: {
+    weeklyRules?: WeeklyImamItem[];
+    rollingImams?: Awaited<ReturnType<typeof getImamRollingActive>>;
+  }
+) {
   try {
+    // Setiap query ditangani terpisah: bila tabel jadwal gagal dibaca, aturan
+    // mingguan masih bisa dipakai untuk menyusun jadwal (dan sebaliknya).
     const [dbSchedules, weeklyRules, rollingImams] = await Promise.all([
-      prisma.imamMuadzinSchedule.findMany({
-        where: { scheduleDate: { gte: from, lte: to } },
-        orderBy: [{ scheduleDate: "asc" }, { prayerName: "asc" }],
-      }),
-      getWeeklyImamSettings().catch(() => []),
-      getImamRollingActive().catch(() => []),
+      prisma.imamMuadzinSchedule
+        .findMany({
+          where: { scheduleDate: { gte: from, lte: to } },
+          orderBy: [{ scheduleDate: "asc" }, { prayerName: "asc" }],
+        })
+        .catch((error) => {
+          console.error("Gagal membaca jadwal imam dari database:", error);
+          return [];
+        }),
+      preloaded?.weeklyRules
+        ? Promise.resolve(preloaded.weeklyRules)
+        : getWeeklyImamSettings().catch(() => []),
+      preloaded?.rollingImams
+        ? Promise.resolve(preloaded.rollingImams)
+        : getImamRollingActive().catch(() => []),
     ]);
 
     // Map existing records by `YYYY-MM-DD_prayerName` (case-insensitive)
@@ -186,7 +205,10 @@ export async function getUpcomingKajian(from: Date, take = 6) {
 
 export const getKajianSafe = getUpcomingKajian;
 
-export async function getKhatibScheduleForDate(fridayDate: Date) {
+export async function getKhatibScheduleForDate(
+  fridayDate: Date,
+  preloadedRolling?: Awaited<ReturnType<typeof getKhatibRollingActive>>
+) {
   try {
     const manual = await prisma.khatibSchedule.findFirst({ where: { fridayDate } });
     if (manual) {
@@ -198,7 +220,7 @@ export async function getKhatibScheduleForDate(fridayDate: Date) {
       };
     }
 
-    const rolling = await getKhatibRollingActive();
+    const rolling = preloadedRolling ?? (await getKhatibRollingActive());
     if (rolling.length > 0) {
       const resolved = resolveRolling(
         rolling.map((r) => ({

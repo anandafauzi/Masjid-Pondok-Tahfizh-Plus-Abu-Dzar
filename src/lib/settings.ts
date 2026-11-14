@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { MASJID_INFO } from "@/utils/constants";
 import type { IqamahSettingLike } from "@/lib/iqamah";
+import { getPublicDataVersion } from "@/lib/public-cache";
 
 export interface MosqueSettingsData {
   mosqueName: string;
@@ -107,7 +108,46 @@ export const DEFAULT_IQAMAH_SETTINGS: IqamahSettingLike[] = [
   { prayerName: "Isya", mode: "DELAY_MINUTES", delayMinutes: 15, fixedIqamahTime: null },
 ];
 
+/**
+ * Cache in-memory singkat untuk pengaturan yang dibaca di hampir semua
+ * halaman. Cache otomatis kedaluwarsa saat admin menyimpan perubahan
+ * (lewat `invalidatePublicDataCache`) atau setelah TTL habis.
+ */
+const SETTINGS_TTL_MS = 30_000;
+const settingsCache = new Map<
+  string,
+  { at: number; version: number; value: unknown }
+>();
+
+function readSettingsCache<T>(key: string): T | null {
+  const entry = settingsCache.get(key);
+  if (!entry) return null;
+  if (entry.version !== getPublicDataVersion()) {
+    settingsCache.delete(key);
+    return null;
+  }
+  if (Date.now() - entry.at > SETTINGS_TTL_MS) {
+    settingsCache.delete(key);
+    return null;
+  }
+  return entry.value as T;
+}
+
+function writeSettingsCache(key: string, value: unknown): void {
+  settingsCache.set(key, {
+    at: Date.now(),
+    version: getPublicDataVersion(),
+    value,
+  });
+}
+
 export async function getMosqueSettings(): Promise<MosqueSettingsData> {
+  // Cache singkat: pengaturan masjid dibaca hampir di semua halaman publik
+  // dan TV. Tanpa cache, setiap request menambah satu query ke pooler yang
+  // hanya punya satu koneksi.
+  const cached = readSettingsCache<MosqueSettingsData>("mosque");
+  if (cached) return cached;
+
   try {
     const settings = await prisma.mosqueSettings.findFirst({
       orderBy: { id: "asc" },
@@ -119,7 +159,7 @@ export async function getMosqueSettings(): Promise<MosqueSettingsData> {
       adjustments = settings.prayerAdjustments as Record<string, number>;
     }
 
-    return {
+    const result: MosqueSettingsData = {
       mosqueName: settings.mosqueName,
       logoUrl: settings.logoUrl ?? null,
       address: settings.address,
@@ -131,12 +171,17 @@ export async function getMosqueSettings(): Promise<MosqueSettingsData> {
       asrMethod: settings.asrMethod,
       prayerAdjustments: adjustments,
     };
+    writeSettingsCache("mosque", result);
+    return result;
   } catch {
     return DEFAULT_MOSQUE_SETTINGS;
   }
 }
 
 export async function getDisplaySettings(): Promise<DisplaySettingsData> {
+  const cached = readSettingsCache<DisplaySettingsData>("display");
+  if (cached) return cached;
+
   try {
     const settings = await prisma.displaySetting.findFirst({
       orderBy: { id: "asc" },
@@ -145,7 +190,7 @@ export async function getDisplaySettings(): Promise<DisplaySettingsData> {
 
     const theme = toPublicTheme(settings.themeSettings);
 
-    return {
+    const result: DisplaySettingsData = {
       slideIntervalSeconds: settings.slideIntervalSeconds,
       autoRotateEnabled: settings.autoRotateEnabled,
       tickerSpeed: settings.tickerSpeed,
@@ -153,6 +198,8 @@ export async function getDisplaySettings(): Promise<DisplaySettingsData> {
       showHijriDate: settings.showHijriDate,
       themeSettings: theme ?? DEFAULT_DISPLAY_SETTINGS.themeSettings,
     };
+    writeSettingsCache("display", result);
+    return result;
   } catch {
     return DEFAULT_DISPLAY_SETTINGS;
   }
@@ -213,6 +260,9 @@ export async function saveDisplayThemePatch(
 }
 
 export async function getIqamahSettings(): Promise<IqamahSettingLike[]> {
+  const cached = readSettingsCache<IqamahSettingLike[]>("iqamah");
+  if (cached) return cached;
+
   try {
     const settings = await prisma.iqamahSetting.findMany();
     if (settings.length === 0) return DEFAULT_IQAMAH_SETTINGS;
@@ -221,7 +271,7 @@ export async function getIqamahSettings(): Promise<IqamahSettingLike[]> {
 
     // Keep a deterministic order and fall back to sensible defaults when a
     // row is missing, instead of silently using a 0-minute delay.
-    return DEFAULT_IQAMAH_SETTINGS.map((fallback) => {
+    const result = DEFAULT_IQAMAH_SETTINGS.map((fallback) => {
       const stored = byName.get(fallback.prayerName);
       if (!stored) return fallback;
       return {
@@ -231,6 +281,8 @@ export async function getIqamahSettings(): Promise<IqamahSettingLike[]> {
         fixedIqamahTime: stored.fixedIqamahTime,
       };
     });
+    writeSettingsCache("iqamah", result);
+    return result;
   } catch {
     return DEFAULT_IQAMAH_SETTINGS;
   }

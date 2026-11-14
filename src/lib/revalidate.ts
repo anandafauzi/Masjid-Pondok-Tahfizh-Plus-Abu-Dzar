@@ -1,10 +1,13 @@
 import { revalidatePath } from "next/cache";
+import { invalidatePublicDataCache } from "@/lib/public-cache";
 
 /**
  * Revalidates all public and display pages instantly
  * so any changes made via Admin panel sync with zero delay.
  */
 export function revalidateAllAppPaths() {
+  // Hapus cache in-memory data publik agar perubahan admin langsung terlihat.
+  invalidatePublicDataCache();
   try {
     revalidatePath("/", "layout");
     revalidatePath("/", "page");

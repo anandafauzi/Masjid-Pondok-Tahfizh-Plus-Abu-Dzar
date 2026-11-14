@@ -53,7 +53,7 @@ export function MuadzinSelectorCard() {
       stopAdzanSound();
       setPreviewingId(null);
     } else {
-      playAdzanSound(id, isFajr, settings.volume);
+      playAdzanSound(id, isFajr, settings.volume, () => setPreviewingId(null));
       setPreviewingId(id);
     }
   };

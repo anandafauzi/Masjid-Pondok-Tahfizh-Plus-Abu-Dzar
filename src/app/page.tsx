@@ -1,16 +1,10 @@
 import Link from "next/link";
 import { PublicShell } from "@/components/public-shell";
 import { HomeHero } from "@/components/home-hero";
-import { getMosqueSettings } from "@/lib/settings";
 import { calculatePrayerTimes, getNextPrayer } from "@/lib/prayer-times";
 import { formatDateOnlyLong, todayDateOnly } from "@/lib/datetime";
-import {
-  getAdviceSafe,
-  getImamSchedulesBetween,
-  getKajianSafe,
-  getKhatibScheduleForDate,
-  nextFriday,
-} from "@/lib/schedule-data";
+import { nextFriday } from "@/lib/schedule-data";
+import { getPublicBundle } from "@/lib/public-data";
 import {
   CalendarClock,
   Users,
@@ -95,9 +89,19 @@ const FIVE_PRAYERS = [
 ] as const;
 
 export default async function Home() {
-  const mosque = await getMosqueSettings();
   const today = todayDateOnly();
   const now = new Date();
+  const friday = nextFriday(today);
+
+  // Satu paket query bersama (cache singkat) dipakai juga oleh endpoint TV
+  // dan taskbar mobile, sehingga beranda tidak menembak query yang sama
+  // berkali-kali.
+  const bundle = await getPublicBundle();
+  const mosque = bundle.mosque;
+  const todayImams = bundle.imamToday;
+  const fridayKhatib = bundle.fridaySchedule;
+  const upcomingKajian = bundle.kajian.slice(0, 4);
+  const adviceList = bundle.advice;
 
   const prayerTimes = calculatePrayerTimes(today, {
     method: mosque.prayerCalculationMethod,
@@ -114,17 +118,6 @@ export default async function Home() {
     latitude: mosque.latitude,
     longitude: mosque.longitude,
   });
-
-  const friday = nextFriday(today);
-
-  // Concurrently fetch all live database resources
-  const [todayImams, fridayKhatib, upcomingKajian, adviceList] =
-    await Promise.all([
-      getImamSchedulesBetween(today, today).catch(() => []),
-      getKhatibScheduleForDate(friday).catch(() => null),
-      getKajianSafe(now, 4).catch(() => []),
-      getAdviceSafe().catch(() => []),
-    ]);
 
   const featuredAdvice = adviceList[0] ?? {
     content: "Sesungguhnya shalat itu mencegah dari perbuatan keji dan mungkar.",
@@ -162,6 +155,7 @@ export default async function Home() {
         mosqueName={mosque.mosqueName}
         mosqueAddress={mosque.address}
         logoUrl={mosque.logoUrl}
+        serverTime={now.toISOString()}
       />
 
       {/* ========================================================

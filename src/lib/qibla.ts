@@ -27,5 +27,16 @@ export function calculateQiblaBearing(latitude: number, longitude: number): numb
  */
 export function formatQiblaBearing(latitude: number, longitude: number): string {
   const angle = calculateQiblaBearing(latitude, longitude);
-  return `${angle.toFixed(2)}° Barat Laut`;
+  const normalized = ((angle % 360) + 360) % 360;
+  const cardinal = [
+    "Utara",
+    "Timur Laut",
+    "Timur",
+    "Tenggara",
+    "Selatan",
+    "Barat Daya",
+    "Barat",
+    "Barat Laut",
+  ][Math.round(normalized / 45) % 8];
+  return `${angle.toFixed(2)}° ${cardinal}`;
 }

@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/api";
 import { getMosqueSettings } from "@/lib/settings";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminLoginView } from "@/components/admin/admin-login-view";
+import { AuthSessionProvider } from "@/components/session-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -40,23 +41,27 @@ export default async function AdminLayout({
 
   if (!user) {
     return (
-      <AdminLoginView
-        logoUrl={mosque.logoUrl}
-        mosqueName={mosque.mosqueName}
-      />
+      <AuthSessionProvider>
+        <AdminLoginView
+          logoUrl={mosque.logoUrl}
+          mosqueName={mosque.mosqueName}
+        />
+      </AuthSessionProvider>
     );
   }
 
   return (
-    <AdminShell
-      user={{
-        name: user.name || "Admin",
-        email: user.email,
-        role: user.role,
-      }}
-      logoUrl={mosque.logoUrl}
-    >
-      {children}
-    </AdminShell>
+    <AuthSessionProvider>
+      <AdminShell
+        user={{
+          name: user.name || "Admin",
+          email: user.email,
+          role: user.role,
+        }}
+        logoUrl={mosque.logoUrl}
+      >
+        {children}
+      </AdminShell>
+    </AuthSessionProvider>
   );
 }
