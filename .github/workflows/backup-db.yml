@@ -14,27 +14,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Install PostgreSQL client 17 (sesuai versi server Supabase)
+      - name: Cek koneksi database & versi pg_dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -euo pipefail
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::Secret DATABASE_URL belum diisi (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
           # pg_dump hanya bisa membaca server dengan major version <= versinya.
-          # Server Supabase sudah PostgreSQL 17, sedangkan paket default
-          # ubuntu-latest masih 16 -> "server version mismatch".
-          sudo install -d /usr/share/postgresql-common/pgdg
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-            | sudo gpg --dearmor -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
-            | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
-          pg_dump --version
+          # Server Supabase saat ini PostgreSQL 17, sedangkan paket default
+          # runner hanya 16 -> "server version mismatch". Jadi pg_dump dijalankan
+          # dari image resmi PostgreSQL 17 (versi selalu cocok, tanpa repot apt).
+          docker run --rm postgres:17-alpine pg_dump --version
+          docker run --rm -e DATABASE_URL postgres:17-alpine \
+            psql "$DATABASE_URL" -tAc "select version()"
 
       - name: Backup database
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          BACKUP_RETENTION: "7"
         run: |
-          chmod +x scripts/backup-db.sh
-          ./scripts/backup-db.sh
+          set -euo pipefail
+          mkdir -p backups
+          TIMESTAMP="$(date -u +%Y%m%d_%H%M%S)"
+          OUTFILE="backups/masjid_abu_dzar_${TIMESTAMP}.sql.gz"
+
+          # pg_dump 17 dari image resmi, stdout dialirkan ke gzip di runner.
+          docker run --rm -e DATABASE_URL postgres:17-alpine \
+            sh -c 'pg_dump "$DATABASE_URL" --format=plain --no-owner --no-privileges' \
+            | gzip -c > "$OUTFILE"
+
+          if [ ! -s "$OUTFILE" ]; then
+            echo "::error::File backup kosong, proses dibatalkan."
+            exit 1
+          fi
+
+          echo "Ukuran backup: $(du -h "$OUTFILE" | cut -f1)"
+          echo "File: $OUTFILE"
 
       - name: Upload backup artifact
         uses: actions/upload-artifact@v6
