@@ -151,7 +151,17 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           (!d.imamToday || d.imamToday.length === 0) &&
           prev.today === d.today
         ) {
-          nextData = { ...d, imamToday: prev.imamToday };
+          nextData = { ...nextData, imamToday: prev.imamToday };
+        }
+        if (
+          prev?.imamTomorrowSubuh &&
+          !d.imamTomorrowSubuh &&
+          prev.today === d.today
+        ) {
+          nextData = {
+            ...nextData,
+            imamTomorrowSubuh: prev.imamTomorrowSubuh,
+          };
         }
         try {
           localStorage.setItem("masjid_tv_cached_data", JSON.stringify(nextData));
@@ -381,7 +391,13 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
     return ROSTER_PRAYER_KEYS.map((key) => {
       const prayer = PRAYER_LIST.find((item) => item.key === key)!;
       const pName = prayer.label;
-      const found = list.find((item) => item.prayerName.toLowerCase() === pName.toLowerCase());
+      const isTomorrowSubuh =
+        Boolean(data?.nextPrayer?.tomorrow) && pName === "Subuh";
+      const found = isTomorrowSubuh
+        ? data?.imamTomorrowSubuh ?? undefined
+        : list.find(
+            (item) => item.prayerName.toLowerCase() === pName.toLowerCase()
+          );
       const base = {
         id: key,
         prayerName: pName,
@@ -426,10 +442,14 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   const upcomingPetugas = useMemo(() => {
     const list = data?.imamToday ?? [];
     const target = upcomingPrayerName.toLowerCase();
-    const found = list.find((item) => {
-      const p = item.prayerName.toLowerCase();
-      return p === target || p.includes(target);
-    });
+    const isTomorrowSubuh =
+      Boolean(data?.nextPrayer?.tomorrow) && target === "subuh";
+    const found = isTomorrowSubuh
+      ? data?.imamTomorrowSubuh ?? null
+      : list.find((item) => {
+          const p = item.prayerName.toLowerCase();
+          return p === target || p.includes(target);
+        });
     return {
       imam:
         found?.imamName?.trim() && found.imamName !== "Belum Ditentukan"
@@ -440,7 +460,12 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           ? found.muadzinName
           : "Santri Bertugas",
     };
-  }, [data?.imamToday, upcomingPrayerName]);
+  }, [
+    data?.imamToday,
+    data?.imamTomorrowSubuh,
+    data?.nextPrayer?.tomorrow,
+    upcomingPrayerName,
+  ]);
 
   const hasSpecialAnnouncement = Boolean(
     data?.display?.themeSettings?.specialAnnouncement?.enabled
@@ -1142,7 +1167,10 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                   <div className="flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-2">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#19261f] sm:text-sm">
                       <Users className="h-4 w-4 text-[#2d946e]" />
-                      <span>Petugas Shalat {upcomingPrayerName}</span>
+                      <span>
+                        Petugas Shalat {upcomingPrayerName}
+                        {data.nextPrayer.tomorrow ? " (Besok)" : ""}
+                      </span>
                     </div>
                     <span className="text-[10px] font-bold text-[#1e6149] bg-[#eaf6f0] px-2.5 py-0.5 rounded-full border border-[#bde5d2]">
                       Shalat Berikutnya
@@ -1238,6 +1266,13 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                   </div>
                 ))}
               </div>
+
+              {data.nextPrayer.tomorrow && (
+                <div className="shrink-0 mb-2 rounded-xl border border-[#bde5d2] bg-[#eef8f3] px-3 py-1.5 text-center text-xs font-semibold text-[#1e6149]">
+                  Petugas Subuh Besok: {upcomingPetugas.imam} • Muadzin:{" "}
+                  {upcomingPetugas.muadzin}
+                </div>
+              )}
 
               {/* Footer */}
               <div className="shrink-0 flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">

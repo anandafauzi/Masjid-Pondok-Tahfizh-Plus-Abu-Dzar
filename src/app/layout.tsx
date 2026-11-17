@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Amiri } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { brandIconUrl, brandManifestUrl, getBrand } from "@/lib/brand";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -19,30 +20,29 @@ const amiri = Amiri({
   preload: false,
 });
 
-export const metadata: Metadata = {
-  title: "Sistem Informasi Masjid Abu Dzar | Pondok Tahfizh Plus",
-  description:
-    "Sistem Informasi & Jadwal Shalat Digital Masjid Pondok Tahfizh Plus Abu Dzar, Rumpin - Bogor",
-  manifest: "/manifest.json",
-  applicationName: "Masjid Abu Dzar",
-  appleWebApp: {
-    capable: true,
-    title: "Masjid Abu Dzar",
-    statusBarStyle: "black-translucent",
-  },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
-      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
-      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
-    ],
-    shortcut: "/favicon.ico",
-    apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-    ],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = await getBrand();
+  const icon = brandIconUrl(brand.version);
+  return {
+    title: `Sistem Informasi ${brand.name} | Pondok Tahfizh Plus`,
+    description: `Sistem Informasi & Jadwal Shalat Digital ${brand.name}, Rumpin - Bogor`,
+    manifest: brandManifestUrl("public", brand.version),
+    applicationName: brand.name,
+    appleWebApp: {
+      capable: true,
+      title: brand.name,
+      statusBarStyle: "black-translucent",
+    },
+    icons: {
+      icon: [
+        { url: icon, type: brand.iconType, sizes: "192x192" },
+        { url: icon, type: brand.iconType, sizes: "512x512" },
+      ],
+      shortcut: icon,
+      apple: [{ url: icon, type: brand.iconType, sizes: "180x180" }],
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#557a64",

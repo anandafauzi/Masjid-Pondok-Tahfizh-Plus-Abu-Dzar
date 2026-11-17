@@ -11,6 +11,7 @@ import {
   LoadingState,
   PageHeader,
   SectionHeading,
+  Toggle,
 } from "@/components/ui";
 import {
   ArrowDown,
@@ -24,13 +25,22 @@ import {
 
 import { PetugasItem } from "@/types/petugas";
 import { PetugasSelect } from "@/components/admin/petugas-select";
-import { dateOnlyToString, nextFriday } from "@/lib/datetime";
+import {
+  addDaysUTC,
+  dateOnlyToString,
+  dateOnlyToUTC,
+  formatDateOnlyShort,
+  nextFriday,
+  toDateOnlyString,
+} from "@/lib/datetime";
+import { resolveRolling } from "@/lib/rolling";
 
 interface Rolling {
   id: string;
   khatibName: string;
   sequenceNumber: number;
   effectiveFrom: string;
+  effectiveUntil: string | null;
   isActive: boolean;
 }
 
@@ -43,11 +53,22 @@ interface Schedule {
 }
 
 const toYmd = (iso: string) => dateOnlyToString(new Date(iso));
-const todayYmd = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
-    new Date()
+const todayYmd = () => toDateOnlyString(new Date());
+
+/** Jumat berikutnya; jika hari ini Jumat, pakai pekan depan. */
+const nextFridayYmd = () => {
+  const friday = nextFriday();
+  return dateOnlyToString(
+    dateOnlyToString(friday) === todayYmd() ? addDaysUTC(friday, 7) : friday
   );
-const nextFridayYmd = () => dateOnlyToString(nextFriday());
+};
+
+function isFridayYmd(value: string) {
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    dateOnlyToUTC(value).getUTCDay() === 5
+  );
+}
 
 export default function AdminKhatibPage() {
   const [rolling, setRolling] = useState<Rolling[]>([]);
@@ -59,6 +80,8 @@ export default function AdminKhatibPage() {
 
   const [rollName, setRollName] = useState("");
   const [rollFrom, setRollFrom] = useState(todayYmd());
+  const [rollUntil, setRollUntil] = useState("");
+  const [rollActive, setRollActive] = useState(true);
   const [editingRollingId, setEditingRollingId] = useState<string | null>(null);
 
   const [date, setDate] = useState(nextFridayYmd);
@@ -67,11 +90,21 @@ export default function AdminKhatibPage() {
   const [backup, setBackup] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const fridayValid = isFridayYmd(date);
+  const existingForDate =
+    schedules.find((s) => toYmd(s.fridayDate) === date) ?? null;
+  const isExistingDifferent = Boolean(
+    existingForDate && existingForDate.id !== editingId
+  );
+  const rollingForDate = fridayValid
+    ? resolveRolling(rolling, dateOnlyToUTC(date))
+    : null;
+
   async function load() {
     try {
       const [r, s, p] = await Promise.all([
         fetch("/api/khatib-rolling", { cache: "no-store" }),
-        fetch("/api/khatib-schedules", { cache: "no-store" }),
+        fetch("/api/khatib-schedules?from=1970-01-01", { cache: "no-store" }),
         fetch("/api/petugas", { cache: "no-store" }),
       ]);
       if (!r.ok || !s.ok || !p.ok) {
@@ -94,12 +127,16 @@ export default function AdminKhatibPage() {
   function resetRollingForm() {
     setRollName("");
     setRollFrom(todayYmd());
+    setRollUntil("");
+    setRollActive(true);
     setEditingRollingId(null);
   }
 
   function beginEditRolling(r: Rolling) {
     setRollName(r.khatibName);
     setRollFrom(toYmd(r.effectiveFrom));
+    setRollUntil(r.effectiveUntil ? toYmd(r.effectiveUntil) : "");
+    setRollActive(r.isActive);
     setEditingRollingId(r.id);
   }
 
@@ -114,7 +151,12 @@ export default function AdminKhatibPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ khatibName: rollName, effectiveFrom: rollFrom }),
+        body: JSON.stringify({
+          khatibName: rollName,
+          effectiveFrom: rollFrom,
+          effectiveUntil: rollUntil || null,
+          isActive: rollActive,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
@@ -184,7 +226,13 @@ export default function AdminKhatibPage() {
   }
 
   async function submitSchedule() {
+    if (!fridayValid) return toast.error("Tanggal harus berupa hari Jumat");
     if (!khatib.trim()) return toast.error("Nama khatib wajib diisi");
+    if (isExistingDifferent) {
+      return toast.error(
+        "Jadwal untuk tanggal ini sudah ada. Klik Edit Jadwal Ini."
+      );
+    }
     setSaving(true);
     try {
       const res = await fetch(
@@ -247,7 +295,7 @@ export default function AdminKhatibPage() {
             title="Rotasi Khatib"
             description="Urutan rotasi mengikuti daftar dari atas ke bawah. Gunakan tombol panah untuk mengubah urutan."
           />
-          <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label htmlFor="rollName">Nama Khatib</Label>
               <PetugasSelect
@@ -268,8 +316,24 @@ export default function AdminKhatibPage() {
                 onChange={(e) => setRollFrom(e.target.value)}
               />
             </div>
-            <div className="flex gap-1.5">
-              <Button onClick={submitRolling} disabled={saving}>
+            <div>
+              <Label htmlFor="rollUntil">Berlaku Sampai (opsional)</Label>
+              <Input
+                id="rollUntil"
+                type="date"
+                value={rollUntil}
+                onChange={(e) => setRollUntil(e.target.value)}
+              />
+            </div>
+            <div className="flex items-end">
+              <Toggle
+                checked={rollActive}
+                onChange={setRollActive}
+                label="Ikut Rotasi"
+              />
+            </div>
+            <div className="flex gap-1.5 sm:col-span-2 lg:col-span-4">
+              <Button onClick={submitRolling} disabled={saving || ordering}>
                 {editingRollingId ? (
                   <>
                     <Pencil className="h-4 w-4" /> Simpan
@@ -314,14 +378,18 @@ export default function AdminKhatibPage() {
                       </div>
                       <p className="text-[11px] text-slate-500">
                         Sejak {toYmd(r.effectiveFrom)}
+                        {r.effectiveUntil
+                          ? ` • s/d ${toYmd(r.effectiveUntil)}`
+                          : ""}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700"
+                      className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30"
                       onClick={() => beginEditRolling(r)}
+                      disabled={saving || ordering}
                       title="Edit Rotasi Khatib"
                     >
                       <Pencil className="h-4 w-4" />
@@ -350,6 +418,7 @@ export default function AdminKhatibPage() {
                       variant="danger"
                       className="ml-1 px-3 py-1.5"
                       onClick={() => delRolling(r.id)}
+                      disabled={saving || ordering}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       <span className="hidden sm:inline">Hapus</span>
@@ -376,6 +445,20 @@ export default function AdminKhatibPage() {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
+              {!fridayValid && date && (
+                <p className="mt-1 text-[11px] font-semibold text-rose-600">
+                  Tanggal harus berupa hari Jumat.
+                </p>
+              )}
+              {fridayValid && (
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Rotasi:{" "}
+                  <span className="font-semibold text-slate-700">
+                    {rollingForDate?.name ?? "Belum ada"}
+                  </span>
+                  {existingForDate ? " • ada jadwal manual" : ""}
+                </p>
+              )}
             </div>
             <div>
               <Label htmlFor="khatib">Nama Khatib</Label>
@@ -409,8 +492,24 @@ export default function AdminKhatibPage() {
               />
             </div>
           </div>
+          {isExistingDifferent && existingForDate && (
+            <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Jadwal tanggal ini sudah ada:{" "}
+              <strong>{existingForDate.khatibName}</strong>.{" "}
+              <button
+                type="button"
+                className="font-bold underline"
+                onClick={() => beginEdit(existingForDate)}
+              >
+                Edit jadwal ini
+              </button>
+            </div>
+          )}
           <div className="flex gap-2">
-            <Button onClick={submitSchedule} disabled={saving}>
+            <Button
+              onClick={submitSchedule}
+              disabled={saving || !fridayValid || isExistingDifferent}
+            >
               {editingId ? (
                 <>
                   <Pencil className="h-4 w-4" /> Simpan Perubahan
@@ -429,11 +528,12 @@ export default function AdminKhatibPage() {
           </div>
 
           <div className="mt-5 max-h-80 overflow-auto rounded-xl border border-slate-100">
-            <table className="w-full min-w-[480px] text-left text-xs">
+            <table className="w-full min-w-[560px] text-left text-xs">
               <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-3 py-2.5">Tanggal</th>
                   <th className="px-3 py-2.5">Khatib</th>
+                  <th className="px-3 py-2.5">Cadangan</th>
                   <th className="px-3 py-2.5">Tema</th>
                   <th className="px-3 py-2.5 text-right">Aksi</th>
                 </tr>
@@ -441,7 +541,7 @@ export default function AdminKhatibPage() {
               <tbody className="divide-y divide-slate-100">
                 {schedules.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-6 text-center text-slate-400">
+                    <td colSpan={5} className="px-3 py-6 text-center text-slate-400">
                       Belum ada jadwal khatib.
                     </td>
                   </tr>
@@ -452,10 +552,13 @@ export default function AdminKhatibPage() {
                       className="transition-colors hover:bg-amber-50/40"
                     >
                       <td className="px-3 py-2.5 text-slate-600">
-                        {toYmd(s.fridayDate)}
+                        {formatDateOnlyShort(new Date(s.fridayDate))}
                       </td>
                       <td className="px-3 py-2.5 font-semibold text-slate-800">
                         {s.khatibName}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-500">
+                        {s.backupKhatibName ?? "-"}
                       </td>
                       <td className="px-3 py-2.5 text-slate-500">
                         {s.sermonTopic ?? "-"}
@@ -463,15 +566,17 @@ export default function AdminKhatibPage() {
                       <td className="px-3 py-2.5">
                         <div className="flex justify-end gap-1.5">
                           <button
-                            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700"
+                            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30"
                             onClick={() => beginEdit(s)}
+                            disabled={saving}
                             title="Edit"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-rose-100 hover:text-rose-600"
+                            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-rose-100 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30"
                             onClick={() => delSchedule(s.id)}
+                            disabled={saving}
                             title="Hapus"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

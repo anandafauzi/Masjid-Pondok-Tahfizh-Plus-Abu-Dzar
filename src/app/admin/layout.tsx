@@ -1,33 +1,36 @@
 import type { Metadata } from "next";
 import { getSessionUser } from "@/lib/api";
 import { getMosqueSettings } from "@/lib/settings";
+import { brandIconUrl, brandManifestUrl, getBrand } from "@/lib/brand";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminLoginView } from "@/components/admin/admin-login-view";
 import { AuthSessionProvider } from "@/components/session-provider";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Panel Admin | Masjid Pondok Tahfizh Plus Abu Dzar",
-  description: "Panel Administrasi Masjid Pondok Tahfizh Plus Abu Dzar",
-  manifest: "/manifest-admin.json",
-  applicationName: "Admin DKM",
-  appleWebApp: {
-    capable: true,
-    title: "Admin DKM",
-    statusBarStyle: "black-translucent",
-  },
-  icons: {
-    icon: [
-      { url: "/icon-admin-192.png", type: "image/png", sizes: "192x192" },
-      { url: "/icon-admin-512.png", type: "image/png", sizes: "512x512" },
-    ],
-    shortcut: "/icon-admin-192.png",
-    apple: [
-      { url: "/icon-admin-192.png", sizes: "192x192", type: "image/png" },
-    ],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const brand = await getBrand();
+  const icon = brandIconUrl(brand.version);
+  return {
+    title: `Panel Admin | ${brand.name}`,
+    description: `Panel Administrasi ${brand.name}`,
+    manifest: brandManifestUrl("admin", brand.version),
+    applicationName: "Admin DKM",
+    appleWebApp: {
+      capable: true,
+      title: "Admin DKM",
+      statusBarStyle: "black-translucent",
+    },
+    icons: {
+      icon: [
+        { url: icon, type: brand.iconType, sizes: "192x192" },
+        { url: icon, type: brand.iconType, sizes: "512x512" },
+      ],
+      shortcut: icon,
+      apple: [{ url: icon, type: brand.iconType, sizes: "180x180" }],
+    },
+  };
+}
 
 export default async function AdminLayout({
   children,

@@ -25,6 +25,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync launcher icons from admin logo
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run icons:sync
+
       # AGP 8.5.x hanya kompatibel dengan Gradle 8.x. Jangan pakai Gradle
       # bawaan runner (9.x) karena bisa membuat build gagal.
       - name: Setup Gradle 8.7
