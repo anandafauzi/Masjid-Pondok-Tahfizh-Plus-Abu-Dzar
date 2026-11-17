@@ -24,6 +24,7 @@ import {
 
 import { PetugasItem } from "@/types/petugas";
 import { PetugasSelect } from "@/components/admin/petugas-select";
+import { dateOnlyToString, nextFriday } from "@/lib/datetime";
 
 interface Rolling {
   id: string;
@@ -46,6 +47,7 @@ const todayYmd = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
     new Date()
   );
+const nextFridayYmd = () => dateOnlyToString(nextFriday());
 
 export default function AdminKhatibPage() {
   const [rolling, setRolling] = useState<Rolling[]>([]);
@@ -59,7 +61,7 @@ export default function AdminKhatibPage() {
   const [rollFrom, setRollFrom] = useState(todayYmd());
   const [editingRollingId, setEditingRollingId] = useState<string | null>(null);
 
-  const [date, setDate] = useState(todayYmd());
+  const [date, setDate] = useState(nextFridayYmd);
   const [khatib, setKhatib] = useState("");
   const [topic, setTopic] = useState("");
   const [backup, setBackup] = useState("");
@@ -163,7 +165,7 @@ export default function AdminKhatibPage() {
   }
 
   function resetScheduleForm() {
-    setDate(todayYmd());
+    setDate(nextFridayYmd());
     setKhatib("");
     setTopic("");
     setBackup("");

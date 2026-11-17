@@ -40,7 +40,9 @@ function parseWeeklyItems(raw: unknown[]): WeeklyImamItem[] | null {
     const imamName =
       typeof item.imamName === "string" ? item.imamName.trim() : "";
     const isActive = item.isActive !== undefined ? Boolean(item.isActive) : true;
-    if (isActive && !imamName) return null;
+    // Jumat Subuh sengaja dikosongkan karena imamnya berasal dari rotasi.
+    const isFridaySubuhRotation = dayOfWeek === 5 && prayerName === "Subuh";
+    if (isActive && !imamName && !isFridaySubuhRotation) return null;
 
     const effectiveFrom =
       typeof item.effectiveFrom === "string" ? item.effectiveFrom.trim() : "";
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
     const items = parseWeeklyItems(body.items);
     if (!items) {
       return badRequest(
-        "Data jadwal pekanan tidak valid: periksa hari, nama shalat, dan nama imam"
+        "Data jadwal pekanan tidak valid: periksa hari, nama shalat, dan petugas"
       );
     }
     const syncDays =

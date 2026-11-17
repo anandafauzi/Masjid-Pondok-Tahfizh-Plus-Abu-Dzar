@@ -76,11 +76,13 @@ const QUICK_ACTIONS = [
 ] as const;
 
 function wibTime(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Asia/Jakarta",
-  }).format(new Date(iso));
+  }).format(date);
 }
 
 function countdown(ms: number) {
@@ -107,9 +109,14 @@ export default function AdminDashboardPage() {
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/khutbah/status", { cache: "no-store" });
+      if (!res.ok) return;
+
       const data = (await res.json()) as StatusResponse;
+      const serverTime = new Date(data.serverTime).getTime();
+      if (!Number.isFinite(serverTime)) return;
+
       setStatus(data);
-      setOffset(new Date(data.serverTime).getTime() - Date.now());
+      setOffset(serverTime - Date.now());
     } catch {
       // ignore transient errors
     }

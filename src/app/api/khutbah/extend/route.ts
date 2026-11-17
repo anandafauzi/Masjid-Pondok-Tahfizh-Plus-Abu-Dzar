@@ -37,8 +37,6 @@ export async function POST(request: NextRequest) {
       return badRequest(error.message);
     }
     console.error(error);
-    return serverError(
-      error instanceof Error ? error.message : "Gagal memperpanjang khutbah"
-    );
+    return serverError("Gagal memperpanjang khutbah");
   }
 }

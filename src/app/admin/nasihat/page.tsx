@@ -93,14 +93,16 @@ export default function AdminNasihatPage() {
 
   async function toggle(item: Advice) {
     try {
-      await fetch(`/api/advice/${item.id}`, {
+      const res = await fetch(`/api/advice/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !item.isActive }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Gagal mengubah status");
       await load();
-    } catch {
-      toast.error("Gagal mengubah status");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal mengubah status");
     }
   }
 

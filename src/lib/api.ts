@@ -72,6 +72,18 @@ export function parseDateOnly(value: string | null | undefined): Date | null {
 }
 
 export function parseIntOr(value: unknown, fallback: number): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+  if (value === null || value === undefined || Array.isArray(value)) {
+    return fallback;
+  }
+  if (typeof value === "boolean") return fallback;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return fallback;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
 }

@@ -89,14 +89,14 @@ function LoginForm() {
     setLoading(true);
 
     const cleanEmail = email.trim();
-    const cleanPassword = password.trim();
 
     try {
       // Rate limit sudah dicek di server (authorize) sehingga tidak ada
       // endpoint publik yang membocorkan status blokir sebuah email.
+      // Password tidak dipangkas karena spasi bisa menjadi bagian dari sandi.
       const result = await signIn("credentials", {
         email: cleanEmail,
-        password: cleanPassword,
+        password,
         redirect: false,
       });
 

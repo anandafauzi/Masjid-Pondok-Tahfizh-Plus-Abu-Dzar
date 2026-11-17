@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ok, serverError, unauthorized, badRequest } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,8 @@ export async function PUT(request: NextRequest) {
       entityType: "IqamahSetting",
       changeSummary: "Memperbarui pengaturan iqamah",
     });
+
+    revalidateAllAppPaths();
 
     return ok(results);
   } catch (error) {

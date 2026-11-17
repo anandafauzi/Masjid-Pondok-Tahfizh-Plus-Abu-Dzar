@@ -73,33 +73,13 @@ export function AdminLoginView({
     setLoading(true);
 
     const cleanEmail = email.trim();
-    const cleanPassword = password.trim();
 
     try {
-      // Cek rate limit sebelum mencoba login
-      try {
-        const rl = await fetch("/api/auth/login-rate-limit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail }),
-        });
-        if (rl.status === 429) {
-          const data = await rl.json().catch(() => ({}));
-          const sec = data.retryAfterSeconds ?? 900;
-          const min = Math.ceil(sec / 60);
-          toast.error(
-            `Terlalu banyak percobaan gagal. Coba lagi dalam ${min} menit atau nanti.`
-          );
-          setLoading(false);
-          return;
-        }
-      } catch {
-        // Jangan blokir login jika pengecekan gagal
-      }
-
+      // Rate limit sudah dicek di server (authorize). Password tidak dipangkas
+      // karena spasi bisa saja menjadi bagian dari sandi.
       const result = await signIn("credentials", {
         email: cleanEmail,
-        password: cleanPassword,
+        password,
         redirect: false,
       });
 
