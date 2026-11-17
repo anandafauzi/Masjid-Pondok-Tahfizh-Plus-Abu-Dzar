@@ -702,6 +702,13 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   const pxPerSecond = (tickerSpeed / 50) * 85;
   const tickerDuration = Math.max(16, Math.round(totalDistancePx / pxPerSecond));
 
+  const activeIqamahEvent = iqamahActive ?? prayerTimeReached?.event;
+  const isPrayerOverlayVisible = (() => {
+    if (khutbahVisible || !activeIqamahEvent) return false;
+    if (isFriday && activeIqamahEvent.label.toLowerCase().includes("zuhur")) return false;
+    return new Date(activeIqamahEvent.iqamahTarget).getTime() > serverNow;
+  })();
+
   // KHUTBAH JUMAT FULLSCREEN MODE (Tampil hening dan khusyuk tanpa countdown / hitung mundur)
   if (khutbahVisible && activeKhutbah) {
     return (
@@ -926,7 +933,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
         {/* IQAMAH OVERLAY COUNTDOWN (When between Adzan and Iqamah) */}
         {(() => {
           if (khutbahVisible) return null;
-          const activeEv = iqamahActive ?? prayerTimeReached?.event;
+          const activeEv = activeIqamahEvent;
           if (!activeEv) return null;
           if (isFriday && activeEv.label.toLowerCase().includes("zuhur")) return null;
           const iqTarget = new Date(activeEv.iqamahTarget).getTime();
@@ -1599,7 +1606,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
       </main>
 
       {/* Bottom Running Text Ticker */}
-      {data.display.tickerEnabled && (
+      {data.display.tickerEnabled && !isPrayerOverlayVisible && (
         <footer className="relative z-10 shrink-0 overflow-hidden border-t border-[#ded5c4] bg-[#fbf9f4] py-1.5 sm:py-2 text-[#19261f]">
           <div className="flex items-center w-full">
             <div className="z-10 flex shrink-0 items-center bg-[#2d946e] px-2.5 py-0.5 text-[9px] font-bold uppercase text-white shadow-sm sm:px-3 sm:py-1 sm:text-xs">
