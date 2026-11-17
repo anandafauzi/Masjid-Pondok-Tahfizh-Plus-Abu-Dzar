@@ -5,11 +5,13 @@ import {
   getSessionUser,
   notFound,
   ok,
+  parseDateOnly,
   serverError,
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { weekdayWib, ymdWib } from "@/lib/kajian";
 
 export const dynamic = "force-dynamic";
 
@@ -67,22 +69,61 @@ export async function PUT(
       return badRequest("Waktu selesai tidak boleh sebelum waktu mulai");
     }
 
-    const item = await prisma.kajianSchedule.update({
-      where: { id },
-      data: {
-        title,
-        speakerName,
-        bookOrTopic:
-          body.bookOrTopic !== undefined ? body.bookOrTopic : undefined,
-        startDateTime: startDateTime ?? undefined,
-        endDateTime:
-          body.endDateTime === null ? null : (endDateTime ?? undefined),
-        location: body.location ?? undefined,
-        description:
-          body.description !== undefined ? body.description : undefined,
-        isActive:
-          body.isActive !== undefined ? Boolean(body.isActive) : undefined,
-      },
+    const isRecurring =
+      body.isRecurring !== undefined
+        ? Boolean(body.isRecurring)
+        : existing.isRecurring;
+
+    let recurrenceUntil: Date | null = existing.recurrenceUntil;
+    if (body.recurrenceUntil !== undefined) {
+      recurrenceUntil = parseDateOnly(body.recurrenceUntil);
+      if (body.recurrenceUntil && !recurrenceUntil) {
+        return badRequest("Tanggal akhir pengulangan tidak valid");
+      }
+    }
+    if (!isRecurring) recurrenceUntil = null;
+    if (
+      isRecurring &&
+      recurrenceUntil &&
+      ymdWib(nextStart) > ymdWib(recurrenceUntil)
+    ) {
+      return badRequest(
+        "Tanggal akhir pengulangan tidak boleh sebelum tanggal mulai"
+      );
+    }
+
+    // Bila jadwal tetap dinonaktifkan, pengecualian lama tidak relevan lagi.
+    // Bila hari pengulangan berubah, pengecualian juga tidak lagi cocok.
+    const weekdayChanged =
+      isRecurring &&
+      (startDateTime !== undefined || !existing.isRecurring) &&
+      weekdayWib(nextStart) !== existing.recurrenceDay;
+
+    const item = await prisma.$transaction(async (tx) => {
+      if (!isRecurring || weekdayChanged) {
+        await tx.kajianException.deleteMany({ where: { kajianId: id } });
+      }
+
+      return tx.kajianSchedule.update({
+        where: { id },
+        data: {
+          title,
+          speakerName,
+          bookOrTopic:
+            body.bookOrTopic !== undefined ? body.bookOrTopic : undefined,
+          startDateTime: startDateTime ?? undefined,
+          endDateTime:
+            body.endDateTime === null ? null : (endDateTime ?? undefined),
+          location: body.location ?? undefined,
+          description:
+            body.description !== undefined ? body.description : undefined,
+          isActive:
+            body.isActive !== undefined ? Boolean(body.isActive) : undefined,
+          isRecurring,
+          recurrenceDay: isRecurring ? weekdayWib(nextStart) : null,
+          recurrenceUntil,
+        },
+      });
     });
 
     await writeAudit({

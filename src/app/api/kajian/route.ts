@@ -1,8 +1,17 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { badRequest, getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
+import {
+  badRequest,
+  getSessionUser,
+  ok,
+  parseDateOnly,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { getAdminKajianData } from "@/lib/schedule-data";
+import { weekdayWib, ymdWib } from "@/lib/kajian";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +19,8 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return unauthorized();
   try {
-    const items = await prisma.kajianSchedule.findMany({
-      orderBy: { startDateTime: "asc" },
-    });
-    return ok(items);
+    const data = await getAdminKajianData();
+    return ok(data);
   } catch (error) {
     console.error(error);
     return serverError();
@@ -43,6 +50,17 @@ export async function POST(request: NextRequest) {
       return badRequest("Waktu selesai tidak boleh sebelum waktu mulai");
     }
 
+    const isRecurring = body.isRecurring === true;
+    const recurrenceUntil = isRecurring
+      ? parseDateOnly(body.recurrenceUntil)
+      : null;
+    if (isRecurring && body.recurrenceUntil && !recurrenceUntil) {
+      return badRequest("Tanggal akhir pengulangan tidak valid");
+    }
+    if (recurrenceUntil && ymdWib(startDateTime) > ymdWib(recurrenceUntil)) {
+      return badRequest("Tanggal akhir pengulangan tidak boleh sebelum tanggal mulai");
+    }
+
     const item = await prisma.kajianSchedule.create({
       data: {
         title: String(body.title).trim(),
@@ -52,6 +70,9 @@ export async function POST(request: NextRequest) {
         endDateTime,
         location: body.location ?? "Masjid",
         description: body.description ?? null,
+        isRecurring,
+        recurrenceDay: isRecurring ? weekdayWib(startDateTime) : null,
+        recurrenceUntil,
         isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
       },
     });

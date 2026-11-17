@@ -171,14 +171,39 @@ model KajianSchedule {
   location         String    @default("Masjid")
   description      String?
   recurrenceRuleId String?
+  // Jadwal tetap: satu baris menjadi template yang diulang setiap pekan.
+  isRecurring      Boolean   @default(false)
+  recurrenceDay    Int?      // 0 = Ahad ... 6 = Sabtu (WIB)
+  recurrenceUntil  DateTime? @db.Date
+  // Diisi bila kajian sekali-sekali dipindahkan ke hari lain.
+  rescheduledFrom  DateTime?
   isActive         Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   
   recurrenceRule   RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id])
+  exceptions       KajianException[]
   
   @@index([startDateTime])
   @@map("kajian_schedules")
+}
+
+// Pengecualian untuk satu pertemuan jadwal tetap (mis. dipindahkan ke hari lain).
+model KajianException {
+  id               String   @id @default(cuid())
+  kajianId         String
+  occurrenceDate   DateTime @db.Date
+  newStartDateTime DateTime?
+  newEndDateTime   DateTime?
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  kajian           KajianSchedule @relation(fields: [kajianId], references: [id], onDelete: Cascade)
+
+  @@unique([kajianId, occurrenceDate])
+  @@index([occurrenceDate])
+  @@map("kajian_exceptions")
 }
 
 // Iqamah settings

@@ -17,6 +17,10 @@ khatib Jumat, kajian, countdown adzan–iqamah, dan panel admin lengkap.
 - **Admin panel** (`/admin`): dashboard khutbah, jadwal shalat, imam &
   muadzin, khatib Jumat, kajian, iqamah, nasihat, running text, pengaturan TV,
   pengaturan masjid, pengguna (khusus Super Admin), dan log aktivitas.
+- **Jadwal kajian tetap**: kajian rutin mingguan cukup dibuat sekali (acuan
+  hari dan jam), lalu tampil otomatis setiap pekan tanpa input tanggal ulang.
+  Satu pertemuan dapat dipindahkan ke hari/jam lain tanpa mengubah pekan
+  lainnya, dan dapat dikembalikan ke jadwal semula.
 - **Pengingat WhatsApp H-1**: pengingat otomatis ke imam, muadzin, dan khatib
   Jumat sehari sebelum bertugas, dengan pratinjau, kirim manual, dan riwayat.
 - **Rotasi berbasis tanggal**: urutan imam/khatib dihitung dari tanggal

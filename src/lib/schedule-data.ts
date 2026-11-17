@@ -3,6 +3,10 @@ import { dateOnlyToString, addDaysUTC, nextFriday } from "@/lib/datetime";
 import { getWeeklyImamSettings, PRAYERS } from "@/lib/weekly-imam";
 import type { WeeklyImamItem } from "@/types/weekly-imam";
 import { resolveRolling } from "@/lib/rolling";
+import {
+  buildKajianOccurrences,
+  generateKajianOccurrences,
+} from "@/lib/kajian";
 
 export async function getRunningTextsSafe() {
   try {
@@ -193,10 +197,24 @@ export async function getUpcomingKhatibSchedules(from: Date, take = 4) {
 
 export async function getUpcomingKajian(from: Date, take = 6) {
   try {
-    return await prisma.kajianSchedule.findMany({
-      where: { startDateTime: { gte: from }, isActive: true },
-      orderBy: { startDateTime: "asc" },
+    const [rows, exceptions] = await Promise.all([
+      prisma.kajianSchedule.findMany({
+        where: { isActive: true },
+        orderBy: { startDateTime: "asc" },
+      }),
+      prisma.kajianException.findMany().catch((error) => {
+        console.error("Gagal membaca pengecualian kajian:", error);
+        return [];
+      }),
+    ]);
+
+    return buildKajianOccurrences({
+      rows,
+      exceptions,
+      from,
       take,
+      horizonDays: 400,
+      maxPerSeries: 60,
     });
   } catch {
     return [];
@@ -204,6 +222,30 @@ export async function getUpcomingKajian(from: Date, take = 6) {
 }
 
 export const getKajianSafe = getUpcomingKajian;
+
+/**
+ * Data untuk panel admin: seluruh baris kajian (termasuk template jadwal
+ * tetap) beserta pertemuan mendatang agar bisa di-reschedule satu per satu.
+ */
+export async function getAdminKajianData() {
+  const [rows, exceptions] = await Promise.all([
+    prisma.kajianSchedule.findMany({ orderBy: { startDateTime: "asc" } }),
+    prisma.kajianException.findMany({ orderBy: { occurrenceDate: "asc" } }),
+  ]);
+
+  const now = new Date();
+  const occurrences = rows
+    .filter((row) => row.isRecurring)
+    .flatMap((row) =>
+      generateKajianOccurrences(row, exceptions, now, {
+        horizonDays: 120,
+        maxOccurrences: 10,
+      })
+    )
+    .sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+
+  return { items: rows, occurrences };
+}
 
 export async function getKhatibScheduleForDate(
   fridayDate: Date,
