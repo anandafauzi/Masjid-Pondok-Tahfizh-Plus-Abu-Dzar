@@ -551,7 +551,7 @@ export default function AdminImamPage() {
                       key={prayerName}
                       className="rounded-xl border border-[#e8dfcf] bg-[#fcfaf6] p-4 transition-colors hover:border-[#2d946e]/40"
                     >
-                      <div className="grid gap-3 sm:grid-cols-[110px_1fr_1fr_auto] sm:items-center">
+                      <div className="grid min-w-0 gap-3 lg:grid-cols-[110px_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center">
                         {/* Prayer Name Badge */}
                         <div className="flex items-center sm:block">
                           <span className="inline-block rounded-lg bg-[#2d946e]/10 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-[#1e6149] border border-[#2d946e]/20">
@@ -560,13 +560,13 @@ export default function AdminImamPage() {
                         </div>
 
                         {/* Imam Name */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
+                        <div className="min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
                             <Label className="text-[11px] text-[#5c6e63]">
                               Nama Imam
                             </Label>
                             {selectedDay === 5 && prayerName === "Subuh" && (
-                              <span className="text-[10px] font-bold text-[#8a6820] bg-[#eddcb2]/40 px-2 py-0.5 rounded-full border border-[#c5a059]/30">
+                              <span className="min-w-0 truncate text-[10px] font-bold text-[#8a6820] bg-[#eddcb2]/40 px-2 py-0.5 rounded-full border border-[#c5a059]/30">
                                 ⭐ Rotasi Otomatis (Tab 2)
                               </span>
                             )}
@@ -598,7 +598,7 @@ export default function AdminImamPage() {
                         </div>
 
                         {/* Muadzin Name */}
-                        <div>
+                        <div className="min-w-0">
                           <Label className="text-[11px] text-[#5c6e63] mb-1">
                             Nama Muadzin
                           </Label>
@@ -620,8 +620,8 @@ export default function AdminImamPage() {
                         </div>
 
                         {/* Tetap Selamanya Checkbox */}
-                        <div className="flex flex-col justify-end pt-1 sm:pt-4">
-                          <label className="flex items-center gap-2 cursor-pointer rounded-lg bg-white px-3 py-2 border border-[#ded5c4] shadow-xs hover:border-[#2d946e]">
+                        <div className="flex min-w-0 flex-col justify-end pt-1 lg:pt-4">
+                          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ded5c4] bg-white px-3 py-2 shadow-xs hover:border-[#2d946e]">
                             <input
                               type="checkbox"
                               checked={item.isPermanent}
@@ -644,7 +644,7 @@ export default function AdminImamPage() {
                               }}
                               className="h-4 w-4 rounded border-[#ded5c4] text-[#2d946e] focus:ring-[#2d946e]"
                             />
-                            <span className="text-xs font-bold text-[#19261f] whitespace-nowrap">
+                            <span className="text-xs font-bold text-[#19261f]">
                               Tetap Selamanya
                             </span>
                           </label>
@@ -724,8 +724,8 @@ export default function AdminImamPage() {
             <h4 className="text-xs font-bold text-[#19261f] uppercase tracking-wider mb-3">
               {editingRollingId ? "Edit Imam Rotasi Subuh Jumat" : "Tambah Imam Rotasi Subuh Jumat"}
             </h4>
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_auto_auto_auto] items-end">
-              <div>
+            <div className="grid min-w-0 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+              <div className="min-w-0">
                 <Label htmlFor="rollName">Nama Imam</Label>
                 <PetugasSelect
                   id="rollName"
@@ -738,7 +738,7 @@ export default function AdminImamPage() {
                 />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <Label htmlFor="rollFrom">Berlaku Sejak</Label>
                 <Input
                   id="rollFrom"
@@ -749,21 +749,21 @@ export default function AdminImamPage() {
                 />
               </div>
 
-              <div className="flex flex-col justify-end">
-                <label className="flex items-center gap-2 cursor-pointer rounded-lg bg-[#fcfaf6] px-3 py-2 border border-[#ded5c4] hover:border-[#2d946e]">
+              <div className="flex min-w-0 flex-col justify-end">
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ded5c4] bg-[#fcfaf6] px-3 py-2 hover:border-[#2d946e]">
                   <input
                     type="checkbox"
                     checked={rollPermanent}
                     onChange={(e) => setRollPermanent(e.target.checked)}
                     className="h-4 w-4 rounded border-[#ded5c4] text-[#2d946e] focus:ring-[#2d946e]"
                   />
-                  <span className="text-xs font-bold text-[#19261f] whitespace-nowrap">
+                  <span className="text-xs font-bold text-[#19261f]">
                     Tetap Selamanya
                   </span>
                 </label>
               </div>
 
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-1.5">
                 <Button
                   onClick={submitRolling}
                   disabled={saving}
@@ -890,8 +890,8 @@ export default function AdminImamPage() {
           />
 
           <div className="mb-6 rounded-2xl border border-[#ded5c4] bg-white p-4 shadow-sm">
-            <div className="mb-4 grid gap-3 sm:grid-cols-2">
-              <div>
+            <div className="mb-4 grid min-w-0 gap-3 sm:grid-cols-2">
+              <div className="min-w-0">
                 <Label htmlFor="schedDate">Tanggal Spesifik</Label>
                 <Input
                   id="schedDate"
@@ -901,7 +901,7 @@ export default function AdminImamPage() {
                   className="bg-[#fcfaf6]"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label htmlFor="prayer">Waktu Shalat</Label>
                 <Select
                   id="prayer"
@@ -916,7 +916,7 @@ export default function AdminImamPage() {
                   ))}
                 </Select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label htmlFor="imam">Nama Imam</Label>
                 <PetugasSelect
                   id="imam"
@@ -928,7 +928,7 @@ export default function AdminImamPage() {
                   petugasList={petugas}
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Label htmlFor="muadzin">Nama Muadzin</Label>
                 <PetugasSelect
                   id="muadzin"
@@ -952,7 +952,7 @@ export default function AdminImamPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 onClick={submitSchedule}
                 disabled={saving}
