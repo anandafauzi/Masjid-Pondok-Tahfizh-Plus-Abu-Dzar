@@ -241,4 +241,34 @@ describe("buildKajianOccurrences", () => {
 
     expect(result).toHaveLength(0);
   });
+
+  it("meneruskan jenis libur dan kajian khusus ke pertemuan", () => {
+    const result = buildKajianOccurrences({
+      rows: [
+        schedule({
+          id: "kajian-libur",
+          isRecurring: false,
+          kajianType: "LIBUR",
+        }),
+        schedule({
+          id: "kajian-khusus",
+          isRecurring: false,
+          kajianType: "KHUSUS",
+          audience: "Asatidz",
+        }),
+      ],
+      exceptions: [],
+      from: new Date("2026-01-01T00:00:00.000Z"),
+      take: 5,
+    });
+
+    expect(result[0]).toMatchObject({
+      kajianType: "LIBUR",
+      audience: null,
+    });
+    expect(result[1]).toMatchObject({
+      kajianType: "KHUSUS",
+      audience: "Asatidz",
+    });
+  });
 });

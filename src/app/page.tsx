@@ -5,6 +5,7 @@ import { calculatePrayerTimes, getNextPrayer } from "@/lib/prayer-times";
 import { formatDateOnlyLong, todayDateOnly } from "@/lib/datetime";
 import { nextFriday } from "@/lib/schedule-data";
 import { getPublicBundle } from "@/lib/public-data";
+import { kajianTypeLabel } from "@/lib/kajian-type";
 import {
   CalendarClock,
   Users,
@@ -319,6 +320,29 @@ export default async function Home() {
                   );
                 })}
               </div>
+
+              {bundle.isRamadan && bundle.tarawihToday && (
+                <div className="mt-3 grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50/80 p-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block rounded-md bg-emerald-600/10 px-2 py-1 text-xs font-black uppercase text-emerald-700 border border-emerald-600/20">
+                      Tarawih
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase font-bold text-emerald-700">
+                      Imam Tarawih Malam Ini
+                    </p>
+                    <p className="truncate text-xs sm:text-sm font-extrabold text-[#19261f]">
+                      {bundle.tarawihToday.imamName}
+                    </p>
+                    {bundle.tarawihToday.notes && (
+                      <p className="truncate text-[11px] text-emerald-800/80">
+                        {bundle.tarawihToday.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 pt-3 border-t border-[#e8dfcf] flex items-center justify-between">
@@ -430,11 +454,26 @@ export default async function Home() {
                       key={k.id}
                       className="rounded-xl border border-[#ded5c4]/60 bg-[#fcfaf6] p-3 transition-colors hover:bg-[#faf7f2]"
                     >
-                      <h4 className="text-sm font-bold text-[#19261f]">
-                        {k.title}
-                      </h4>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-sm font-bold text-[#19261f]">
+                          {k.title}
+                        </h4>
+                        {k.kajianType !== "REGULAR" && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                              k.kajianType === "LIBUR"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            {kajianTypeLabel(k.kajianType)}
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-0.5 text-xs font-semibold text-[#2d946e]">
-                        Pemateri: {k.speakerName}
+                        {k.kajianType === "KHUSUS" && k.audience
+                          ? `Untuk: ${k.audience}`
+                          : `Pemateri: ${k.speakerName}`}
                       </p>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#5c6e63]">
                         <span className="inline-flex items-center gap-1">

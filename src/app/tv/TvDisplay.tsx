@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TvData } from "@/lib/public-data";
+import { kajianTypeLabel } from "@/lib/kajian-type";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import {
   playCountdownBeep,
@@ -15,6 +16,7 @@ import {
   Users,
   Maximize2,
   Minimize2,
+  Moon,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -68,8 +70,6 @@ function countdown(targetMs: number, nowMs: number) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
-
-const SLIDE_COUNT = 5;
 
 const PRAYER_LIST = [
   { key: "imsak", label: "Imsak", ar: "الإمساك" },
@@ -470,15 +470,20 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   const hasSpecialAnnouncement = Boolean(
     data?.display?.themeSettings?.specialAnnouncement?.enabled
   );
+  const hasTarawih = Boolean(data?.isRamadan && data?.tarawihToday);
 
-  // Available slides (0: Jadwal, 1: Iqamah, 2: Petugas, 3: Jumat, 4: Nasihat, 5: Pengumuman Khusus)
+  // Available slides (0: Jadwal, 1: Iqamah, 2: Petugas, 3: Jumat,
+  // 4: Nasihat, 5: Pengumuman Khusus, 6: Imam Tarawih saat Ramadan)
   const availableSlides = useMemo(() => {
     const s = [0, 1, 2, 3, 4];
     if (hasSpecialAnnouncement) {
       s.push(5);
     }
+    if (hasTarawih) {
+      s.push(6);
+    }
     return s;
-  }, [hasSpecialAnnouncement]);
+  }, [hasSpecialAnnouncement, hasTarawih]);
 
   useEffect(() => {
     if (availableSlides.length === 0) return;
@@ -512,18 +517,15 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
 
   useEffect(() => {
     if (!data?.display.autoRotateEnabled || khutbahVisible) return;
-    const maxSlides = hasSpecialAnnouncement ? 6 : SLIDE_COUNT;
     const timer = setInterval(() => {
       setSlide((current) => {
-        for (let i = 1; i <= maxSlides; i++) {
-          const candidate = (current + i) % maxSlides;
-          if (availableSlides.includes(candidate)) return candidate;
-        }
-        return current;
+        if (availableSlides.length === 0) return current;
+        const idx = availableSlides.indexOf(current);
+        return availableSlides[(idx + 1) % availableSlides.length];
       });
     }, interval);
     return () => clearInterval(timer);
-  }, [data?.display.autoRotateEnabled, interval, khutbahVisible, availableSlides, hasSpecialAnnouncement]);
+  }, [data?.display.autoRotateEnabled, interval, khutbahVisible, availableSlides]);
 
   useEffect(() => {
     adviceLengthRef.current = data?.advice.length ?? 0;
@@ -1438,8 +1440,23 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                           <h4 className="text-xs sm:text-sm lg:text-base font-bold text-[#19261f] break-words">
                             {k.title}
                           </h4>
+                          {k.kajianType !== "REGULAR" && (
+                            <span
+                              className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                k.kajianType === "LIBUR"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-emerald-100 text-emerald-800"
+                              }`}
+                            >
+                              {kajianTypeLabel(k.kajianType)}
+                            </span>
+                          )}
                           <p className="mt-0.5 text-xs font-semibold text-[#257659]">
-                            {k.speakerName}
+                            {k.kajianType === "KHUSUS" && k.audience
+                              ? `Untuk: ${k.audience}`
+                              : k.kajianType === "LIBUR"
+                                ? "Tidak ada kajian"
+                                : k.speakerName}
                           </p>
                           <p className="mt-0.5 text-[10px] sm:text-xs text-[#5a685e]">
                             {new Intl.DateTimeFormat("id-ID", {
@@ -1638,6 +1655,41 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
             </div>
           );
         })()}
+
+        {/* SLIDE 6: IMAM TARAWIH (RAMADAN ONLY) */}
+        {slide === 6 && hasTarawih && data?.tarawihToday && (
+          <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
+            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-emerald-400/40 bg-gradient-to-br from-[#0c1a13] via-[#0a2a1d] to-[#04120b] p-6 sm:p-10 lg:p-12 text-center text-white shadow-2xl flex flex-col items-center justify-between overflow-hidden relative">
+              <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-emerald-400/10 via-transparent to-transparent" />
+
+              <div className="relative z-10 flex items-center gap-2 rounded-full bg-emerald-400/15 border border-emerald-300/40 px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-emerald-200">
+                <Moon className="h-4 w-4" />
+                <span>Imam Tarawih Malam Ini</span>
+              </div>
+
+              <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4 overflow-hidden">
+                <div className="font-arabic text-3xl sm:text-5xl lg:text-6xl text-[#eddcb2] font-bold leading-relaxed">
+                  التراويح
+                </div>
+                <h2 className="mt-4 text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white break-words">
+                  {data.tarawihToday.imamName}
+                </h2>
+                {data.tarawihToday.notes && (
+                  <p className="mt-4 max-w-2xl text-sm sm:text-lg lg:text-xl font-medium text-[#b8d4c5]">
+                    {data.tarawihToday.notes}
+                  </p>
+                )}
+              </div>
+
+              <div className="relative z-10 shrink-0 w-full flex items-center justify-between text-xs text-[#8ca898] border-t border-white/10 pt-2 px-1">
+                <span>{data.mosque.name}</span>
+                <span className="text-emerald-300 font-semibold">
+                  Ramadan Kareem
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Bottom Running Text Ticker */}

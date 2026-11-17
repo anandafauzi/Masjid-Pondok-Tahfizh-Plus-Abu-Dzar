@@ -114,6 +114,20 @@ model ImamMuadzinSchedule {
   @@map("imam_muadzin_schedules")
 }
 
+// Imam Tarawih schedules (only shown publicly during Ramadan)
+model TarawihSchedule {
+  id           String   @id @default(cuid())
+  scheduleDate DateTime @db.Date
+  imamName     String
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([scheduleDate])
+  @@index([scheduleDate])
+  @@map("tarawih_schedules")
+}
+
 // Imam rolling settings for Subuh Jumat
 model ImamRollingSetting {
   id             String    @id @default(cuid())
@@ -177,6 +191,9 @@ model KajianSchedule {
   recurrenceUntil  DateTime? @db.Date
   // Diisi bila kajian sekali-sekali dipindahkan ke hari lain.
   rescheduledFrom  DateTime?
+  // REGULAR = kajian rutin, LIBUR = tidak ada kajian, KHUSUS = kajian khusus (mis. asatidz)
+  kajianType       KajianType @default(REGULAR)
+  audience         String?
   isActive         Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -204,6 +221,12 @@ model KajianException {
   @@unique([kajianId, occurrenceDate])
   @@index([occurrenceDate])
   @@map("kajian_exceptions")
+}
+
+enum KajianType {
+  REGULAR
+  LIBUR
+  KHUSUS
 }
 
 // Iqamah settings

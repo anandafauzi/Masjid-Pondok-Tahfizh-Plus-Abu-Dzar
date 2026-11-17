@@ -11,6 +11,7 @@ import {
   LoadingState,
   PageHeader,
   SectionHeading,
+  Select,
   Textarea,
   Toggle,
 } from "@/components/ui";
@@ -31,6 +32,12 @@ import {
 import { PetugasItem } from "@/types/petugas";
 import { PetugasSelect } from "@/components/admin/petugas-select";
 import { fromWibInput, toWibInput } from "@/lib/datetime";
+import {
+  KAJIAN_TYPES,
+  kajianTypeLabel,
+  parseKajianType,
+} from "@/lib/kajian-type";
+import type { KajianType } from "@/lib/kajian";
 
 interface Kajian {
   id: string;
@@ -46,6 +53,8 @@ interface Kajian {
   recurrenceDay: number | null;
   recurrenceUntil: string | null;
   rescheduledFrom: string | null;
+  kajianType: KajianType;
+  audience: string | null;
 }
 
 interface KajianOccurrence extends Kajian {
@@ -135,6 +144,8 @@ export default function AdminKajianPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [kajianType, setKajianType] = useState<KajianType>("REGULAR");
+  const [audience, setAudience] = useState("");
   const [title, setTitle] = useState("");
   const [speaker, setSpeaker] = useState("");
   const [topic, setTopic] = useState("");
@@ -180,6 +191,8 @@ export default function AdminKajianPage() {
   }, []);
 
   function resetForm() {
+    setKajianType("REGULAR");
+    setAudience("");
     setTitle("");
     setSpeaker("");
     setTopic("");
@@ -193,6 +206,8 @@ export default function AdminKajianPage() {
   }
 
   function beginEdit(item: Kajian) {
+    setKajianType(parseKajianType(item.kajianType));
+    setAudience(item.audience ?? "");
     setTitle(item.title);
     setSpeaker(item.speakerName);
     setTopic(item.bookOrTopic ?? "");
@@ -205,9 +220,19 @@ export default function AdminKajianPage() {
     setEditingId(item.id);
   }
 
+  function changeType(next: KajianType) {
+    setKajianType(next);
+    if (!title.trim()) {
+      if (next === "LIBUR") setTitle("Libur Kajian");
+      if (next === "KHUSUS") setTitle("Kajian Khusus");
+    }
+    if (next === "KHUSUS" && !audience.trim()) setAudience("Asatidz");
+  }
+
   async function submit() {
-    if (!title.trim() || !speaker.trim())
-      return toast.error("Judul dan pemateri wajib diisi");
+    if (!title.trim()) return toast.error("Judul kajian wajib diisi");
+    if (kajianType !== "LIBUR" && !speaker.trim())
+      return toast.error("Pemateri wajib diisi");
     if (!start) return toast.error("Waktu mulai wajib diisi");
     setSaving(true);
     try {
@@ -218,6 +243,8 @@ export default function AdminKajianPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title,
+            kajianType,
+            audience: kajianType === "KHUSUS" ? audience || null : null,
             speakerName: speaker,
             bookOrTopic: topic || null,
             startDateTime: fromWibInput(start).toISOString(),
@@ -384,6 +411,39 @@ export default function AdminKajianPage() {
           description="Isi informasi kajian dengan lengkap agar jamaah mudah menemukannya."
         />
         <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="kajianType">Jenis Kajian</Label>
+            <Select
+              id="kajianType"
+              value={kajianType}
+              onChange={(e) => changeType(parseKajianType(e.target.value))}
+              className="bg-[#fcfaf6]"
+            >
+              {KAJIAN_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {kajianTypeLabel(type)}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-[11px] text-slate-500">
+              {kajianType === "LIBUR"
+                ? "Tandai tidak ada kajian. Pemateri boleh kosong."
+                : kajianType === "KHUSUS"
+                  ? "Misalnya kajian khusus untuk asatidz."
+                  : "Kajian rutin seperti biasa."}
+            </p>
+          </div>
+          {kajianType === "KHUSUS" && (
+            <div>
+              <Label htmlFor="audience">Untuk</Label>
+              <Input
+                id="audience"
+                value={audience}
+                onChange={(e) => setAudience(e.target.value)}
+                placeholder="Contoh: Asatidz"
+              />
+            </div>
+          )}
           <div className="sm:col-span-2">
             <Label htmlFor="title">Judul Kajian</Label>
             <Input
@@ -394,7 +454,9 @@ export default function AdminKajianPage() {
             />
           </div>
           <div>
-            <Label htmlFor="speaker">Pemateri</Label>
+            <Label htmlFor="speaker">
+              Pemateri{kajianType === "LIBUR" ? " (opsional)" : ""}
+            </Label>
             <PetugasSelect
               id="speaker"
               value={speaker}
@@ -523,6 +585,16 @@ export default function AdminKajianPage() {
                       <h3 className="text-sm font-bold text-slate-900">
                         {item.title}
                       </h3>
+                      {item.kajianType !== "REGULAR" && (
+                        <Badge
+                          color={item.kajianType === "LIBUR" ? "amber" : "blue"}
+                        >
+                          {kajianTypeLabel(item.kajianType)}
+                          {item.kajianType === "KHUSUS" && item.audience
+                            ? ` · ${item.audience}`
+                            : ""}
+                        </Badge>
+                      )}
                       <Badge color={item.isActive ? "green" : "slate"}>
                         {item.isActive ? "Aktif" : "Nonaktif"}
                       </Badge>

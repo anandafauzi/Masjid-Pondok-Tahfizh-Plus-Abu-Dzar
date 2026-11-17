@@ -12,6 +12,7 @@ import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
 import { getAdminKajianData } from "@/lib/schedule-data";
 import { weekdayWib, ymdWib } from "@/lib/kajian";
+import { parseKajianType } from "@/lib/kajian-type";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,8 @@ export async function POST(request: NextRequest) {
     if (!body.title || !String(body.title).trim()) {
       return badRequest("Judul kajian wajib diisi");
     }
-    if (!body.speakerName || !String(body.speakerName).trim()) {
+    const kajianType = parseKajianType(body.kajianType);
+    if (kajianType !== "LIBUR" && (!body.speakerName || !String(body.speakerName).trim())) {
       return badRequest("Nama pemateri wajib diisi");
     }
     const startDateTime = body.startDateTime ? new Date(body.startDateTime) : null;
@@ -64,7 +66,15 @@ export async function POST(request: NextRequest) {
     const item = await prisma.kajianSchedule.create({
       data: {
         title: String(body.title).trim(),
-        speakerName: String(body.speakerName).trim(),
+        speakerName:
+          kajianType === "LIBUR"
+            ? String(body.speakerName ?? "").trim() || "Libur"
+            : String(body.speakerName).trim(),
+        kajianType,
+        audience:
+          typeof body.audience === "string" && body.audience.trim()
+            ? body.audience.trim()
+            : null,
         bookOrTopic: body.bookOrTopic ?? null,
         startDateTime,
         endDateTime,

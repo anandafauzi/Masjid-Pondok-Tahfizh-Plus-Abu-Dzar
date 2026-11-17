@@ -1,6 +1,8 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { TIMEZONE, dateOnlyToString } from "@/lib/datetime";
 
+export type KajianType = "REGULAR" | "LIBUR" | "KHUSUS";
+
 /** Baris kajian dari database yang dibutuhkan untuk menyusun jadwal. */
 export interface KajianRowLike {
   id: string;
@@ -16,6 +18,8 @@ export interface KajianRowLike {
   recurrenceDay: number | null;
   recurrenceUntil: Date | null;
   rescheduledFrom: Date | null;
+  kajianType?: KajianType;
+  audience?: string | null;
 }
 
 export interface KajianExceptionLike {
@@ -26,7 +30,10 @@ export interface KajianExceptionLike {
   note?: string | null;
 }
 
-export interface KajianOccurrence extends Omit<KajianRowLike, "rescheduledFrom"> {
+export interface KajianOccurrence
+  extends Omit<KajianRowLike, "rescheduledFrom" | "kajianType" | "audience"> {
+  kajianType: KajianType;
+  audience: string | null;
   /** ID publik yang stabil: `templateId@YYYY-MM-DD` untuk jadwal berulang. */
   id: string;
   kajianId: string;
@@ -96,6 +103,8 @@ function toOccurrence(
     ...row,
     id: `${row.id}@${occurrenceDate}`,
     kajianId: row.id,
+    kajianType: row.kajianType ?? "REGULAR",
+    audience: row.audience ?? null,
     occurrenceDate,
     startDateTime: start,
     endDateTime: end,
@@ -127,6 +136,8 @@ export function generateKajianOccurrences(
             ...row,
             id: row.id,
             kajianId: row.id,
+            kajianType: row.kajianType ?? "REGULAR",
+            audience: row.audience ?? null,
             occurrenceDate: ymdWib(row.startDateTime),
             isException: Boolean(row.rescheduledFrom),
             originalStartDateTime: row.rescheduledFrom,

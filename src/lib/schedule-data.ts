@@ -183,6 +183,18 @@ export async function getImamSchedulesBetween(
   }
 }
 
+export async function getTarawihSchedulesBetween(from: Date, to: Date) {
+  try {
+    return await prisma.tarawihSchedule.findMany({
+      where: { scheduleDate: { gte: from, lte: to } },
+      orderBy: { scheduleDate: "asc" },
+    });
+  } catch (error) {
+    console.error("Gagal mengambil jadwal imam Tarawih:", error);
+    return [];
+  }
+}
+
 export async function getUpcomingKhatibSchedules(from: Date, take = 4) {
   try {
     return await prisma.khatibSchedule.findMany({

@@ -22,11 +22,13 @@ import {
   getKhatibRollingActive,
   getKhatibScheduleForDate,
   getRunningTextsSafe,
+  getTarawihSchedulesBetween,
   getUpcomingKhatibSchedules,
   nextFriday,
 } from "@/lib/schedule-data";
 import { getWeeklyImamSettings } from "@/lib/weekly-imam";
 import { getPublicDataVersion } from "@/lib/public-cache";
+import { isRamadan } from "@/lib/ramadan";
 
 export interface TvData {
   serverTime: string;
@@ -39,6 +41,12 @@ export interface TvData {
   };
   today: string;
   isFriday: boolean;
+  isRamadan: boolean;
+  tarawihToday: {
+    id: string;
+    imamName: string;
+    notes: string | null;
+  } | null;
   prayerTimes: PrayerTimesStrings;
   nextPrayer: {
     key: string;
@@ -97,6 +105,8 @@ export interface TvData {
     bookOrTopic: string | null;
     startDateTime: string;
     location: string;
+    kajianType: "REGULAR" | "LIBUR" | "KHUSUS";
+    audience: string | null;
   }>;
   advice: Array<{
     id: string;
@@ -136,6 +146,8 @@ export type PublicBundle = {
   weeklyImam: Awaited<ReturnType<typeof getWeeklyImamSettings>>;
   imamToday: Awaited<ReturnType<typeof getImamSchedulesBetween>>;
   imamTomorrow: Awaited<ReturnType<typeof getImamSchedulesBetween>>;
+  tarawihToday: Awaited<ReturnType<typeof getTarawihSchedulesBetween>>[number] | null;
+  isRamadan: boolean;
   fridaySchedule: Awaited<ReturnType<typeof getKhatibScheduleForDate>>;
 };
 
@@ -238,17 +250,21 @@ async function loadPublicBundle(
     getWeeklyImamSettings().catch(() => []),
   ]);
 
-  const [imamTodayRaw, imamTomorrowRaw, fridaySchedule] = await Promise.all([
-    getImamSchedulesBetween(today, today, {
-      weeklyRules: weeklyImam,
-      rollingImams: imamRolling,
-    }),
-    getImamSchedulesBetween(tomorrow, tomorrow, {
-      weeklyRules: weeklyImam,
-      rollingImams: imamRolling,
-    }),
-    getKhatibScheduleForDate(friday, khatibRolling),
-  ]);
+  const [imamTodayRaw, imamTomorrowRaw, fridaySchedule, tarawihRows] =
+    await Promise.all([
+      getImamSchedulesBetween(today, today, {
+        weeklyRules: weeklyImam,
+        rollingImams: imamRolling,
+      }),
+      getImamSchedulesBetween(tomorrow, tomorrow, {
+        weeklyRules: weeklyImam,
+        rollingImams: imamRolling,
+      }),
+      getKhatibScheduleForDate(friday, khatibRolling),
+      getTarawihSchedulesBetween(today, today),
+    ]);
+
+  const ramadanToday = isRamadan(today);
 
   pruneCache(imamLastGood, IMAM_LAST_GOOD_TTL_MS, 32);
   const imamKey = cacheKey(version, ymd);
@@ -289,6 +305,8 @@ async function loadPublicBundle(
     imamToday,
     imamTomorrow,
     fridaySchedule,
+    tarawihToday: ramadanToday ? (tarawihRows[0] ?? null) : null,
+    isRamadan: ramadanToday,
   };
 
   bundleCache.set(key, { at: Date.now(), bundle });
@@ -324,6 +342,8 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
     imamToday,
     imamTomorrow,
     fridaySchedule,
+    tarawihToday,
+    isRamadan: ramadanToday,
   } = bundle;
 
   const imamTomorrowSubuh =
@@ -415,6 +435,14 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
     },
     today: dateOnlyToString(today),
     isFriday: isFridayToday,
+    isRamadan: ramadanToday,
+    tarawihToday: tarawihToday
+      ? {
+          id: tarawihToday.id,
+          imamName: tarawihToday.imamName,
+          notes: tarawihToday.notes,
+        }
+      : null,
     prayerTimes,
     nextPrayer: {
       key: nextPrayer.key,
@@ -477,6 +505,8 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
       bookOrTopic: k.bookOrTopic,
       startDateTime: k.startDateTime.toISOString(),
       location: k.location,
+      kajianType: k.kajianType,
+      audience: k.audience,
     })),
     advice: advice.map((a) => ({
       id: a.id,

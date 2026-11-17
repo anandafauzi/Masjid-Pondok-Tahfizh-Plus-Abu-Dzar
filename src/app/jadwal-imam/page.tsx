@@ -2,7 +2,13 @@ import { PublicShell } from "@/components/public-shell";
 import { EmptyState } from "@/components/ui";
 import { ScheduleExportActions } from "@/components/schedule-export-actions";
 import { PrintLetterhead, PrintSignatureBlock } from "@/components/print-letterhead";
-import { getImamSchedulesBetween, getImamRollingActive, nextFriday } from "@/lib/schedule-data";
+import {
+  getImamSchedulesBetween,
+  getImamRollingActive,
+  getTarawihSchedulesBetween,
+  nextFriday,
+} from "@/lib/schedule-data";
+import { isRamadanDate } from "@/lib/ramadan";
 import { getMosqueSettings } from "@/lib/settings";
 import { resolveRolling } from "@/lib/rolling";
 import {
@@ -24,11 +30,21 @@ export default async function JadwalImamPage() {
   const today = todayDateOnly();
   const until = addDaysUTC(today, 13);
 
-  const [schedules, rolling, mosque] = await Promise.all([
+  const [schedules, rolling, mosque, tarawihRows] = await Promise.all([
     getImamSchedulesBetween(today, until),
     getImamRollingActive(),
     getMosqueSettings(),
+    getTarawihSchedulesBetween(today, until),
   ]);
+
+  const tarawihByDate = new Map(
+    tarawihRows.map((row) => [dateOnlyToString(row.scheduleDate), row])
+  );
+  const tarawihForDate = (key: string) =>
+    isRamadanDate(key) ? (tarawihByDate.get(key) ?? null) : null;
+  const hasRamadanDates = [...tarawihByDate.keys()].some((key) =>
+    isRamadanDate(key)
+  );
 
   const grouped = new Map<string, typeof schedules>();
   for (const schedule of schedules) {
@@ -110,6 +126,9 @@ export default async function JadwalImamPage() {
               <th className="border border-black p-1.5 text-center text-[9pt]">Asar</th>
               <th className="border border-black p-1.5 text-center text-[9pt]">Magrib</th>
               <th className="border border-black p-1.5 text-center text-[9pt]">Isya</th>
+              {hasRamadanDates && (
+                <th className="border border-black p-1.5 text-center text-[9pt]">Tarawih</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -137,6 +156,11 @@ export default async function JadwalImamPage() {
                       </td>
                     );
                   })}
+                  {hasRamadanDates && (
+                    <td className="border border-black p-1 text-[8pt] align-top">
+                      <div className="font-bold text-black">{tarawihForDate(key)?.imamName || "-"}</div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -211,6 +235,31 @@ export default async function JadwalImamPage() {
               <p className="mt-1 text-xs text-slate-500">
                 Bertugas memimpin shalat Subuh berjamaah pada {formatDateOnlyLong(friday)}
               </p>
+            </div>
+          </section>
+        )}
+
+        {/* Imam Tarawih Malam Ini (Ramadan only) */}
+        {tarawihForDate(todayKey) && (
+          <section className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800 border border-emerald-200">
+                <Sparkles className="h-3 w-3 text-emerald-600" />
+                Imam Tarawih Malam Ini
+              </span>
+              <span className="text-xs font-semibold text-emerald-800/80">
+                Ramadan
+              </span>
+            </div>
+            <div className="mt-3">
+              <h2 className="text-2xl font-bold text-slate-900">
+                {tarawihForDate(todayKey)?.imamName}
+              </h2>
+              {tarawihForDate(todayKey)?.notes && (
+                <p className="mt-1 text-xs text-emerald-900/80">
+                  {tarawihForDate(todayKey)?.notes}
+                </p>
+              )}
             </div>
           </section>
         )}
@@ -291,6 +340,28 @@ export default async function JadwalImamPage() {
                             </td>
                           </tr>
                         ))}
+                        {tarawihForDate(key) && (
+                          <tr className="bg-emerald-50/70">
+                            <td className="px-6 py-3.5 font-bold text-emerald-900 flex items-center gap-2">
+                              <span className="font-arabic text-xs text-emerald-600">
+                                التراويح
+                              </span>
+                              <span>Tarawih</span>
+                            </td>
+                            <td className="px-6 py-3.5 text-slate-800 font-medium">
+                              <div className="flex items-center gap-1.5">
+                                <UserCheck className="h-4 w-4 text-emerald-600" />
+                                <span>{tarawihForDate(key)?.imamName}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3.5 text-slate-500">
+                              <div className="flex items-center gap-1.5">
+                                <Mic className="h-3.5 w-3.5 text-slate-400" />
+                                <span>-</span>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>

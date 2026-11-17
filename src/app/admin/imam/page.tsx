@@ -20,6 +20,7 @@ import {
   CalendarCheck,
   Check,
   Copy,
+  Moon,
   Pencil,
   Plus,
   RefreshCw,
@@ -34,6 +35,13 @@ import { PetugasItem } from "@/types/petugas";
 import { ScheduleExportActions } from "@/components/schedule-export-actions";
 import { PetugasSelect } from "@/components/admin/petugas-select";
 import { dateOnlyToString } from "@/lib/datetime";
+
+interface Tarawih {
+  id: string;
+  scheduleDate: string;
+  imamName: string;
+  notes: string | null;
+}
 
 interface Rolling {
   id: string;
@@ -54,17 +62,32 @@ interface Schedule {
 }
 
 const toYmd = (iso: string) => dateOnlyToString(new Date(iso));
+const formatDateId = (ymd: string) =>
+  new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${ymd}T00:00:00.000Z`));
 const todayYmd = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
     new Date()
   );
+const ymdOffset = (days: number) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
+    new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+  );
 
 export default function AdminImamPage() {
-  const [activeTab, setActiveTab] = useState<"weekly" | "rolling" | "daily">("weekly");
+  const [activeTab, setActiveTab] = useState<
+    "weekly" | "rolling" | "daily" | "tarawih"
+  >("weekly");
   const [weeklyItems, setWeeklyItems] = useState<WeeklyImamItem[]>([]);
   const [selectedDay, setSelectedDay] = useState<number>(1); // 1 = Senin
   const [rolling, setRolling] = useState<Rolling[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [tarawih, setTarawih] = useState<Tarawih[]>([]);
   const [petugas, setPetugas] = useState<PetugasItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,21 +108,32 @@ export default function AdminImamPage() {
   const [notes, setNotes] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Tarawih form state
+  const [tarawihDate, setTarawihDate] = useState(todayYmd());
+  const [tarawihImam, setTarawihImam] = useState("");
+  const [tarawihNotes, setTarawihNotes] = useState("");
+  const [editingTarawihId, setEditingTarawihId] = useState<string | null>(null);
+
   async function load() {
     try {
-      const [w, r, s, p] = await Promise.all([
+      const [w, r, s, p, t] = await Promise.all([
         fetch("/api/imam-weekly", { cache: "no-store" }),
         fetch("/api/imam-rolling", { cache: "no-store" }),
         fetch("/api/imam-schedules", { cache: "no-store" }),
         fetch("/api/petugas", { cache: "no-store" }),
+        fetch(
+          `/api/tarawih-schedules?from=${ymdOffset(-30)}&to=${ymdOffset(365)}`,
+          { cache: "no-store" }
+        ),
       ]);
-      if (!w.ok || !r.ok || !s.ok || !p.ok) {
+      if (!w.ok || !r.ok || !s.ok || !p.ok || !t.ok) {
         throw new Error("Gagal memuat data imam");
       }
       setWeeklyItems(await w.json());
       setRolling(await r.json());
       setSchedules(await s.json());
       setPetugas(await p.json());
+      setTarawih(await t.json());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal memuat data imam");
     } finally {
@@ -373,6 +407,69 @@ export default function AdminImamPage() {
     }
   }
 
+  // --- TARAWIH LOGIC ---
+  function resetTarawihForm() {
+    setTarawihDate(todayYmd());
+    setTarawihImam("");
+    setTarawihNotes("");
+    setEditingTarawihId(null);
+  }
+
+  function beginEditTarawih(item: Tarawih) {
+    setTarawihDate(toYmd(item.scheduleDate));
+    setTarawihImam(item.imamName);
+    setTarawihNotes(item.notes ?? "");
+    setEditingTarawihId(item.id);
+  }
+
+  async function submitTarawih() {
+    if (!tarawihImam.trim()) return toast.error("Nama imam wajib diisi");
+    setSaving(true);
+    try {
+      const res = await fetch(
+        editingTarawihId
+          ? `/api/tarawih-schedules/${editingTarawihId}`
+          : "/api/tarawih-schedules",
+        {
+          method: editingTarawihId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scheduleDate: tarawihDate,
+            imamName: tarawihImam,
+            notes: tarawihNotes || null,
+          }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan jadwal Tarawih");
+      toast.success(editingTarawihId ? "Jadwal Tarawih diperbarui" : "Jadwal Tarawih ditambahkan");
+      resetTarawihForm();
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan jadwal Tarawih");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function delTarawih(id: string) {
+    if (!confirm("Hapus jadwal Tarawih ini?")) return;
+    try {
+      const res = await fetch(`/api/tarawih-schedules/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Gagal menghapus");
+      }
+      if (editingTarawihId === id) resetTarawihForm();
+      await load();
+      toast.success("Jadwal Tarawih dihapus");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menghapus");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -442,6 +539,22 @@ export default function AdminImamPage() {
         >
           <Calendar className="h-4 w-4" />
           <span>Jadwal Harian / Override</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("tarawih")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all sm:text-sm ${
+            activeTab === "tarawih"
+              ? "bg-[#2d946e] text-white shadow-md ring-2 ring-[#2d946e]/20"
+              : "text-[#3f5045] hover:bg-[#ede5d5] hover:text-[#19261f]"
+          }`}
+        >
+          <Moon className="h-4 w-4" />
+          <span>Imam Tarawih</span>
+          <span className="rounded-full bg-slate-200/60 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+            Ramadan
+          </span>
         </button>
       </div>
 
@@ -880,6 +993,125 @@ export default function AdminImamPage() {
             </ul>
           )}
         </Card>
+      ) : activeTab === "tarawih" ? (
+        /* --- TAB 4: IMAM TARAWIH --- */
+        <div className="space-y-6">
+          <Card className="min-w-0 border-[#ded5c4] bg-[#fdfbf7]">
+            <SectionHeading
+              icon={Moon}
+              title="Jadwal Imam Tarawih"
+              description="Atur imam Tarawih per malam. Jadwal ini hanya tampil di aplikasi, web, dan layar TV saat bulan Ramadan."
+            />
+            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs leading-relaxed text-emerald-800">
+              Data tetap tersimpan di database kapan saja, tetapi tampilan publik
+              dan notifikasi otomatis hanya aktif saat kalender Hijriah Umm
+              al-Qura menunjukkan Ramadan (bulan ke-9).
+            </div>
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+              <div className="min-w-0">
+                <Label htmlFor="tarawihDate">Tanggal</Label>
+                <Input
+                  id="tarawihDate"
+                  type="date"
+                  value={tarawihDate}
+                  onChange={(e) => setTarawihDate(e.target.value)}
+                  className="bg-[#fcfaf6]"
+                />
+              </div>
+              <div className="min-w-0">
+                <Label htmlFor="tarawihImam">Nama Imam</Label>
+                <PetugasSelect
+                  id="tarawihImam"
+                  value={tarawihImam}
+                  onChange={setTarawihImam}
+                  roleFilter="IMAM"
+                  placeholder="Pilih Nama Imam"
+                  className="bg-[#fcfaf6]"
+                  petugasList={petugas}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="tarawihNotes">Catatan (Opsional)</Label>
+                <Input
+                  id="tarawihNotes"
+                  value={tarawihNotes}
+                  onChange={(e) => setTarawihNotes(e.target.value)}
+                  placeholder="Contoh: Tarawih 20 rakaat"
+                  className="bg-[#fcfaf6]"
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                onClick={submitTarawih}
+                disabled={saving}
+                className="bg-[#2d946e] hover:bg-[#237858] text-white"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" /> Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    {editingTarawihId ? "Simpan Perubahan" : "Tambah Jadwal"}
+                  </>
+                )}
+              </Button>
+              {editingTarawihId && (
+                <Button variant="secondary" onClick={resetTarawihForm}>
+                  Batal
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          <Card className="min-w-0 border-[#ded5c4] bg-[#fdfbf7]">
+            <SectionHeading
+              icon={Calendar}
+              title="Daftar Imam Tarawih"
+              description="Jadwal yang sudah tersimpan. Hanya ditampilkan ke publik saat Ramadan."
+            />
+            {tarawih.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-[#ded5c4] bg-white px-4 py-6 text-center text-sm text-slate-500">
+                Belum ada jadwal Tarawih. Tambahkan jadwal pertama di atas.
+              </p>
+            ) : (
+              <ul className="divide-y divide-[#e8dfcf] overflow-hidden rounded-xl border border-[#e8dfcf] bg-white">
+                {tarawih.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900">
+                        {formatDateId(toYmd(item.scheduleDate))}
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        Imam: {item.imamName}
+                        {item.notes ? ` · ${item.notes}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => beginEditTarawih(item)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        onClick={() => delTarawih(item.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Hapus
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
       ) : (
         /* --- TAB 3: JADWAL HARIAN / OVERRIDE --- */
         <Card className="min-w-0 border-[#ded5c4] bg-[#fdfbf7]">

@@ -13,6 +13,7 @@ import {
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
 import { weekdayWib, ymdWib } from "@/lib/kajian";
+import { parseKajianType } from "@/lib/kajian-type";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,12 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    const existing = await prisma.kajianSchedule.findUnique({ where: { id } });
+    if (!existing) return notFound("Kajian tidak ditemukan");
+    const kajianType =
+      body.kajianType !== undefined
+        ? parseKajianType(body.kajianType)
+        : existing.kajianType;
 
     const title =
       body.title !== undefined ? String(body.title).trim() : undefined;
@@ -33,7 +40,7 @@ export async function PUT(
     }
     const speakerName =
       body.speakerName !== undefined ? String(body.speakerName).trim() : undefined;
-    if (speakerName !== undefined && !speakerName) {
+    if (speakerName !== undefined && !speakerName && kajianType !== "LIBUR") {
       return badRequest("Nama pemateri wajib diisi");
     }
 
@@ -57,9 +64,6 @@ export async function PUT(
     if (endDateTime !== undefined && Number.isNaN(endDateTime.getTime())) {
       return badRequest("Waktu selesai tidak valid");
     }
-
-    const existing = await prisma.kajianSchedule.findUnique({ where: { id } });
-    if (!existing) return notFound("Kajian tidak ditemukan");
 
     const nextStart = startDateTime ?? existing.startDateTime;
     const nextEnd =
@@ -109,7 +113,17 @@ export async function PUT(
         where: { id },
         data: {
           title,
-          speakerName,
+          speakerName:
+            kajianType === "LIBUR" && speakerName === ""
+              ? "Libur"
+              : speakerName,
+          kajianType,
+          audience:
+            body.audience !== undefined
+              ? typeof body.audience === "string" && body.audience.trim()
+                ? body.audience.trim()
+                : null
+              : undefined,
           bookOrTopic:
             body.bookOrTopic !== undefined ? body.bookOrTopic : undefined,
           startDateTime: startDateTime ?? undefined,

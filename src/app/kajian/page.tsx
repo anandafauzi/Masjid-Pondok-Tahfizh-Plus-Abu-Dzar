@@ -1,6 +1,7 @@
 import { PublicShell } from "@/components/public-shell";
 import { getUpcomingKajian } from "@/lib/schedule-data";
 import { getMosqueSettings } from "@/lib/settings";
+import { kajianTypeLabel } from "@/lib/kajian-type";
 import { BookMarked, Calendar, MapPin, User, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -80,9 +81,17 @@ export default async function KajianPage() {
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f4f7f5] border border-[#d2dfd6] px-3 py-0.5 text-xs font-bold text-[#395243]">
-                    <Sparkles className="h-3 w-3 text-[#557a64]" />
-                    <span>Kajian Rutin</span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-0.5 text-xs font-bold ${
+                      item.kajianType === "LIBUR"
+                        ? "bg-amber-50 border-amber-200 text-amber-800"
+                        : item.kajianType === "KHUSUS"
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                          : "bg-[#f4f7f5] border-[#d2dfd6] text-[#395243]"
+                    }`}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    <span>{kajianTypeLabel(item.kajianType)}</span>
                   </span>
                   <div className="flex items-center gap-1 text-xs text-slate-500">
                     <MapPin className="h-3.5 w-3.5 text-[#557a64]" />
@@ -96,7 +105,11 @@ export default async function KajianPage() {
 
                 <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-700">
                   <User className="h-4 w-4 text-[#557a64]" />
-                  <span>Pemateri: {item.speakerName}</span>
+                  <span>
+                    {item.kajianType === "KHUSUS" && item.audience
+                      ? `Untuk: ${item.audience}`
+                      : `Pemateri: ${item.speakerName}`}
+                  </span>
                 </div>
 
                 {item.bookOrTopic && (
