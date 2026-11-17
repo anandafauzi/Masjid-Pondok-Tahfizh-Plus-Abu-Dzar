@@ -196,9 +196,11 @@ export function MobilePrayerTaskbar() {
         phase: "ADZAN" as const,
         prayerKey: upcomingEvent.key,
         prayerLabel:
-          data.isFriday && upcomingEvent.key === "dhuhr"
-            ? "Jumat"
-            : upcomingEvent.label,
+          data.nextPrayer?.tomorrow && upcomingEvent.key === "fajr"
+            ? `${upcomingEvent.label} (Besok)`
+            : data.isFriday && upcomingEvent.key === "dhuhr"
+              ? "Jumat"
+              : upcomingEvent.label,
         adhanTime: upcomingEvent.adhanTime,
         iqamahTime:
           data.isFriday && upcomingEvent.key === "dhuhr"
@@ -219,7 +221,9 @@ export function MobilePrayerTaskbar() {
     return {
       phase: "TOMORROW" as const,
       prayerKey: "fajr",
-      prayerLabel: data.nextPrayer?.label || "Subuh Esok",
+      prayerLabel: data.nextPrayer?.label
+        ? `${data.nextPrayer.label} (Besok)`
+        : "Subuh Esok",
       adhanTime: data.nextPrayer?.time || data.prayerTimes.fajr,
       iqamahTime: "--:--",
       targetMs: tomorrowMs,
@@ -232,6 +236,23 @@ export function MobilePrayerTaskbar() {
   // 3. Find Imam and Muadzin for the active/next prayer
   const nextImamSchedule = useMemo(() => {
     if (!data || !prayerState) return null;
+
+    // Setelah Isya lewat, shalat berikutnya adalah Subuh esok hari.
+    // Petugasnya harus diambil dari jadwal besok, bukan petugas Subuh hari ini.
+    if (prayerState.phase === "TOMORROW" || data.nextPrayer?.tomorrow) {
+      const found = data.imamTomorrowSubuh;
+      return {
+        imamName:
+          found?.imamName?.trim() && found.imamName !== "Belum Ditentukan"
+            ? found.imamName
+            : "Asatidz Pondok Tahfizh",
+        muadzinName:
+          found?.muadzinName?.trim() && found.muadzinName !== "-"
+            ? found.muadzinName
+            : "Santri Abu Dzar",
+      };
+    }
+
     const targetLabel = prayerState.prayerLabel.toLowerCase();
 
     // Map possible labels to standard names

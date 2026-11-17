@@ -119,6 +119,14 @@ export default async function Home() {
     longitude: mosque.longitude,
   });
 
+  // Sesudah Isya lewat, shalat berikutnya adalah Subuh esok hari. Petugasnya
+  // harus diambil dari jadwal besok, bukan dari petugas Subuh hari ini.
+  const tomorrowSubuh = nextPrayer.tomorrow
+    ? bundle.imamTomorrow.find(
+        (item) => item.prayerName.toLowerCase() === "subuh"
+      ) ?? null
+    : null;
+
   const featuredAdvice = adviceList[0] ?? {
     content: "Sesungguhnya shalat itu mencegah dari perbuatan keji dan mungkar.",
     sourceReference: "QS. Al-'Ankabut: 45",
@@ -256,15 +264,19 @@ export default async function Home() {
 
               <div className="space-y-2.5">
                 {FIVE_PRAYERS.map((pr) => {
-                  const assignment = todayImams.find(
-                    (item) =>
-                      item.prayerName.toLowerCase() === pr.name.toLowerCase()
-                  );
+                  const isTomorrowSubuh = pr.key === "fajr" && nextPrayer.tomorrow;
+                  const assignment = isTomorrowSubuh
+                    ? tomorrowSubuh
+                    : todayImams.find(
+                        (item) =>
+                          item.prayerName.toLowerCase() === pr.name.toLowerCase()
+                      );
                   const imamName = assignment?.imamName || "Asatidzah Pondok";
                   const muadzinName =
                     assignment?.muadzinName || "Santri Pondok Tahfizh";
                   const isCurrentNext =
-                    !nextPrayer.tomorrow && nextPrayer.key === pr.key;
+                    isTomorrowSubuh ||
+                    (!nextPrayer.tomorrow && nextPrayer.key === pr.key);
 
                   return (
                     <div
@@ -279,6 +291,11 @@ export default async function Home() {
                         <span className="inline-block rounded-md bg-[#2d946e]/10 px-2 py-1 text-xs font-black uppercase text-[#1e6149] border border-[#2d946e]/20">
                           {pr.name}
                         </span>
+                        {isTomorrowSubuh && (
+                          <span className="whitespace-nowrap rounded-full bg-[#2d946e] px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
+                            Besok
+                          </span>
+                        )}
                       </div>
 
                       <div className="min-w-0">
