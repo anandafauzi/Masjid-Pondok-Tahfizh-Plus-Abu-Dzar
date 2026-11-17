@@ -940,26 +940,28 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
             return (
               <div
                 suppressHydrationWarning
-                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#0d1e15]/98 p-6 text-center animate-fade-in sm:p-12 select-none"
+                className="fixed inset-0 z-30 overflow-y-auto bg-[#0d1e15] text-center animate-fade-in select-none"
               >
-                <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/30 via-transparent to-transparent" />
+                <div className="pointer-events-none fixed inset-0 bg-radial-gradient from-[#2d946e]/30 via-transparent to-transparent" />
 
-                <div className="relative z-10 flex flex-col items-center max-w-4xl w-full">
-                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#2d946e]/20 border-2 border-[#2d946e]/40 text-4xl shadow-2xl animate-pulse">
-                    🕌
+                <div className="relative z-10 flex min-h-full flex-col items-center justify-center p-4 sm:p-8">
+                  <div className="flex w-full max-w-4xl flex-col items-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#2d946e]/20 border-2 border-[#2d946e]/40 text-4xl shadow-2xl animate-pulse">
+                      🕌
+                    </div>
+
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-5 py-2 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-base animate-pulse">
+                      <span>WAKTU SHALAT TIBA</span>
+                    </div>
+
+                    <h1 className="text-4xl font-black text-white sm:text-6xl md:text-7xl tracking-tight">
+                      Telah masuk waktu sholat {activeEv.label}...
+                    </h1>
+
+                    <p className="mt-4 text-base text-[#b8ccc0] sm:text-2xl font-medium">
+                      Pondok Tahfizh Plus Abu Dzar
+                    </p>
                   </div>
-
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-5 py-2 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-base animate-pulse">
-                    <span>WAKTU SHALAT TIBA</span>
-                  </div>
-
-                  <h1 className="text-4xl font-black text-white sm:text-6xl md:text-7xl tracking-tight">
-                    Telah masuk waktu sholat {activeEv.label}...
-                  </h1>
-
-                  <p className="mt-4 text-base text-[#b8ccc0] sm:text-2xl font-medium">
-                    Pondok Tahfizh Plus Abu Dzar
-                  </p>
                 </div>
               </div>
             );
@@ -973,54 +975,59 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           const imamName = imamInfo?.imamName ?? "Asatidzah Pondok";
 
           return (
-            <div suppressHydrationWarning className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#11231a]/98 p-4 text-center animate-fade-in sm:p-8">
-              <div
-                className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${isFinalCountdown
-                    ? "bg-amber-400 text-slate-950 ring-4 ring-amber-400/50 animate-pulse font-black"
-                    : "bg-[#c5a059]/20 text-[#eddcb2] border border-[#c5a059]/30"
-                  }`}
-              >
-                {isFinalCountdown
-                  ? `PERSIAPAN IQAMAH • ${secLeft} DETIK LAGI`
-                  : "MENUJU IQAMAH"}
-              </div>
-
-              <div className="mb-2 font-arabic text-3xl text-[#eddcb2] sm:text-4xl">
-                حَيَّ عَلَى الصَّلَاةِ
-              </div>
-              <h2 className="text-5xl font-black text-white md:text-8xl tracking-tight sm:text-6xl">
-                {activeEv.label}
-              </h2>
-              <p className="mt-2 text-lg text-[#b8ccc0] font-medium sm:mt-4 sm:text-2xl md:text-3xl">
-                Adzan {activeEv.adhanTime} • Waktu Iqamah {activeEv.iqamahTime}
-              </p>
-
-              {/* Imam yang bertugas */}
-              <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-[#1e6149]/40 border border-[#3eb489]/40 px-5 py-2 text-sm sm:text-lg text-white shadow-sm">
-                <span className="text-[#a5e4cb] font-semibold">Imam Shalat:</span>
-                <span className="font-extrabold text-amber-300">{imamName}</span>
-              </div>
-
-              <div
-                className={`my-4 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:my-8 sm:px-12 sm:py-6 ${isFinalCountdown
-                    ? "border-amber-400 bg-amber-500/20 ring-4 ring-amber-400/60 animate-bounce"
-                    : "border-[#c5a059]/40 bg-[#0a1811]/70 ring-2 ring-[#c5a059]/30"
-                  }`}
-              >
-                <span className="mb-2 block text-[10px] uppercase tracking-widest text-[#9db3a6] sm:text-xs">
-                  Sisa Waktu Menuju Iqamah
-                </span>
-                <span
-                  suppressHydrationWarning
-                  className={`font-mono text-6xl font-black md:text-9xl sm:text-8xl tracking-tight ${isFinalCountdown ? "text-amber-300" : "text-[#eddcb2]"
+            <div
+              suppressHydrationWarning
+              className="fixed inset-0 z-30 overflow-y-auto bg-[#11231a] text-center animate-fade-in select-none"
+            >
+              <div className="flex min-h-full flex-col items-center justify-center p-3 sm:p-6 lg:p-8">
+                <div
+                  className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${isFinalCountdown
+                      ? "bg-amber-400 text-slate-950 ring-4 ring-amber-400/50 animate-pulse font-black"
+                      : "bg-[#c5a059]/20 text-[#eddcb2] border border-[#c5a059]/30"
                     }`}
                 >
-                  {countdown(iqTarget, serverNow)}
-                </span>
-              </div>
+                  {isFinalCountdown
+                    ? `PERSIAPAN IQAMAH • ${secLeft} DETIK LAGI`
+                    : "MENUJU IQAMAH"}
+                </div>
 
-              <div className="max-w-2xl rounded-2xl bg-[#1e6149]/50 border border-[#3eb489]/30 px-4 py-3 text-base font-semibold text-[#a5e4cb] sm:px-8 sm:py-4 sm:text-xl">
-                Harap merapatkan &amp; meluruskan shaf, serta menonaktifkan nada dering handphone.
+                <div className="mb-2 font-arabic text-3xl text-[#eddcb2] sm:text-4xl">
+                  حَيَّ عَلَى الصَّلَاةِ
+                </div>
+                <h2 className="text-5xl font-black text-white md:text-8xl tracking-tight sm:text-6xl">
+                  {activeEv.label}
+                </h2>
+                <p className="mt-2 text-lg text-[#b8ccc0] font-medium sm:mt-4 sm:text-2xl md:text-3xl">
+                  Adzan {activeEv.adhanTime} • Waktu Iqamah {activeEv.iqamahTime}
+                </p>
+
+                {/* Imam yang bertugas */}
+                <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-[#1e6149]/40 border border-[#3eb489]/40 px-5 py-2 text-sm sm:text-lg text-white shadow-sm">
+                  <span className="text-[#a5e4cb] font-semibold">Imam Shalat:</span>
+                  <span className="font-extrabold text-amber-300">{imamName}</span>
+                </div>
+
+                <div
+                  className={`my-4 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:my-8 sm:px-12 sm:py-6 ${isFinalCountdown
+                      ? "border-amber-400 bg-amber-500/20 ring-4 ring-amber-400/60 animate-bounce"
+                      : "border-[#c5a059]/40 bg-[#0a1811]/70 ring-2 ring-[#c5a059]/30"
+                    }`}
+                >
+                  <span className="mb-2 block text-[10px] uppercase tracking-widest text-[#9db3a6] sm:text-xs">
+                    Sisa Waktu Menuju Iqamah
+                  </span>
+                  <span
+                    suppressHydrationWarning
+                    className={`font-mono text-6xl font-black md:text-9xl sm:text-8xl tracking-tight ${isFinalCountdown ? "text-amber-300" : "text-[#eddcb2]"
+                      }`}
+                  >
+                    {countdown(iqTarget, serverNow)}
+                  </span>
+                </div>
+
+                <div className="max-w-2xl rounded-2xl bg-[#1e6149]/50 border border-[#3eb489]/30 px-4 py-3 text-base font-semibold text-[#a5e4cb] sm:px-8 sm:py-4 sm:text-xl">
+                  Harap merapatkan &amp; meluruskan shaf, serta menonaktifkan nada dering handphone.
+                </div>
               </div>
             </div>
           );
