@@ -10,7 +10,6 @@ import {
 } from "@/lib/tv-audio";
 import {
   Clock,
-  Sparkles,
   WifiOff,
   BookOpen,
   Users,
@@ -82,6 +81,13 @@ const PRAYER_LIST = [
   { key: "isha", label: "Isya", ar: "العشاء" },
 ] as const;
 
+const ROSTER_PRAYER_KEYS = ["fajr", "dhuhr", "asr", "maghrib", "isha"] as const;
+
+/** Singkatan Arab diambil dari nama yang sama dengan slide waktu shalat. */
+function shortArabicPrayerName(fullName: string) {
+  return fullName.replace(/^ال/, "");
+}
+
 function cleanKhatibName(name?: string | null): string {
   if (!name) return "Belum Ditentukan";
   return (
@@ -121,6 +127,9 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   // Audio Beep Tracker Refs
   const lastBeepSecRef = useRef<number | null>(null);
   const lastChimeKeyRef = useRef<string | null>(null);
+  // Nasihat berganti satu per satu setiap kali slide 4 diputar ulang.
+  const adviceVisitRef = useRef(0);
+  const adviceLengthRef = useRef(0);
 
   const load = useCallback(async () => {
     const controller = new AbortController();
@@ -369,29 +378,34 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   // 5 daily prayers roster so Petugas slide is always structured & symmetrical
   const displayImamList = useMemo(() => {
     const list = data?.imamToday && data.imamToday.length > 0 ? data.imamToday : [];
-    const prayers = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"];
-    return prayers.map((pName) => {
+    return ROSTER_PRAYER_KEYS.map((key) => {
+      const prayer = PRAYER_LIST.find((item) => item.key === key)!;
+      const pName = prayer.label;
       const found = list.find((item) => item.prayerName.toLowerCase() === pName.toLowerCase());
-      if (found && (found.imamName || found.muadzinName)) {
-        return {
-          id: found.id || pName.toLowerCase(),
-          prayerName: pName,
-          imamName:
-            found.imamName?.trim() && found.imamName !== "Belum Ditentukan"
-              ? found.imamName
-              : "Asatidzah Pondok",
-          muadzinName:
-            found.muadzinName?.trim() && found.muadzinName !== "-"
-              ? found.muadzinName
-              : "Santri Bertugas",
-        };
-      }
-      return {
-        id: pName.toLowerCase(),
+      const base = {
+        id: key,
         prayerName: pName,
+        arabic: prayer.ar,
+        arabicShort: shortArabicPrayerName(prayer.ar),
         imamName: "Asatidzah Pondok",
         muadzinName: "Santri Bertugas",
       };
+
+      if (found && (found.imamName || found.muadzinName)) {
+        return {
+          ...base,
+          imamName:
+            found.imamName?.trim() && found.imamName !== "Belum Ditentukan"
+              ? found.imamName
+              : base.imamName,
+          muadzinName:
+            found.muadzinName?.trim() && found.muadzinName !== "-"
+              ? found.muadzinName
+              : base.muadzinName,
+        };
+      }
+
+      return base;
     });
   }, [data]);
 
@@ -487,13 +501,18 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   }, [data?.display.autoRotateEnabled, interval, khutbahVisible, availableSlides, hasSpecialAnnouncement]);
 
   useEffect(() => {
-    if (!data || data.advice.length <= 1) return;
+    adviceLengthRef.current = data?.advice.length ?? 0;
+  }, [data?.advice.length]);
+
+  useEffect(() => {
     if (slide !== 4) return;
-    const timer = setInterval(() => {
-      setAdviceIndex((i) => (i + 1) % data.advice.length);
-    }, 10000);
-    return () => clearInterval(timer);
-  }, [data, slide]);
+    const visit = adviceVisitRef.current;
+    adviceVisitRef.current += 1;
+    // Kunjungan pertama memakai nasihat pertama; kunjungan berikutnya bergantian.
+    if (visit > 0 && adviceLengthRef.current > 1) {
+      setAdviceIndex((i) => (i + 1) % adviceLengthRef.current);
+    }
+  }, [slide]);
 
   const iqamahActive = useMemo(() => {
     if (khutbahVisible) return null;
@@ -596,12 +615,12 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   const renderFloatingControls = () => (
     <aside
       aria-label="Kontrol Layar TV"
-      className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0c1f16]/90 p-1.5 text-white backdrop-blur-md shadow-2xl transition-opacity duration-300 ${isMouseIdle ? "opacity-0 pointer-events-none" : "opacity-100"
+      className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-2xl border border-[#f8fdfa]/10 bg-[#08271a]/90 p-1.5 text-white backdrop-blur-md shadow-2xl transition-opacity duration-300 ${isMouseIdle ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
     >
       {/* WakeLock Anti-Sleep Status */}
       <div
-        className="flex items-center gap-1.5 rounded-xl bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-[#c1d1c7]"
+        className="flex items-center gap-1.5 rounded-xl bg-[#f8fdfa]/5 px-2.5 py-1.5 text-[11px] font-semibold text-[#a3c5b2]"
         title={
           wakeLockActive
             ? "Screen Wake Lock aktif: Layar TV tidak akan mati/screensaver"
@@ -609,7 +628,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
         }
       >
         <span
-          className={`h-2 w-2 rounded-full ${wakeLockActive ? "bg-emerald-400 animate-pulse" : "bg-slate-500"
+          className={`h-2 w-2 rounded-full ${wakeLockActive ? "bg-[#3eb489] animate-pulse" : "bg-[#5f8070]"
             }`}
         />
         <span className="hidden sm:inline">
@@ -625,8 +644,8 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           setAudioMuted(!audioMuted);
         }}
         className={`rounded-xl p-2 transition-colors ${audioMuted
-            ? "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
-            : "bg-white/10 text-white hover:bg-white/20"
+            ? "bg-[#3eb489]/20 text-[#bde5d2] hover:bg-[#3eb489]/30"
+            : "bg-[#f8fdfa]/10 text-white hover:bg-[#f8fdfa]/20"
           }`}
         title={audioMuted ? "Aktifkan Nada Beep Iqamah" : "Senyapkan Nada Beep"}
       >
@@ -637,7 +656,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
       <button
         type="button"
         onClick={toggleFullscreen}
-        className="flex items-center gap-1 rounded-xl bg-[#2d946e] px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#35a87e] active:scale-95 transition-all"
+        className="flex items-center gap-1 rounded-xl bg-[#2d946e] px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#3eb489] active:scale-95 transition-all"
         title={isFullscreen ? "Keluar Layar Penuh (Esc)" : "Layar Penuh (F11)"}
       >
         {isFullscreen ? (
@@ -657,12 +676,10 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
 
   if (!data) {
     return (
-      <div suppressHydrationWarning className="flex min-h-dvh items-center justify-center bg-[#faf7f2] text-[#19261f] bg-islamic-pattern">
+      <div suppressHydrationWarning className="flex min-h-dvh items-center justify-center text-[#103a29] bg-tv-pattern">
         <div className="relative text-center">
-          <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-[#2d946e]/10 text-6xl ring-2 ring-[#2d946e]/30 animate-pulse">
-            🕌
-          </div>
-          <h2 className="text-2xl font-black tracking-tight text-[#19261f] md:text-3xl">
+          <div className="mx-auto mb-6 text-6xl animate-pulse">🕌</div>
+          <h2 className="text-2xl font-black tracking-tight text-[#103a29] md:text-3xl">
             Sistem Informasi Layar TV Masjid
           </h2>
           <p className="mt-2 text-base text-[#2d946e] font-semibold font-mono">
@@ -673,7 +690,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
     );
   }
 
-  const tickerText = data.runningTexts.map((r) => r.content).join("     ✦     ");
+  const tickerText = data.runningTexts.map((r) => r.content).join("     •     ");
   const tickerContent =
     tickerText ||
     "Selamat Datang di Masjid Pondok Tahfizh Plus Abu Dzar - Rumpin, Kabupaten Bogor";
@@ -686,7 +703,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   // KHUTBAH JUMAT FULLSCREEN MODE (Tampil hening dan khusyuk tanpa countdown / hitung mundur)
   if (khutbahVisible && activeKhutbah) {
     return (
-      <div suppressHydrationWarning className="relative flex min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-[#faf7f2] via-[#eaf6f0] to-[#faf7f2] text-[#19261f] bg-islamic-pattern">
+      <div suppressHydrationWarning className="relative flex min-h-dvh flex-col overflow-hidden text-[#103a29] bg-tv-pattern">
         <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#3eb489]/15 via-transparent to-transparent" />
 
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-6 text-center sm:px-10">
@@ -696,35 +713,35 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
             <span className="truncate">{data.mosque.name}</span>
           </div>
 
-          <div className="my-4 w-full max-w-4xl rounded-3xl border border-[#ded5c4] bg-[#fdfbf7] p-5 shadow-2xl sm:my-6 sm:p-10">
-            <span className="mb-3 inline-block rounded-full bg-[#faf4e6] px-3 py-1 text-xs font-bold tracking-widest text-[#7c6630] border border-[#ecd8a6] uppercase sm:mb-6 sm:px-4 sm:text-sm">
+          <div className="my-4 w-full max-w-4xl rounded-3xl border border-[#a9d5bd] bg-[#f8fdfa] p-5 shadow-2xl sm:my-6 sm:p-10">
+            <span className="mb-3 inline-block rounded-full bg-[#eaf6f0] px-3 py-1 text-xs font-bold tracking-widest text-[#1e6149] border border-[#bde5d2] uppercase sm:mb-6 sm:px-4 sm:text-sm">
               Shalat Jumat
             </span>
-            <h1 className="text-4xl font-black tracking-tight text-[#19261f] sm:text-5xl md:text-7xl">
+            <h1 className="text-4xl font-black tracking-tight text-[#103a29] sm:text-5xl md:text-7xl">
               KHUTBAH JUMAT
             </h1>
             <p className="mt-2 text-xl font-bold text-[#2d946e] sm:mt-3 sm:text-2xl md:text-3xl">
               Sedang Berlangsung
             </p>
 
-            <div className="mx-auto my-4 h-px w-32 bg-gradient-to-r from-transparent via-[#8a6820]/40 to-transparent sm:my-8 sm:w-48" />
+            <div className="mx-auto my-4 h-px w-32 bg-gradient-to-r from-transparent via-[#1e6149]/40 to-transparent sm:my-8 sm:w-48" />
 
             <div className="space-y-3 sm:space-y-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[#5c6e63] sm:text-sm">
+                <p className="text-xs font-bold uppercase tracking-wider text-[#4f7261] sm:text-sm">
                   Khatib
                 </p>
-                <p className="mt-1 text-2xl font-bold text-[#19261f] sm:text-3xl md:text-4xl">
+                <p className="mt-1 text-2xl font-bold text-[#103a29] sm:text-3xl md:text-4xl">
                   {activeKhutbah.khatibName}
                 </p>
               </div>
 
               {activeKhutbah.sermonTopic && activeKhutbah.sermonTopic.trim() !== "" && (
                 <div className="pt-1 sm:pt-2">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#5c6e63] sm:text-sm">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#4f7261] sm:text-sm">
                     Tema Khutbah
                   </p>
-                  <p className="mt-1 text-xl font-bold text-[#8a6820] sm:text-2xl md:text-3xl">
+                  <p className="mt-1 text-xl font-bold text-[#1e6149] sm:text-2xl md:text-3xl">
                     “{activeKhutbah.sermonTopic}”
                   </p>
                 </div>
@@ -732,12 +749,12 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
             </div>
           </div>
 
-          <div className="mt-3 rounded-xl bg-white border border-[#ded5c4] px-4 py-2 text-sm font-semibold text-[#5c6e63] shadow-sm sm:mt-4 sm:px-8 sm:py-3 sm:text-lg">
+          <div className="mt-3 rounded-xl bg-[#f8fdfa] border border-[#a9d5bd] px-4 py-2 text-sm font-semibold text-[#4f7261] shadow-sm sm:mt-4 sm:px-8 sm:py-3 sm:text-lg">
             Mari dengarkan khutbah dengan khusyuk dan tidak berbicara.
           </div>
         </div>
 
-        <footer className="flex flex-col items-center justify-between gap-1 border-t border-[#ded5c4] bg-[#fbf9f4]/95 px-4 py-3 text-sm text-[#5a685e] sm:flex-row sm:px-8 sm:py-4 sm:text-base">
+        <footer className="flex flex-col items-center justify-between gap-1 border-t border-[#a9d5bd] bg-[#f4faf6]/95 px-4 py-3 text-sm text-[#4f7261] sm:flex-row sm:px-8 sm:py-4 sm:text-base">
           <span suppressHydrationWarning>{dateString(serverNow)}</span>
           <span suppressHydrationWarning className="font-mono text-lg font-bold text-[#1e6149] sm:text-xl">
             {clockString(serverNow)} WIB
@@ -754,18 +771,18 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
     return (
       <div
         suppressHydrationWarning
-        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#08130e] text-white p-6 sm:p-12 text-center select-none animate-fade-in ${isMouseIdle ? "cursor-none" : ""
+        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#061d13] text-white p-6 sm:p-12 text-center select-none animate-fade-in ${isMouseIdle ? "cursor-none" : ""
           }`}
       >
         <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/20 via-transparent to-transparent" />
 
         <div className="relative z-10 max-w-4xl w-full flex flex-col items-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-sm animate-pulse">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#3eb489]/40 bg-[#3eb489]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#bde5d2] sm:text-sm animate-pulse">
             <span>🕌</span>
             <span>SHALAT BERJAMAAH SEGERA DIMULAI</span>
           </div>
 
-          <div className="mb-3 font-arabic text-3xl font-bold text-[#eddcb2] sm:text-5xl leading-relaxed">
+          <div className="mb-3 font-arabic text-3xl font-bold text-[#bde5d2] sm:text-5xl leading-relaxed">
             سَوُّوا صُفُوفَكُمْ فَإِنَّ تَسْوِيَةَ الصُّفُوفِ مِنْ تَمَامِ الصَّلَاةِ
           </div>
 
@@ -773,12 +790,12 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
             Luruskan &amp; Rapatkan Shaf
           </h1>
 
-          <p className="mt-3 text-lg font-medium text-[#c1d1c7] sm:text-2xl">
+          <p className="mt-3 text-lg font-medium text-[#a3c5b2] sm:text-2xl">
             Shalat {activeShalatMode.label} Berjamaah • Imam:{" "}
             <strong className="text-white font-extrabold">{activeShalatMode.imamName}</strong>
           </p>
 
-          <div className="my-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm font-semibold text-rose-200 sm:text-lg flex items-center gap-3">
+          <div className="my-6 rounded-2xl border border-[#3eb489]/30 bg-[#3eb489]/10 px-6 py-3 text-sm font-semibold text-[#bde5d2] sm:text-lg flex items-center gap-3">
             <span className="text-xl">📴</span>
             <span>Harap nonaktifkan atau senyapkan nada dering handphone Anda</span>
           </div>
@@ -794,15 +811,15 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
     return (
       <div
         suppressHydrationWarning
-        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#030705] text-[#1e3428] p-6 text-center select-none transition-colors duration-1000 ${isMouseIdle ? "cursor-none" : ""
+        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#04140d] text-[#163c2a] p-6 text-center select-none transition-colors duration-1000 ${isMouseIdle ? "cursor-none" : ""
           }`}
       >
         <div className="relative z-10 flex flex-col items-center opacity-40 hover:opacity-90 transition-opacity duration-500">
           <div className="text-3xl sm:text-4xl mb-3">🕌</div>
-          <h2 className="text-xl font-bold text-[#2d503d] sm:text-3xl tracking-tight">
+          <h2 className="text-xl font-bold text-[#215640] sm:text-3xl tracking-tight">
             Shalat {activeShalatMode.label} Berjamaah Sedang Berlangsung
           </h2>
-          <p className="mt-2 text-sm text-[#233d2f] sm:text-lg">
+          <p className="mt-2 text-sm text-[#1b4a33] sm:text-lg">
             Imam: {activeShalatMode.imamName}
           </p>
 
@@ -810,13 +827,13 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           <button
             type="button"
             onClick={() => setManualExitShalatKey(activeShalatMode.sessionKey)}
-            className="mt-6 rounded-xl border border-white/5 bg-white/5 px-4 py-2 text-xs text-[#2d503d] hover:text-white hover:bg-white/10 transition-all"
+            className="mt-6 rounded-xl border border-[#f8fdfa]/5 bg-[#f8fdfa]/5 px-4 py-2 text-xs text-[#215640] hover:text-white hover:bg-[#f8fdfa]/10 transition-all"
           >
             Selesai Shalat / Kembali ke Slide Normal
           </button>
         </div>
 
-        <div className="absolute bottom-4 right-6 text-xs text-[#1e3428] font-mono">
+        <div className="absolute bottom-4 right-6 text-xs text-[#163c2a] font-mono">
           {clockString(serverNow)} WIB
         </div>
 
@@ -829,32 +846,30 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
   return (
     <div
       suppressHydrationWarning
-      className={`relative flex h-screen h-dvh max-h-screen w-screen max-w-full flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none ${isMouseIdle ? "cursor-none" : ""
+      className={`relative flex h-screen h-dvh max-h-screen w-screen max-w-full flex-col overflow-hidden text-[#103a29] bg-tv-pattern select-none ${isMouseIdle ? "cursor-none" : ""
         }`}
     >
       {/* Background ambient lighting */}
       <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-[#3eb489]/15 blur-[120px]" />
-      <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-[#c5a059]/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-[#2d946e]/10 blur-[120px]" />
 
       {/* Top Header Bar */}
-      <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-[#ded5c4] bg-[#fbf9f4] px-3 py-1.5 sm:px-6 sm:py-2 lg:px-8 lg:py-2.5">
+      <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-[#a9d5bd] bg-[#f4faf6] px-3 py-1.5 sm:px-6 sm:py-2 lg:px-8 lg:py-2.5">
         {/* Left: Mosque branding */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#3eb489] to-[#205e48] shadow-md ring-2 ring-[#8fd2b5]/30 sm:h-12 sm:w-12">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={data.mosque.logoUrl || "/logo-masjid.png"}
-              alt={data.mosque.name}
-              className="h-full w-full object-contain p-0.5"
-            />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={data.mosque.logoUrl || "/logo-masjid.png"}
+            alt={data.mosque.name}
+            className="h-9 w-9 shrink-0 object-contain sm:h-12 sm:w-12"
+          />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="truncate text-base font-black tracking-tight text-[#19261f] sm:text-xl lg:text-2xl">
+              <h1 className="truncate text-base font-black tracking-tight text-[#103a29] sm:text-xl lg:text-2xl">
                 {data.mosque.name}
               </h1>
             </div>
-            <p className="hidden truncate text-[11px] text-[#5a685e] sm:block lg:text-xs">
+            <p className="hidden truncate text-[11px] text-[#4f7261] sm:block lg:text-xs">
               {data.mosque.address ?? "Rumpin, Kabupaten Bogor, Jawa Barat"}
             </p>
           </div>
@@ -864,14 +879,14 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
         <div className="flex shrink-0 items-center gap-2 text-right sm:gap-4 lg:gap-5">
           {/* Weather Widget */}
           {weather && data.display.themeSettings?.showWeather !== false && (
-            <div className="hidden md:flex items-center gap-2 rounded-xl border border-[#ded5c4] bg-[#f7f2e8]/90 px-3 py-1 text-xs shadow-xs">
+            <div className="hidden md:flex items-center gap-2 rounded-xl border border-[#a9d5bd] bg-[#e8f5ee]/90 px-3 py-1 text-xs shadow-xs">
               <span className="text-xl leading-none">{weather.icon}</span>
               <div className="flex flex-col text-left leading-tight">
-                <div className="flex items-center gap-1 font-bold text-[#19261f]">
+                <div className="flex items-center gap-1 font-bold text-[#103a29]">
                   <span>{weather.temperature}°C</span>
-                  <span className="text-[10px] font-normal text-[#5a685e] hidden xl:inline">({weather.condition})</span>
+                  <span className="text-[10px] font-normal text-[#4f7261] hidden xl:inline">({weather.condition})</span>
                 </div>
-                <span className="text-[9px] text-[#5a685e] font-medium truncate max-w-[120px]">
+                <span className="text-[9px] text-[#4f7261] font-medium truncate max-w-[120px]">
                   {weather.locationName}
                 </span>
               </div>
@@ -880,12 +895,12 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
 
           <div className="hidden sm:block">
             {data.display.showHijriDate && (
-              <div suppressHydrationWarning className="flex items-center justify-end gap-1 text-[11px] font-semibold text-[#8a6820] sm:text-xs">
+              <div suppressHydrationWarning className="flex items-center justify-end gap-1 text-[11px] font-semibold text-[#1e6149] sm:text-xs">
                 <span>🌙</span>
                 <span>{hijriString(serverNow)} H</span>
               </div>
             )}
-            <div suppressHydrationWarning className="text-[11px] text-[#5a685e] font-medium sm:text-xs">
+            <div suppressHydrationWarning className="text-[11px] text-[#4f7261] font-medium sm:text-xs">
               {dateString(serverNow)}
             </div>
           </div>
@@ -897,7 +912,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
             >
               {clockString(serverNow)}
             </div>
-            <div className="hidden text-center text-[9px] font-bold uppercase tracking-widest text-[#257659] sm:block">
+            <div className="hidden text-center text-[9px] font-bold uppercase tracking-widest text-[#1e6149] sm:block">
               WIB
             </div>
           </div>
@@ -923,7 +938,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
             return (
               <div
                 suppressHydrationWarning
-                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#0d1e15]/98 p-6 text-center animate-fade-in sm:p-12 select-none"
+                className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-[#08271a]/98 p-6 text-center animate-fade-in sm:p-12 select-none"
               >
                 <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/30 via-transparent to-transparent" />
 
@@ -932,7 +947,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                     🕌
                   </div>
 
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-5 py-2 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-base animate-pulse">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#3eb489]/50 bg-[#3eb489]/10 px-5 py-2 text-xs font-bold uppercase tracking-widest text-[#bde5d2] sm:text-base animate-pulse">
                     <span>WAKTU SHALAT TIBA</span>
                   </div>
 
@@ -940,7 +955,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                     Telah masuk waktu sholat {activeEv.label}...
                   </h1>
 
-                  <p className="mt-4 text-base text-[#b8ccc0] sm:text-2xl font-medium">
+                  <p className="mt-4 text-base text-[#a3c5b2] sm:text-2xl font-medium">
                     Pondok Tahfizh Plus Abu Dzar
                   </p>
                 </div>
@@ -956,11 +971,11 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           const imamName = imamInfo?.imamName ?? "Asatidzah Pondok";
 
           return (
-            <div suppressHydrationWarning className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#11231a]/98 p-4 text-center animate-fade-in sm:p-8">
+            <div suppressHydrationWarning className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#0a2b1c]/98 p-4 text-center animate-fade-in sm:p-8">
               <div
                 className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${isFinalCountdown
-                    ? "bg-amber-400 text-slate-950 ring-4 ring-amber-400/50 animate-pulse font-black"
-                    : "bg-[#c5a059]/20 text-[#eddcb2] border border-[#c5a059]/30"
+                    ? "bg-[#3eb489] text-[#061d13] ring-4 ring-[#3eb489]/50 animate-pulse font-black"
+                    : "bg-[#2d946e]/20 text-[#bde5d2] border border-[#2d946e]/30"
                   }`}
               >
                 {isFinalCountdown
@@ -968,34 +983,34 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                   : "MENUJU IQAMAH"}
               </div>
 
-              <div className="mb-2 font-arabic text-3xl text-[#eddcb2] sm:text-4xl">
+              <div className="mb-2 font-arabic text-3xl text-[#bde5d2] sm:text-4xl">
                 حَيَّ عَلَى الصَّلَاةِ
               </div>
               <h2 className="text-5xl font-black text-white md:text-8xl tracking-tight sm:text-6xl">
                 {activeEv.label}
               </h2>
-              <p className="mt-2 text-lg text-[#b8ccc0] font-medium sm:mt-4 sm:text-2xl md:text-3xl">
+              <p className="mt-2 text-lg text-[#a3c5b2] font-medium sm:mt-4 sm:text-2xl md:text-3xl">
                 Adzan {activeEv.adhanTime} • Waktu Iqamah {activeEv.iqamahTime}
               </p>
 
               {/* Imam yang bertugas */}
               <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-[#1e6149]/40 border border-[#3eb489]/40 px-5 py-2 text-sm sm:text-lg text-white shadow-sm">
                 <span className="text-[#a5e4cb] font-semibold">Imam Shalat:</span>
-                <span className="font-extrabold text-amber-300">{imamName}</span>
+                <span className="font-extrabold text-[#bde5d2]">{imamName}</span>
               </div>
 
               <div
                 className={`my-4 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:my-8 sm:px-12 sm:py-6 ${isFinalCountdown
-                    ? "border-amber-400 bg-amber-500/20 ring-4 ring-amber-400/60 animate-bounce"
-                    : "border-[#c5a059]/40 bg-[#0a1811]/70 ring-2 ring-[#c5a059]/30"
+                    ? "border-[#3eb489] bg-[#2d946e]/20 ring-4 ring-[#3eb489]/60 animate-bounce"
+                    : "border-[#2d946e]/40 bg-[#061d13]/70 ring-2 ring-[#2d946e]/30"
                   }`}
               >
-                <span className="mb-2 block text-[10px] uppercase tracking-widest text-[#9db3a6] sm:text-xs">
+                <span className="mb-2 block text-[10px] uppercase tracking-widest text-[#86ac97] sm:text-xs">
                   Sisa Waktu Menuju Iqamah
                 </span>
                 <span
                   suppressHydrationWarning
-                  className={`font-mono text-6xl font-black md:text-9xl sm:text-8xl tracking-tight ${isFinalCountdown ? "text-amber-300" : "text-[#eddcb2]"
+                  className={`font-mono text-6xl font-black md:text-9xl sm:text-8xl tracking-tight ${isFinalCountdown ? "text-[#bde5d2]" : "text-[#bde5d2]"
                     }`}
                 >
                   {countdown(iqTarget, serverNow)}
@@ -1014,7 +1029,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
             <div className="grid h-full min-h-0 gap-2 sm:gap-4 lg:grid-cols-12 lg:gap-6 items-stretch overflow-hidden">
               {/* Left Column: 7 Prayers Master Cards (No Slide Title) */}
-              <div className="lg:col-span-7 h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 shadow-xl overflow-hidden">
+              <div className="lg:col-span-7 h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#a9d5bd] bg-[#f8fdfa]/95 p-3 sm:p-5 shadow-xl overflow-hidden">
                 <div className="flex-1 flex flex-col justify-between gap-1.5 sm:gap-2 min-h-0 overflow-hidden">
                   {PRAYER_LIST.map(({ key, label, ar }) => {
                     const isNext =
@@ -1027,17 +1042,17 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                         key={key}
                         className={`flex items-center justify-between gap-3 rounded-xl sm:rounded-2xl px-3 py-1.5 sm:px-5 sm:py-2.5 transition-all flex-1 min-h-0 ${isNext
                             ? activeGlow
-                              ? "border-2 border-[#2d946e] bg-gradient-to-r from-[#e7f7ef] via-[#f4faf6] to-white shadow-lg ring-4 ring-[#2d946e]/20"
-                              : "border border-[#3eb489] bg-gradient-to-r from-[#eef8f3] to-white shadow-md ring-2 ring-[#3eb489]/30"
-                            : "border border-[#ded5c4]/60 bg-[#fbf9f4] hover:bg-white"
+                              ? "border-2 border-[#2d946e] bg-gradient-to-r from-[#e7f7ef] via-[#f4faf6] to-[#f8fdfa] shadow-lg ring-4 ring-[#2d946e]/20"
+                              : "border border-[#3eb489] bg-gradient-to-r from-[#eef8f3] to-[#f8fdfa] shadow-md ring-2 ring-[#3eb489]/30"
+                            : "border border-[#a9d5bd]/60 bg-[#f4faf6] hover:bg-[#f8fdfa]"
                           }`}
                       >
                         <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                          <span className="w-10 shrink-0 font-arabic text-base sm:text-xl text-[#8a6820]">
+                          <span className="w-10 shrink-0 font-arabic text-base sm:text-xl text-[#1e6149]">
                             {ar}
                           </span>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-[#19261f] sm:text-xl lg:text-2xl">
+                            <span className="text-sm font-black text-[#103a29] sm:text-xl lg:text-2xl">
                               {label}
                             </span>
                             {isNext && (
@@ -1048,11 +1063,11 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                           </div>
                         </div>
 
-                        <div className="shrink-0 font-mono text-lg font-black text-[#19261f] sm:text-2xl lg:text-3xl">
-                          <span className={isNext ? "text-[#1e6149]" : "text-[#19261f]"}>
+                        <div className="shrink-0 font-mono text-lg font-black text-[#103a29] sm:text-2xl lg:text-3xl">
+                          <span className={isNext ? "text-[#1e6149]" : "text-[#103a29]"}>
                             {time}
                           </span>
-                          <span className="ml-1 text-[10px] font-normal text-[#6d7c71] sm:text-xs">
+                          <span className="ml-1 text-[10px] font-normal text-[#5f806d] sm:text-xs">
                             WIB
                           </span>
                         </div>
@@ -1065,10 +1080,10 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
               {/* Right Column: Next Prayer Spotlight + Imam Info */}
               <div className="lg:col-span-5 h-full min-h-0 flex flex-col justify-between gap-2 sm:gap-4 overflow-hidden">
                 {/* Next Prayer Glowing Card */}
-                <div className="flex-1 min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#eef8f3] via-[#f7fbf8] to-[#e8f6ef] p-4 sm:p-5 text-[#19261f] shadow-xl overflow-hidden">
+                <div className="flex-1 min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#eef8f3] via-[#f7fbf8] to-[#e8f6ef] p-4 sm:p-5 text-[#103a29] shadow-xl overflow-hidden">
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#7c6630]">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#1e6149]">
                         Menuju Waktu Shalat
                       </span>
                       {data.nextPrayer.tomorrow && (
@@ -1079,25 +1094,25 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                     </div>
 
                     <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                      <h2 className="text-2xl font-black tracking-tight text-[#19261f] sm:text-4xl lg:text-5xl">
+                      <h2 className="text-2xl font-black tracking-tight text-[#103a29] sm:text-4xl lg:text-5xl">
                         {data.nextPrayer.label}
                       </h2>
-                      <span className="font-arabic text-2xl text-[#8a6820] sm:text-3xl lg:text-4xl">
+                      <span className="font-arabic text-2xl text-[#1e6149] sm:text-3xl lg:text-4xl">
                         {PRAYER_NAMES_ARABIC[data.nextPrayer.key as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
                       </span>
                     </div>
 
                     <div className="mt-1 font-mono text-4xl font-black text-[#2d946e] sm:text-6xl lg:text-7xl">
                       {data.nextPrayer.time}
-                      <span className="ml-1 text-xs font-semibold text-[#5c6e63] sm:text-sm">WIB</span>
+                      <span className="ml-1 text-xs font-semibold text-[#4f7261] sm:text-sm">WIB</span>
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-2xl border border-[#ecd8a6] bg-[#faf4e6] p-3 sm:p-4 shadow-inner">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7c6630] sm:text-xs">
+                  <div className="mt-3 rounded-2xl border border-[#bde5d2] bg-[#eaf6f0] p-3 sm:p-4 shadow-inner">
+                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#1e6149] sm:text-xs">
                       Hitung Mundur Adzan
                     </span>
-                    <div suppressHydrationWarning className="font-mono text-3xl font-black text-[#8a6820] sm:text-4xl lg:text-5xl">
+                    <div suppressHydrationWarning className="font-mono text-3xl font-black text-[#1e6149] sm:text-4xl lg:text-5xl">
                       {countdown(
                         new Date(data.nextPrayer.target).getTime(),
                         serverNow
@@ -1107,9 +1122,9 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                 </div>
 
                 {/* Petugas Shalat Yang Akan Datang (Subuh-Isya) */}
-                <div className="rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3.5 sm:p-5 shadow-xl flex flex-col justify-between text-[#19261f] shrink-0 overflow-hidden">
-                  <div className="flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#19261f] sm:text-sm">
+                <div className="rounded-2xl sm:rounded-3xl border border-[#a9d5bd] bg-[#f8fdfa]/95 p-3.5 sm:p-5 shadow-xl flex flex-col justify-between text-[#103a29] shrink-0 overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 border-b border-[#a9d5bd] pb-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#103a29] sm:text-sm">
                       <Users className="h-4 w-4 text-[#2d946e]" />
                       <span>Petugas Shalat {upcomingPrayerName}</span>
                     </div>
@@ -1119,17 +1134,17 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                   </div>
 
                   <div className="mt-3 space-y-2.5">
-                    <div className="flex items-center justify-between rounded-xl bg-[#fbf9f4] border border-[#ded5c4]/60 px-3.5 py-2.5">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#8a6820]">
+                    <div className="flex items-center justify-between rounded-xl bg-[#f4faf6] border border-[#a9d5bd]/60 px-3.5 py-2.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#1e6149]">
                         Imam:
                       </span>
-                      <span className="text-sm sm:text-base lg:text-lg font-black text-[#19261f]">
+                      <span className="text-sm sm:text-base lg:text-lg font-black text-[#103a29]">
                         {upcomingPetugas.imam}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between rounded-xl bg-[#fbf9f4] border border-[#ded5c4]/60 px-3.5 py-2.5">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#5a685e]">
+                    <div className="flex items-center justify-between rounded-xl bg-[#f4faf6] border border-[#a9d5bd]/60 px-3.5 py-2.5">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#4f7261]">
                         Muadzin:
                       </span>
                       <span className="text-sm sm:text-base lg:text-lg font-bold text-[#1e6149]">
@@ -1146,20 +1161,20 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
         {/* SLIDE 1: PRAYER & IQAMAH MATRIX (No Slide Title) */}
         {slide === 1 && (
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
-            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 shadow-xl flex flex-col justify-between overflow-hidden">
+            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#a9d5bd] bg-[#f8fdfa]/95 p-3 sm:p-5 shadow-xl flex flex-col justify-between overflow-hidden">
               {/* Symmetrical Table Header */}
-              <div className="shrink-0 mb-2.5 grid grid-cols-12 gap-2 sm:gap-4 rounded-xl border border-[#ded5c4] bg-[#f4eee2] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#7c6630]">
+              <div className="shrink-0 mb-2.5 grid grid-cols-12 gap-2 sm:gap-4 rounded-xl border border-[#a9d5bd] bg-[#e3f2e9] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#1e6149]">
                 <div className="col-span-3 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-[#8a6820]" />
+                  <Clock className="h-4 w-4 text-[#1e6149]" />
                   <span>Waktu Shalat</span>
                 </div>
-                <div className="col-span-3 text-center border-l border-[#ded5c4] pl-2">
+                <div className="col-span-3 text-center border-l border-[#a9d5bd] pl-2">
                   <span>Waktu Adzan</span>
                 </div>
-                <div className="col-span-3 text-center border-l border-[#ded5c4] pl-2">
+                <div className="col-span-3 text-center border-l border-[#a9d5bd] pl-2">
                   <span>Waktu Iqamah</span>
                 </div>
-                <div className="col-span-3 text-center border-l border-[#ded5c4] pl-2">
+                <div className="col-span-3 text-center border-l border-[#a9d5bd] pl-2">
                   <span>Jeda Tunggu</span>
                 </div>
               </div>
@@ -1172,32 +1187,32 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                 ).map((e) => (
                   <div
                     key={e.key}
-                    className="grid grid-cols-12 gap-2 sm:gap-4 items-center flex-1 min-h-0 rounded-xl sm:rounded-2xl border border-[#ded5c4] bg-[#fbf9f4] px-4 py-2 sm:px-6 sm:py-3 hover:bg-white transition-colors shadow-sm"
+                    className="grid grid-cols-12 gap-2 sm:gap-4 items-center flex-1 min-h-0 rounded-xl sm:rounded-2xl border border-[#a9d5bd] bg-[#f4faf6] px-4 py-2 sm:px-6 sm:py-3 hover:bg-[#f8fdfa] transition-colors shadow-sm"
                   >
                     <div className="col-span-3 flex items-center gap-3 min-w-0">
-                      <span className="w-10 sm:w-14 shrink-0 font-arabic text-base sm:text-xl text-[#8a6820]">
+                      <span className="w-10 sm:w-14 shrink-0 font-arabic text-base sm:text-xl text-[#1e6149]">
                         {PRAYER_NAMES_ARABIC[e.key as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
                       </span>
-                      <div className="min-w-0 font-black text-sm sm:text-lg lg:text-xl text-[#19261f]">
+                      <div className="min-w-0 font-black text-sm sm:text-lg lg:text-xl text-[#103a29]">
                         {e.label}
                       </div>
                     </div>
 
-                    <div className="col-span-3 text-center border-l border-[#ded5c4]/70 pl-2">
-                      <span className="font-mono text-base sm:text-xl lg:text-2xl font-bold text-[#19261f]">
+                    <div className="col-span-3 text-center border-l border-[#a9d5bd]/70 pl-2">
+                      <span className="font-mono text-base sm:text-xl lg:text-2xl font-bold text-[#103a29]">
                         {e.adhanTime}
                       </span>
-                      <span className="ml-1 text-xs text-[#6d7c71]">WIB</span>
+                      <span className="ml-1 text-xs text-[#5f806d]">WIB</span>
                     </div>
 
-                    <div className="col-span-3 text-center border-l border-[#ded5c4]/70 pl-2">
+                    <div className="col-span-3 text-center border-l border-[#a9d5bd]/70 pl-2">
                       <span className="font-mono text-base sm:text-xl lg:text-2xl font-black text-[#1e6149]">
                         {e.iqamahTime}
                       </span>
                       <span className="ml-1 text-xs text-[#2d946e]">WIB</span>
                     </div>
 
-                    <div className="col-span-3 text-center border-l border-[#ded5c4]/70 pl-2">
+                    <div className="col-span-3 text-center border-l border-[#a9d5bd]/70 pl-2">
                       <span className="inline-block rounded-md bg-[#eaf6f0] px-2.5 py-1 font-mono text-xs sm:text-sm font-bold text-[#1e6149] border border-[#bde5d2]">
                         {e.mode === "FIXED_TIME"
                           ? (e.fixedIqamahTime ? `Pukul ${e.fixedIqamahTime} WIB` : "Waktu Tetap")
@@ -1209,7 +1224,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
               </div>
 
               {/* Footer */}
-              <div className="shrink-0 flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
+              <div className="shrink-0 flex items-center justify-between text-xs text-[#4f7261] border-t border-[#a9d5bd]/60 pt-2 px-1">
                 <span>Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
                 <span className="font-semibold text-[#1e6149]">Metode Kemenag RI (+2 Menit Ihtiyat)</span>
               </div>
@@ -1220,19 +1235,19 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
         {/* SLIDE 2: IMAM & MUADZIN ROSTER (No Slide Title, 100% Symmetrical) */}
         {slide === 2 && (
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
-            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3 sm:p-5 shadow-xl flex flex-col justify-between overflow-hidden">
+            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#a9d5bd] bg-[#f8fdfa]/95 p-3 sm:p-5 shadow-xl flex flex-col justify-between overflow-hidden">
               {/* Symmetrical Table Header */}
-              <div className="shrink-0 mb-2.5 grid grid-cols-12 gap-2 sm:gap-4 rounded-xl border border-[#ded5c4] bg-[#f4eee2] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#7c6630]">
+              <div className="shrink-0 mb-2.5 grid grid-cols-12 gap-2 sm:gap-4 rounded-xl border border-[#a9d5bd] bg-[#e3f2e9] px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#1e6149]">
                 <div className="col-span-3 flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-[#8a6820]" />
+                  <Clock className="h-4 w-4 text-[#1e6149]" />
                   <span>Waktu Shalat</span>
                 </div>
-                <div className="col-span-5 flex items-center gap-2 border-l border-[#ded5c4] pl-3 sm:pl-4">
+                <div className="col-span-5 flex items-center gap-2 border-l border-[#a9d5bd] pl-3 sm:pl-4">
                   <Users className="h-4 w-4 text-[#2d946e]" />
                   <span>Imam Rawatib</span>
                 </div>
-                <div className="col-span-4 flex items-center gap-2 border-l border-[#ded5c4] pl-3 sm:pl-4">
-                  <Volume2 className="h-4 w-4 text-[#457c6b]" />
+                <div className="col-span-4 flex items-center gap-2 border-l border-[#a9d5bd] pl-3 sm:pl-4">
+                  <Volume2 className="h-4 w-4 text-[#2d946e]" />
                   <span>Muadzin / Bilal</span>
                 </div>
               </div>
@@ -1242,42 +1257,46 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                 {displayImamList.map((s) => (
                   <div
                     key={s.id}
-                    className="grid grid-cols-12 gap-2 sm:gap-4 items-center flex-1 min-h-0 rounded-xl sm:rounded-2xl border border-[#ded5c4] bg-[#fbf9f4] px-4 py-2 sm:px-6 sm:py-3 hover:bg-white transition-colors shadow-sm"
+                    className="grid grid-cols-12 gap-2 sm:gap-4 items-center flex-1 min-h-0 rounded-xl sm:rounded-2xl border border-[#a9d5bd] bg-[#f4faf6] px-4 py-2 sm:px-6 sm:py-3 hover:bg-[#f8fdfa] transition-colors shadow-sm"
                   >
                     {/* Col 1: Waktu Shalat */}
                     <div className="col-span-3 flex items-center gap-3 min-w-0">
-                      <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-[#c5a059]/20 font-mono text-xs sm:text-base font-black text-[#8a6820] shadow-inner">
-                        {s.prayerName.slice(0, 3).toUpperCase()}
+                      <div
+                        title={s.arabic}
+                        aria-label={s.arabic}
+                        className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl bg-[#1e6149]/15 font-arabic text-sm sm:text-lg font-bold text-[#1e6149]"
+                      >
+                        {s.arabicShort}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm sm:text-lg lg:text-xl font-black text-[#19261f] leading-tight">
+                        <div className="text-sm sm:text-lg lg:text-xl font-black text-[#103a29] leading-tight">
                           {s.prayerName}
                         </div>
-                        <div className="text-[10px] sm:text-xs text-[#748479]">
+                        <div className="text-[10px] sm:text-xs text-[#5f806d]">
                           Shalat Fardhu
                         </div>
                       </div>
                     </div>
 
                     {/* Col 2: Imam Rawatib */}
-                    <div className="col-span-5 flex items-center border-l border-[#ded5c4]/70 pl-3 sm:pl-4 min-w-0">
+                    <div className="col-span-5 flex items-center border-l border-[#a9d5bd]/70 pl-3 sm:pl-4 min-w-0">
                       <div className="min-w-0 w-full">
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <span className="inline-block rounded bg-[#2d946e]/15 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#1e6149]">
                             Imam
                           </span>
                         </div>
-                        <p className="text-sm sm:text-base lg:text-lg font-bold text-[#19261f] leading-snug break-words">
+                        <p className="text-sm sm:text-base lg:text-lg font-bold text-[#103a29] leading-snug break-words">
                           {s.imamName || "Asatidzah Pondok"}
                         </p>
                       </div>
                     </div>
 
                     {/* Col 3: Muadzin / Bilal */}
-                    <div className="col-span-4 flex items-center border-l border-[#ded5c4]/70 pl-3 sm:pl-4 min-w-0">
+                    <div className="col-span-4 flex items-center border-l border-[#a9d5bd]/70 pl-3 sm:pl-4 min-w-0">
                       <div className="min-w-0 w-full">
                         <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="inline-block rounded bg-[#c5a059]/20 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#8a6820]">
+                          <span className="inline-block rounded bg-[#2d946e]/20 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#1e6149]">
                             Muadzin
                           </span>
                         </div>
@@ -1291,7 +1310,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
               </div>
 
               {/* Footer */}
-              <div className="shrink-0 flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
+              <div className="shrink-0 flex items-center justify-between text-xs text-[#4f7261] border-t border-[#a9d5bd]/60 pt-2 px-1">
                 <span>* Jadwal petugas shalat fardhu berjamaah</span>
                 <span className="font-semibold text-[#1e6149]">Pondok Tahfizh Plus Abu Dzar</span>
               </div>
@@ -1304,43 +1323,43 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
             <div className="grid h-full min-h-0 gap-2 sm:gap-4 lg:grid-cols-2 lg:gap-6 items-stretch overflow-hidden">
               {/* Left: Friday Khatib */}
-              <div className="h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#ded3be] bg-gradient-to-br from-[#fdfbf7] via-[#f7f2e5] to-[#f4ebe1] p-4 sm:p-6 shadow-xl overflow-hidden">
+              <div className="h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#a9d5bd] bg-gradient-to-br from-[#f8fdfa] via-[#e4f2ea] to-[#dff0e6] p-4 sm:p-6 shadow-xl overflow-hidden">
                 <div>
-                  <div className="flex items-center justify-between border-b border-[#ded3be] pb-2">
-                    <span className="text-xs sm:text-sm font-bold text-[#8a6820]">
+                  <div className="flex items-center justify-between border-b border-[#a9d5bd] pb-2">
+                    <span className="text-xs sm:text-sm font-bold text-[#1e6149]">
                       {new Intl.DateTimeFormat("id-ID", {
                         dateStyle: "full",
                         timeZone: "Asia/Jakarta",
                       }).format(new Date(data.jumat.fridayDate + "T00:00:00+07:00"))}
                     </span>
-                    <span className="rounded-full bg-[#c5a059] px-2.5 py-0.5 text-[10px] font-bold uppercase text-white shadow-sm">
+                    <span className="rounded-full bg-[#2d946e] px-2.5 py-0.5 text-[10px] font-bold uppercase text-white shadow-sm">
                       Jumat Mendatang
                     </span>
                   </div>
 
                   <div className="mt-4 sm:mt-5">
-                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#8a6820]">
+                    <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#1e6149]">
                       Khatib Jumat
                     </p>
-                    <h3 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-black text-[#19261f] break-words leading-tight">
+                    <h3 className="mt-1 text-2xl sm:text-3xl lg:text-4xl font-black text-[#103a29] break-words leading-tight">
                       {cleanKhatibName(data.jumat.khatibName)}
                     </h3>
                   </div>
 
                   {data.jumat.sermonTopic && data.jumat.sermonTopic.trim() !== "" && (
-                    <div className="mt-4 rounded-2xl bg-white/80 p-3 sm:p-4 border border-[#ded3be]">
-                      <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#8a6820]">
+                    <div className="mt-4 rounded-2xl bg-[#f8fdfa]/80 p-3 sm:p-4 border border-[#a9d5bd]">
+                      <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#1e6149]">
                         Tema Khutbah
                       </p>
-                      <p className="mt-1 text-sm sm:text-base lg:text-lg font-semibold text-[#19261f] break-words">
+                      <p className="mt-1 text-sm sm:text-base lg:text-lg font-semibold text-[#103a29] break-words">
                         “{data.jumat.sermonTopic}”
                       </p>
                     </div>
                   )}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-[#ded3be] pt-3 text-xs sm:text-sm">
-                  <span className="text-[#5a685e]">Imam Subuh Jumat:</span>
+                <div className="mt-3 flex items-center justify-between border-t border-[#a9d5bd] pt-3 text-xs sm:text-sm">
+                  <span className="text-[#4f7261]">Imam Subuh Jumat:</span>
                   <span className="font-bold text-[#1e6149]">
                     {data.jumat.imamSubuh || "Belum Ditentukan"}
                   </span>
@@ -1348,10 +1367,10 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
               </div>
 
               {/* Right: Upcoming Kajian */}
-              <div className="h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#f8fdfb] via-[#edf7f3] to-[#e4f3ec] p-4 sm:p-6 shadow-xl overflow-hidden">
+              <div className="h-full min-h-0 flex flex-col justify-between rounded-2xl sm:rounded-3xl border border-[#bde5d2] bg-gradient-to-br from-[#f3fbf7] via-[#edf7f3] to-[#e4f3ec] p-4 sm:p-6 shadow-xl overflow-hidden">
                 <div className="overflow-hidden flex flex-col">
                   <div className="flex items-center justify-between gap-2 border-b border-[#bde5d2] pb-2 shrink-0">
-                    <div className="flex items-center gap-2 text-sm sm:text-base font-bold text-[#19261f]">
+                    <div className="flex items-center gap-2 text-sm sm:text-base font-bold text-[#103a29]">
                       <BookOpen className="h-4 w-4 text-[#2d946e]" />
                       <span>Kajian &amp; Majelis Taklim</span>
                     </div>
@@ -1361,11 +1380,11 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                   </div>
 
                   {data.kajian.length === 0 ? (
-                    <div className="my-auto py-8 text-center text-[#5a685e]">
+                    <div className="my-auto py-8 text-center text-[#4f7261]">
                       <p className="text-sm font-medium sm:text-base">
                         Kajian rutin tafsir dan tahsin diselenggarakan setiap pekan.
                       </p>
-                      <p className="mt-1 text-xs text-[#748479]">
+                      <p className="mt-1 text-xs text-[#5f806d]">
                         Ikuti pengumuman takmir untuk jadwal kajian tematik terbaru.
                       </p>
                     </div>
@@ -1374,15 +1393,15 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                       {data.kajian.slice(0, 3).map((k) => (
                         <div
                           key={k.id}
-                          className="rounded-xl border border-[#bde5d2] bg-white/80 p-2.5 sm:p-3"
+                          className="rounded-xl border border-[#bde5d2] bg-[#f8fdfa]/80 p-2.5 sm:p-3"
                         >
-                          <h4 className="text-xs sm:text-sm lg:text-base font-bold text-[#19261f] break-words">
+                          <h4 className="text-xs sm:text-sm lg:text-base font-bold text-[#103a29] break-words">
                             {k.title}
                           </h4>
-                          <p className="mt-0.5 text-xs font-semibold text-[#257659]">
+                          <p className="mt-0.5 text-xs font-semibold text-[#1e6149]">
                             {k.speakerName}
                           </p>
-                          <p className="mt-0.5 text-[10px] sm:text-xs text-[#5a685e]">
+                          <p className="mt-0.5 text-[10px] sm:text-xs text-[#4f7261]">
                             {new Intl.DateTimeFormat("id-ID", {
                               dateStyle: "medium",
                               timeStyle: "short",
@@ -1396,7 +1415,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                   )}
                 </div>
 
-                <div className="mt-2 text-center text-xs text-[#5a685e] shrink-0">
+                <div className="mt-2 text-center text-xs text-[#4f7261] shrink-0">
                   Informasi kajian: Hubungi Pengurus Takmir Masjid Abu Dzar
                 </div>
               </div>
@@ -1407,14 +1426,14 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
         {/* SLIDE 4: ISLAMIC ADVICE & HADITH (No Slide Title) */}
         {slide === 4 && (
           <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
-            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-gradient-to-br from-[#fdfbf7] via-[#f7f3ea] to-[#f1eae0] p-6 sm:p-10 lg:p-12 text-center text-[#19261f] shadow-xl flex flex-col items-center justify-between overflow-hidden">
+            <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border border-[#a9d5bd] bg-gradient-to-br from-[#f8fdfa] via-[#e9f5ef] to-[#ddede4] p-6 sm:p-10 lg:p-12 text-center text-[#103a29] shadow-xl flex flex-col items-center justify-between overflow-hidden">
               <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4 overflow-hidden">
                 {data.advice.length === 0 ? (
                   <div className="space-y-4 sm:space-y-6">
-                    <p className="font-arabic text-2xl sm:text-4xl lg:text-5xl text-[#8a6820] leading-relaxed font-bold">
+                    <p className="font-arabic text-2xl sm:text-4xl lg:text-5xl text-[#1e6149] leading-relaxed font-bold">
                       إِنَّ الصَّلَاةَ تَنْهَىٰ عَنِ الْفَحْشَاءِ وَالْمُنكَرِ
                     </p>
-                    <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-[#19261f] leading-relaxed break-words">
+                    <p className="text-lg sm:text-2xl lg:text-3xl font-bold text-[#103a29] leading-relaxed break-words">
                       “Sesungguhnya shalat itu mencegah dari perbuatan-perbuatan keji dan mungkar.”
                     </p>
                     <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#2d946e]">
@@ -1423,10 +1442,10 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                   </div>
                 ) : (
                   <div key={adviceIndex} className="animate-fade-in space-y-4 sm:space-y-6">
-                    <p className="text-lg sm:text-2xl lg:text-3xl font-bold leading-relaxed text-[#19261f] break-words">
+                    <p className="text-lg sm:text-2xl lg:text-3xl font-bold leading-relaxed text-[#103a29] break-words">
                       “{data.advice[adviceIndex % data.advice.length].content}”
                     </p>
-                    <p className="text-sm sm:text-base font-bold text-[#8a6820]">
+                    <p className="text-sm sm:text-base font-bold text-[#1e6149]">
                       {data.advice[adviceIndex % data.advice.length].sourceReference ||
                         data.advice[adviceIndex % data.advice.length].authorOrSource ||
                         "Hadits Shahih"}
@@ -1435,9 +1454,9 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                 )}
               </div>
 
-              <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
+              <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#4f7261] border-t border-[#a9d5bd]/60 pt-2 px-1">
                 <span>Pondok Tahfizh Plus Abu Dzar</span>
-                <span className="text-[#8a6820] font-semibold">Tausiyah Harian</span>
+                <span className="text-[#1e6149] font-semibold">Tausiyah Harian</span>
               </div>
             </div>
           </div>
@@ -1451,16 +1470,16 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           if (ann.type === "duka") {
             return (
               <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
-                <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-amber-500/40 bg-gradient-to-br from-[#0c1a13] via-[#08130d] to-[#040a07] p-6 sm:p-10 lg:p-12 text-center text-white shadow-2xl flex flex-col items-center justify-between overflow-hidden relative">
-                  <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-amber-500/10 via-transparent to-transparent" />
+                <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-[#2d946e]/40 bg-gradient-to-br from-[#08271a] via-[#061d13] to-[#04140d] p-6 sm:p-10 lg:p-12 text-center text-white shadow-2xl flex flex-col items-center justify-between overflow-hidden relative">
+                  <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/10 via-transparent to-transparent" />
 
                   {/* Arabic Kaligrafi */}
-                  <div className="relative z-10 font-arabic text-3xl sm:text-5xl lg:text-6xl text-[#eddcb2] leading-relaxed font-bold tracking-wide">
+                  <div className="relative z-10 font-arabic text-3xl sm:text-5xl lg:text-6xl text-[#bde5d2] leading-relaxed font-bold tracking-wide">
                     إِنَّا لِلَّٰهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ
                   </div>
 
                   <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4 overflow-hidden">
-                    <span className="inline-block rounded-full bg-amber-400/15 border border-amber-400/40 px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-amber-300">
+                    <span className="inline-block rounded-full bg-[#3eb489]/15 border border-[#3eb489]/40 px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-[#bde5d2]">
                       {ann.subtitle || "BERITA DUKA CITA"}
                     </span>
 
@@ -1471,23 +1490,23 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                     )}
 
                     {ann.details && (
-                      <div className="mt-4 max-w-3xl rounded-2xl bg-white/5 border border-white/10 p-4 sm:p-6 backdrop-blur-md">
-                        <p className="whitespace-pre-line text-base sm:text-xl lg:text-2xl font-medium text-slate-200 leading-relaxed">
+                      <div className="mt-4 max-w-3xl rounded-2xl bg-[#f8fdfa]/5 border border-[#f8fdfa]/10 p-4 sm:p-6 backdrop-blur-md">
+                        <p className="whitespace-pre-line text-base sm:text-xl lg:text-2xl font-medium text-[#cdebdc] leading-relaxed">
                           {ann.details}
                         </p>
                       </div>
                     )}
 
                     {ann.notes && (
-                      <p className="mt-4 text-xs sm:text-base italic text-[#b8d4c5] max-w-2xl">
+                      <p className="mt-4 text-xs sm:text-base italic text-[#96c5ab] max-w-2xl">
                         &ldquo;{ann.notes}&rdquo;
                       </p>
                     )}
                   </div>
 
-                  <div className="relative z-10 shrink-0 w-full flex items-center justify-between text-xs text-[#8ca898] border-t border-white/10 pt-2 px-1">
+                  <div className="relative z-10 shrink-0 w-full flex items-center justify-between text-xs text-[#7aa992] border-t border-[#f8fdfa]/10 pt-2 px-1">
                     <span>{data.mosque.name}</span>
-                    <span className="text-amber-300 font-semibold">Semoga Husnul Khatimah</span>
+                    <span className="text-[#bde5d2] font-semibold">Semoga Husnul Khatimah</span>
                   </div>
                 </div>
               </div>
@@ -1497,13 +1516,13 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           if (ann.type === "kajian") {
             return (
               <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
-                <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-[#2d946e]/40 bg-gradient-to-br from-[#fdfbf7] via-[#f3f9f5] to-[#e8f5ee] p-6 sm:p-10 lg:p-12 text-center text-[#19261f] shadow-2xl flex flex-col items-center justify-between overflow-hidden">
+                <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-[#2d946e]/40 bg-gradient-to-br from-[#f8fdfa] via-[#f3f9f5] to-[#e8f5ee] p-6 sm:p-10 lg:p-12 text-center text-[#103a29] shadow-2xl flex flex-col items-center justify-between overflow-hidden">
                   <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4 overflow-hidden">
                     <span className="inline-block rounded-full bg-[#2d946e] px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-white shadow-md">
                       {ann.subtitle || "TABLIGH AKBAR & KAJIAN SPESIAL"}
                     </span>
 
-                    <h2 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-black text-[#19261f] tracking-tight">
+                    <h2 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-black text-[#103a29] tracking-tight">
                       {ann.title}
                     </h2>
 
@@ -1514,21 +1533,21 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                     )}
 
                     {ann.details && (
-                      <div className="mt-4 max-w-3xl rounded-2xl bg-white border border-[#ded5c4] p-4 sm:p-6 shadow-sm">
-                        <p className="whitespace-pre-line text-sm sm:text-lg lg:text-xl font-semibold text-[#3a4c41] leading-relaxed">
+                      <div className="mt-4 max-w-3xl rounded-2xl bg-[#f8fdfa] border border-[#a9d5bd] p-4 sm:p-6 shadow-sm">
+                        <p className="whitespace-pre-line text-sm sm:text-lg lg:text-xl font-semibold text-[#2f5943] leading-relaxed">
                           {ann.details}
                         </p>
                       </div>
                     )}
 
                     {ann.notes && (
-                      <p className="mt-3 text-xs sm:text-sm font-medium text-[#5a685e]">
+                      <p className="mt-3 text-xs sm:text-sm font-medium text-[#4f7261]">
                         {ann.notes}
                       </p>
                     )}
                   </div>
 
-                  <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4] pt-2 px-1">
+                  <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#4f7261] border-t border-[#a9d5bd] pt-2 px-1">
                     <span>{data.mosque.name}</span>
                     <span className="text-[#2d946e] font-bold">Terbuka Untuk Umum</span>
                   </div>
@@ -1540,13 +1559,13 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           // Umum / Buka Puasa
           return (
             <div className="w-full max-w-7xl mx-auto h-full min-h-0 flex flex-col justify-center animate-fade-in overflow-hidden">
-              <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-teal-500/40 bg-gradient-to-br from-[#fcfbf9] via-[#edf7f4] to-[#e4f3ee] p-6 sm:p-10 lg:p-12 text-center text-[#19261f] shadow-2xl flex flex-col items-center justify-between overflow-hidden">
+              <div className="w-full h-full min-h-0 rounded-2xl sm:rounded-3xl border-2 border-[#2d946e]/40 bg-gradient-to-br from-[#f6fbf8] via-[#edf7f4] to-[#e4f3ee] p-6 sm:p-10 lg:p-12 text-center text-[#103a29] shadow-2xl flex flex-col items-center justify-between overflow-hidden">
                 <div className="flex-1 min-h-0 flex flex-col items-center justify-center my-auto max-w-4xl mx-auto px-4 overflow-hidden">
-                  <span className="inline-block rounded-full bg-teal-700 px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-white shadow-md">
+                  <span className="inline-block rounded-full bg-[#1e6149] px-4 py-1 text-xs sm:text-sm font-bold uppercase tracking-widest text-white shadow-md">
                     {ann.subtitle || "PENGUMUMAN DKM"}
                   </span>
 
-                  <h2 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-black text-[#19261f] tracking-tight">
+                  <h2 className="mt-3 text-3xl sm:text-5xl lg:text-6xl font-black text-[#103a29] tracking-tight">
                     {ann.title}
                   </h2>
 
@@ -1557,23 +1576,23 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                   )}
 
                   {ann.details && (
-                    <div className="mt-4 max-w-3xl rounded-2xl bg-white border border-[#ded5c4] p-4 sm:p-6 shadow-sm">
-                      <p className="whitespace-pre-line text-sm sm:text-lg lg:text-xl font-semibold text-[#3a4c41] leading-relaxed">
+                    <div className="mt-4 max-w-3xl rounded-2xl bg-[#f8fdfa] border border-[#a9d5bd] p-4 sm:p-6 shadow-sm">
+                      <p className="whitespace-pre-line text-sm sm:text-lg lg:text-xl font-semibold text-[#2f5943] leading-relaxed">
                         {ann.details}
                       </p>
                     </div>
                   )}
 
                   {ann.notes && (
-                    <p className="mt-3 text-xs sm:text-sm font-medium text-[#5a685e]">
+                    <p className="mt-3 text-xs sm:text-sm font-medium text-[#4f7261]">
                       {ann.notes}
                     </p>
                   )}
                 </div>
 
-                <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4] pt-2 px-1">
+                <div className="shrink-0 w-full flex items-center justify-between text-xs text-[#4f7261] border-t border-[#a9d5bd] pt-2 px-1">
                   <span>{data.mosque.name}</span>
-                  <span className="text-teal-700 font-bold">Pengurus DKM</span>
+                  <span className="text-[#1e6149] font-bold">Pengurus DKM</span>
                 </div>
               </div>
             </div>
@@ -1583,10 +1602,9 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
 
       {/* Bottom Running Text Ticker */}
       {data.display.tickerEnabled && (
-        <footer className="relative z-10 shrink-0 overflow-hidden border-t border-[#ded5c4] bg-[#fbf9f4] py-1.5 sm:py-2 text-[#19261f]">
+        <footer className="relative z-10 shrink-0 overflow-hidden border-t border-[#a9d5bd] bg-[#f4faf6] py-1.5 sm:py-2 text-[#103a29]">
           <div className="flex items-center w-full">
-            <div className="z-10 flex shrink-0 items-center gap-1.5 bg-[#2d946e] px-2.5 py-0.5 text-[9px] font-bold uppercase text-white shadow-sm sm:px-3 sm:py-1 sm:text-xs">
-              <Sparkles className="h-3 w-3 text-white sm:h-3.5 sm:w-3.5" />
+            <div className="z-10 flex shrink-0 items-center bg-[#2d946e] px-2.5 py-0.5 text-[9px] font-bold uppercase text-white shadow-sm sm:px-3 sm:py-1 sm:text-xs">
               <span>INFO MASJID</span>
             </div>
             <div className="flex-1 overflow-hidden min-w-0 relative flex items-center">
@@ -1604,7 +1622,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
 
       {/* Offline Status Warning Indicator */}
       {!connected && (
-        <div className="fixed bottom-16 right-3 z-40 flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-xl bg-red-600/90 px-3 py-2 text-[10px] font-bold text-white shadow-2xl backdrop-blur sm:bottom-14 sm:right-6 sm:px-4 sm:py-2.5 sm:text-xs">
+        <div className="fixed bottom-16 right-3 z-40 flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-xl bg-[#1e6149]/90 px-3 py-2 text-[10px] font-bold text-white shadow-2xl backdrop-blur sm:bottom-14 sm:right-6 sm:px-4 sm:py-2.5 sm:text-xs">
           <WifiOff className="h-4 w-4 shrink-0" />
           <span>Koneksi Offline — Menampilkan Data Tersimpan</span>
         </div>

@@ -122,6 +122,13 @@ body {
   background-size: 24px 24px;
 }
 
+/* TV Display: satu warna hijau dengan pola halus yang senada */
+.bg-tv-pattern {
+  background-color: #eef7f1;
+  background-image: radial-gradient(rgba(45, 148, 110, 0.1) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
 .bg-islamic-pattern-dark {
   background-color: #0b1410;
   background-image: radial-gradient(rgba(135, 170, 147, 0.14) 1.2px, transparent 1.2px);

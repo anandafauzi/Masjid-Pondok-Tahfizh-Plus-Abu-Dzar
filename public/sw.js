@@ -1,4 +1,4 @@
-const CACHE = "masjid-cache-v11";
+const CACHE = "masjid-cache-v12";
 const PRECACHE = [
   "/",
   "/jadwal-shalat",
