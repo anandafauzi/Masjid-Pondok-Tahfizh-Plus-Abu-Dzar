@@ -52,3 +52,10 @@ scratch/
 # desktop build outputs
 *.exe
 
+# android build outputs
+/android/.gradle/
+/android/app/build/
+/android/local.properties
+/android/.idea/
+/android/*.iml
+

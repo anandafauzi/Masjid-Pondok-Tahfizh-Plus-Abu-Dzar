@@ -247,9 +247,18 @@ async function loadPublicBundle(
   return bundle;
 }
 
-export async function buildTvData(): Promise<TvData> {
+function parseRequestedDate(value: string | null | undefined): Date {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return todayDateOnly();
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    return todayDateOnly();
+  }
+  return parsed;
+}
+
+export async function buildTvData(date?: string | null): Promise<TvData> {
   const now = new Date();
-  const today = todayDateOnly();
+  const today = parseRequestedDate(date);
   const friday = nextFriday(today);
 
   const bundle = await loadPublicBundle(now, today, friday);

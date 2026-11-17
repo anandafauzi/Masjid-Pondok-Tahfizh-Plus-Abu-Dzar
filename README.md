@@ -142,6 +142,31 @@ Panduan lengkap (update, backup, restore, troubleshooting) ada di
   node scripts/generate-icons.js
   ```
 
+## Aplikasi Android (APK)
+
+Folder `android/` membungkus aplikasi web dengan WebView dan menambahkan
+kemampuan native:
+
+- Saat pertama dibuka, aplikasi meminta izin **Notifikasi** dan (di Android 12+)
+  **Alarm & pengingat** agar adzan tepat waktu.
+- Notifikasi *ongoing* di status bar menampilkan waktu shalat berikutnya, imam,
+  muadzin, dan hitung mundur iqamah tanpa perlu membuka aplikasi.
+- Saat adzan, aplikasi memutar MP3 yang dipilih di menu adzan. Jika HP dalam
+  mode silent/getar atau DND, audio dilewati dan hanya notifikasi yang muncul.
+- Jadwal diambil dari `/api/public/tv-data` untuk hari ini dan besok (WIB),
+  sehingga notifikasi tetap punya data petugas setelah shalat terakhir.
+  **Perubahan endpoint ini ikut terdeploy bersama aplikasi web.**
+
+Build APK debug (butuh JDK 17 dan Android SDK 34):
+
+```bash
+cd android
+./gradlew assembleDebug          # Windows: .\gradlew.bat assembleDebug
+```
+
+Hasil: `android/app/build/outputs/apk/debug/app-debug.apk`. Untuk distribusi
+Play Store/APK release, tambahkan `signingConfig` release terlebih dahulu.
+
 ## Pengingat WhatsApp H-1
 
 Pengingat otomatis dikirim **satu hari sebelum bertugas** kepada imam,

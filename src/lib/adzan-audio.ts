@@ -36,6 +36,16 @@ export function saveStoredAdzanSettings(settings: Partial<AdzanSettings>): Adzan
     const current = getStoredAdzanSettings();
     const updated = { ...current, ...settings };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    try {
+      const nativeBridge = (
+        window as Window & {
+          MasjidNative?: { syncAdzanSettings?: (raw: string) => void };
+        }
+      ).MasjidNative;
+      nativeBridge?.syncAdzanSettings?.(JSON.stringify(updated));
+    } catch {
+      // Aplikasi Web biasa tidak punya bridge native.
+    }
     return updated;
   } catch {
     return DEFAULT_ADZAN_SETTINGS;

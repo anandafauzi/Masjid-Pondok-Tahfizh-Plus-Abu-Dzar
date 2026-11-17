@@ -3,9 +3,10 @@ import { ok, serverError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const data = await buildTvData();
+    const date = new URL(request.url).searchParams.get("date");
+    const data = await buildTvData(date);
     return ok(data);
   } catch (error) {
     console.error(error);
