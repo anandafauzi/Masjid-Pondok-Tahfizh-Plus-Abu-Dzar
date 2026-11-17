@@ -27,6 +27,7 @@ import {
   Smartphone,
   Share2,
   CheckCircle2,
+  BellRing,
 } from "lucide-react";
 
 interface NavItem {
@@ -39,6 +40,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/petugas", label: "Data Petugas", icon: UserCheck },
+  { href: "/admin/pengingat", label: "Pengingat WA", icon: BellRing },
   { href: "/admin/prayer-times", label: "Jadwal Shalat", icon: CalendarClock },
   { href: "/admin/imam", label: "Imam & Muadzin", icon: Users },
   { href: "/admin/khatib", label: "Khatib Jumat", icon: BookOpen },

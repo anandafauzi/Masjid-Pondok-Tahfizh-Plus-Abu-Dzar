@@ -17,6 +17,8 @@ khatib Jumat, kajian, countdown adzan–iqamah, dan panel admin lengkap.
 - **Admin panel** (`/admin`): dashboard khutbah, jadwal shalat, imam &
   muadzin, khatib Jumat, kajian, iqamah, nasihat, running text, pengaturan TV,
   pengaturan masjid, pengguna (khusus Super Admin), dan log aktivitas.
+- **Pengingat WhatsApp H-1**: pengingat otomatis ke imam, muadzin, dan khatib
+  Jumat sehari sebelum bertugas, dengan pratinjau, kirim manual, dan riwayat.
 - **Rotasi berbasis tanggal**: urutan imam/khatib dihitung dari tanggal
   berlaku, bukan counter perangkat, dan urutannya dapat diubah dari panel
   admin (tombol naik/turun).
@@ -135,6 +137,40 @@ Panduan lengkap (update, backup, restore, troubleshooting) ada di
   ```bash
   node scripts/generate-icons.js
   ```
+
+## Pengingat WhatsApp H-1
+
+Pengingat otomatis dikirim **satu hari sebelum bertugas** kepada imam,
+muadzin, dan khatib Jumat. Nomor WhatsApp diambil dari **Admin → Data
+Petugas**.
+
+1. Isi nomor WhatsApp setiap petugas di menu **Data Petugas**.
+2. Buat akun gateway (disarankan **Fonnte** paket Free: 1.000 pesan teks per
+   bulan), hubungkan perangkat WhatsApp, lalu salin token ke `.env`:
+
+   ```env
+   FONNTE_TOKEN="token-dari-dashboard-fonnte"
+   CRON_SECRET="string-acak-panjang"
+   ```
+
+   Gateway lain juga didukung: `WHATSAPP_PROVIDER=wablas` dengan
+   `WABLAS_DOMAIN` + `WABLAS_TOKEN`, atau `WHATSAPP_PROVIDER=webhook` dengan
+   `WHATSAPP_WEBHOOK_URL` (menerima JSON `{ target, message, type }`).
+3. Pratinjau, kirim manual, dan lihat riwayat di **Admin → Pengingat WA**.
+4. Di Vercel, cron berjalan otomatis setiap hari pukul **16.00 WIB** (09.00
+   UTC) melalui `/api/cron/h-1-reminders`. Endpoint ini hanya menerima
+   permintaan dengan header `Authorization: Bearer <CRON_SECRET>`.
+
+Pengiriman bersifat idempoten: satu penerima hanya menerima satu pesan per
+tanggal tugas (semua tugasnya digabung), dan riwayat disimpan di tabel
+`reminder_logs`. Pengiriman ulang hanya dilakukan lewat tombol **Kirim ulang**
+di panel admin.
+
+Uji tanpa mengirim pesan:
+
+```bash
+curl "http://localhost:3000/api/cron/h-1-reminders?dryRun=1&secret=$CRON_SECRET"
+```
 
 ## Catatan Teknis
 

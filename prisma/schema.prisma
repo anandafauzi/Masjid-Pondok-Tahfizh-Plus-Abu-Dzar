@@ -305,3 +305,35 @@ model LoginAttempt {
   @@index([createdAt])
   @@map("login_attempts")
 }
+
+// Riwayat pengingat WhatsApp H-1 ke petugas (imam, muadzin, khatib).
+// Satu baris = satu penerima per tanggal tugas. `dedupeKey` mencegah pesan
+// terkirim dua kali ketika cron dan pengiriman manual berjalan bersamaan.
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model ReminderLog {
+  id            String         @id @default(cuid())
+  reminderDate  DateTime       @db.Date
+  dedupeKey     String         @unique
+  recipientName String
+  phone         String?
+  duties        String         @db.Text
+  message       String         @db.Text
+  status        ReminderStatus @default(PENDING)
+  provider      String?
+  providerRef   String?
+  error         String?
+  sentAt        DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([reminderDate])
+  @@index([status])
+  @@index([createdAt])
+  @@map("reminder_logs")
+}
