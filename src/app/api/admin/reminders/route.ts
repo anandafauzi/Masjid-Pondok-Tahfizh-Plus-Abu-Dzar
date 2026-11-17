@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser, ok, parseDateOnly, serverError, unauthorized } from "@/lib/api";
+import {
+  badRequest,
+  getSessionUser,
+  ok,
+  parseDateOnly,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
 import {
   buildReminderPlan,
   getTomorrowDateOnly,
@@ -15,7 +22,10 @@ export async function GET(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const dateOnly = parseDateOnly(request.nextUrl.searchParams.get("date")) ?? getTomorrowDateOnly();
+    const dateParam = request.nextUrl.searchParams.get("date");
+    const dateOnly = dateParam ? parseDateOnly(dateParam) : getTomorrowDateOnly();
+    if (!dateOnly) return badRequest("Format tanggal harus yyyy-MM-dd");
+
     const plan = await buildReminderPlan(dateOnly);
     return ok(plan);
   } catch (error) {
@@ -36,7 +46,9 @@ export async function POST(request: NextRequest) {
       force?: unknown;
     };
 
-    const dateOnly = parseDateOnly(body.date) ?? getTomorrowDateOnly();
+    const dateOnly = body.date ? parseDateOnly(body.date) : getTomorrowDateOnly();
+    if (!dateOnly) return badRequest("Format tanggal harus yyyy-MM-dd");
+
     const dedupeKeys = Array.isArray(body.dedupeKeys)
       ? body.dedupeKeys.filter((key): key is string => typeof key === "string")
       : undefined;

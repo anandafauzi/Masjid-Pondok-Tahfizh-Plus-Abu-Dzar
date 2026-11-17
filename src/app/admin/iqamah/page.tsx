@@ -42,23 +42,26 @@ export default function AdminIqamahPage() {
       try {
         const res = await fetch("/api/iqamah-settings", { cache: "no-store" });
         const data = await res.json();
-        if (res.ok) {
-          const map = new Map<string, IqamahSetting>();
-          for (const d of data) map.set(d.prayerName, d);
-          setItems(
-            ORDER.map(
-              (name) =>
-                map.get(name) ?? {
-                  prayerName: name,
-                  mode: "DELAY_MINUTES",
-                  delayMinutes: DEFAULT_DELAYS[name] ?? 15,
-                  fixedIqamahTime: null,
-                }
-            )
-          );
+        if (!res.ok) {
+          throw new Error(data?.error || "Gagal memuat pengaturan iqamah");
         }
-      } catch {
-        toast.error("Gagal memuat pengaturan iqamah");
+        const map = new Map<string, IqamahSetting>();
+        for (const d of data) map.set(d.prayerName, d);
+        setItems(
+          ORDER.map(
+            (name) =>
+              map.get(name) ?? {
+                prayerName: name,
+                mode: "DELAY_MINUTES",
+                delayMinutes: DEFAULT_DELAYS[name] ?? 15,
+                fixedIqamahTime: null,
+              }
+          )
+        );
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : "Gagal memuat pengaturan iqamah"
+        );
       } finally {
         setLoading(false);
       }

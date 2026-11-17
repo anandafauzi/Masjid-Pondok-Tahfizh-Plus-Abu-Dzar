@@ -50,9 +50,10 @@ export default function AdminNasihatPage() {
     try {
       const res = await fetch("/api/advice", { cache: "no-store" });
       const data = await res.json();
-      if (res.ok) setItems(data);
-    } catch {
-      toast.error("Gagal memuat nasihat");
+      if (!res.ok) throw new Error(data?.error || "Gagal memuat nasihat");
+      setItems(data);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal memuat nasihat");
     } finally {
       setLoading(false);
     }

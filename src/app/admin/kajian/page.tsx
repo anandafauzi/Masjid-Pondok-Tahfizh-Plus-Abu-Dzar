@@ -30,6 +30,7 @@ import {
 
 import { PetugasItem } from "@/types/petugas";
 import { PetugasSelect } from "@/components/admin/petugas-select";
+import { fromWibInput, toWibInput } from "@/lib/datetime";
 
 interface Kajian {
   id: string;
@@ -72,11 +73,7 @@ const WEEKDAY_LABELS = [
 ] as const;
 
 function toLocalInput(iso: string) {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
+  return toWibInput(iso);
 }
 
 function formatDateTime(iso: string) {
@@ -162,13 +159,17 @@ export default function AdminKajianPage() {
         fetch("/api/petugas", { cache: "no-store" }),
       ]);
       const data = await res.json();
-      if (res.ok) {
-        setItems(Array.isArray(data.items) ? data.items : []);
-        setOccurrences(Array.isArray(data.occurrences) ? data.occurrences : []);
+      if (!res.ok) throw new Error(data?.error || "Gagal memuat kajian");
+      setItems(Array.isArray(data.items) ? data.items : []);
+      setOccurrences(Array.isArray(data.occurrences) ? data.occurrences : []);
+
+      const petugasData = await pRes.json().catch(() => ({}));
+      if (!pRes.ok) {
+        throw new Error(petugasData?.error || "Gagal memuat daftar petugas");
       }
-      if (pRes.ok) setPetugas(await pRes.json());
-    } catch {
-      toast.error("Gagal memuat kajian");
+      setPetugas(petugasData);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal memuat kajian");
     } finally {
       setLoading(false);
     }
@@ -219,8 +220,8 @@ export default function AdminKajianPage() {
             title,
             speakerName: speaker,
             bookOrTopic: topic || null,
-            startDateTime: new Date(start).toISOString(),
-            endDateTime: end ? new Date(end).toISOString() : null,
+            startDateTime: fromWibInput(start).toISOString(),
+            endDateTime: end ? fromWibInput(end).toISOString() : null,
             location,
             description: description || null,
             isRecurring,
@@ -294,7 +295,7 @@ export default function AdminKajianPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             occurrenceDate: rescheduleTarget.occurrenceDate,
-            newStartDateTime: new Date(newStart).toISOString(),
+            newStartDateTime: fromWibInput(newStart).toISOString(),
             note: newNote || null,
           }),
         }
@@ -458,7 +459,7 @@ export default function AdminKajianPage() {
               description={
                 isRecurring && start
                   ? `Kajian otomatis muncul setiap ${weekdayName(
-                      new Date(start).toISOString()
+                      fromWibInput(start).toISOString()
                     )} pada jam yang sama, tanpa perlu input tanggal lagi.`
                   : "Aktifkan untuk kajian rutin mingguan. Tanggal pertama di atas menjadi acuan hari pengulangan."
               }

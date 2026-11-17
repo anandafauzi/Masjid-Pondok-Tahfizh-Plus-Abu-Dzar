@@ -65,9 +65,10 @@ export default function AdminUsersPage() {
     try {
       const res = await fetch("/api/users", { cache: "no-store" });
       const data = await res.json();
-      if (res.ok) setItems(data);
-    } catch {
-      toast.error("Gagal memuat pengguna");
+      if (!res.ok) throw new Error(data?.error || "Gagal memuat pengguna");
+      setItems(data);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal memuat pengguna");
     } finally {
       setLoading(false);
     }

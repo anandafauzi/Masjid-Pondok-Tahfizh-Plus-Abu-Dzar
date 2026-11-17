@@ -9,6 +9,7 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { withSerializableRetry } from "@/lib/db-retry";
 
 export const dynamic = "force-dynamic";
 
@@ -26,49 +27,51 @@ export async function POST(request: NextRequest) {
       return badRequest("Arah perpindahan tidak valid");
     }
 
-    const outcome = await prisma.$transaction(
-      async (tx) => {
-        const items = await tx.imamRollingSetting.findMany({
-          orderBy: [
-            { sequenceNumber: "asc" },
-            { createdAt: "asc" },
-            { id: "asc" },
-          ],
-        });
-        const index = items.findIndex((item) => item.id === id);
-        if (index === -1) {
-          return { status: "not-found" as const };
-        }
+    const outcome = await withSerializableRetry(() =>
+      prisma.$transaction(
+        async (tx) => {
+          const items = await tx.imamRollingSetting.findMany({
+            orderBy: [
+              { sequenceNumber: "asc" },
+              { createdAt: "asc" },
+              { id: "asc" },
+            ],
+          });
+          const index = items.findIndex((item) => item.id === id);
+          if (index === -1) {
+            return { status: "not-found" as const };
+          }
 
-        const targetIndex = direction === "up" ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= items.length) {
-          return { status: "ok" as const, items };
-        }
+          const targetIndex = direction === "up" ? index - 1 : index + 1;
+          if (targetIndex < 0 || targetIndex >= items.length) {
+            return { status: "ok" as const, items };
+          }
 
-        const reordered = [...items];
-        [reordered[index], reordered[targetIndex]] = [
-          reordered[targetIndex],
-          reordered[index],
-        ];
+          const reordered = [...items];
+          [reordered[index], reordered[targetIndex]] = [
+            reordered[targetIndex],
+            reordered[index],
+          ];
 
-        const result = [];
-        for (let position = 0; position < reordered.length; position++) {
-          result.push(
-            await tx.imamRollingSetting.update({
-              where: { id: reordered[position].id },
-              data: { sequenceNumber: position + 1 },
-            })
-          );
-        }
+          const result = [];
+          for (let position = 0; position < reordered.length; position++) {
+            result.push(
+              await tx.imamRollingSetting.update({
+                where: { id: reordered[position].id },
+                data: { sequenceNumber: position + 1 },
+              })
+            );
+          }
 
-        return {
-          status: "ok" as const,
-          items,
-          result,
-          name: items[index].imamName,
-        };
-      },
-      { isolationLevel: "Serializable" }
+          return {
+            status: "ok" as const,
+            items,
+            result,
+            name: items[index].imamName,
+          };
+        },
+        { isolationLevel: "Serializable" }
+      )
     );
 
     if (outcome.status === "not-found") {

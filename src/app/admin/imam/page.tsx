@@ -33,6 +33,7 @@ import { DAYS_OF_WEEK, PRAYERS, WeeklyImamItem } from "@/types/weekly-imam";
 import { PetugasItem } from "@/types/petugas";
 import { ScheduleExportActions } from "@/components/schedule-export-actions";
 import { PetugasSelect } from "@/components/admin/petugas-select";
+import { dateOnlyToString } from "@/lib/datetime";
 
 interface Rolling {
   id: string;
@@ -52,7 +53,7 @@ interface Schedule {
   notes: string | null;
 }
 
-const toYmd = (iso: string) => new Date(iso).toISOString().slice(0, 10);
+const toYmd = (iso: string) => dateOnlyToString(new Date(iso));
 const todayYmd = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
     new Date()
@@ -92,12 +93,15 @@ export default function AdminImamPage() {
         fetch("/api/imam-schedules", { cache: "no-store" }),
         fetch("/api/petugas", { cache: "no-store" }),
       ]);
-      if (w.ok) setWeeklyItems(await w.json());
-      if (r.ok) setRolling(await r.json());
-      if (s.ok) setSchedules(await s.json());
-      if (p.ok) setPetugas(await p.json());
-    } catch {
-      toast.error("Gagal memuat data imam");
+      if (!w.ok || !r.ok || !s.ok || !p.ok) {
+        throw new Error("Gagal memuat data imam");
+      }
+      setWeeklyItems(await w.json());
+      setRolling(await r.json());
+      setSchedules(await s.json());
+      setPetugas(await p.json());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal memuat data imam");
     } finally {
       setLoading(false);
     }

@@ -36,8 +36,10 @@ export async function PUT(request: NextRequest) {
 
     const results = [];
     for (const item of items) {
-      const prayerName = item?.prayerName ? String(item.prayerName) : "";
-      if (!PRAYER_NAMES.has(prayerName)) continue;
+      const prayerName = item?.prayerName ? String(item.prayerName).trim() : "";
+      if (!PRAYER_NAMES.has(prayerName)) {
+        return badRequest(`Nama shalat tidak valid: ${prayerName || "(kosong)"}`);
+      }
 
       const mode = item.mode === "FIXED_TIME" ? "FIXED_TIME" : "DELAY_MINUTES";
       const rawDelay = Number(item.delayMinutes ?? 0);

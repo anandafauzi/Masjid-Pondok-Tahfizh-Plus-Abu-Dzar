@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  isPrismaNotFound,
   notFound,
   ok,
   parseDateOnly,
@@ -151,6 +152,9 @@ export async function POST(
     revalidateAllAppPaths();
     return ok(item, 201);
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Kajian tidak ditemukan");
+    }
     console.error(error);
     return serverError("Gagal memindahkan jadwal kajian");
   }
@@ -227,6 +231,9 @@ export async function DELETE(
     revalidateAllAppPaths();
     return ok({ success: true });
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Kajian tidak ditemukan");
+    }
     console.error(error);
     return serverError("Gagal mengembalikan jadwal kajian");
   }

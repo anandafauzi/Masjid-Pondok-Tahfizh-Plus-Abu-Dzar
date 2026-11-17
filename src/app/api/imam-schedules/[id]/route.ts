@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  isPrismaNotFound,
+  notFound,
   ok,
   parseDateOnly,
   serverError,
@@ -75,6 +77,9 @@ export async function PUT(
 
     return ok(item);
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Jadwal imam tidak ditemukan");
+    }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
@@ -109,6 +114,9 @@ export async function DELETE(
 
     return ok({ success: true });
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Jadwal imam tidak ditemukan");
+    }
     console.error(error);
     return serverError("Gagal menghapus jadwal imam");
   }

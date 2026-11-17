@@ -40,9 +40,10 @@ export default function AdminRunningTextPage() {
     try {
       const res = await fetch("/api/running-texts", { cache: "no-store" });
       const data = await res.json();
-      if (res.ok) setItems(data);
-    } catch {
-      toast.error("Gagal memuat data");
+      if (!res.ok) throw new Error(data?.error || "Gagal memuat data");
+      setItems(data);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal memuat data");
     } finally {
       setLoading(false);
     }

@@ -3,9 +3,11 @@ import {
   addDaysUTC,
   combineDateTime,
   dateOnlyToString,
+  fromWibInput,
   dateOnlyToUTC,
   nextFriday,
   toDateOnlyString,
+  toWibInput,
   todayDateOnly,
 } from "@/lib/datetime";
 
@@ -45,6 +47,17 @@ describe("datetime helpers", () => {
     // 00:30 UTC = 07:30 WIB same day
     const d = new Date("2026-11-01T00:30:00.000Z");
     expect(toDateOnlyString(d)).toBe("2026-11-01");
+  });
+
+  it("fromWibInput treats datetime-local as WIB wall time", () => {
+    expect(fromWibInput("2026-11-01T05:00").toISOString()).toBe(
+      "2026-10-31T22:00:00.000Z"
+    );
+  });
+
+  it("toWibInput round-trips a datetime-local value in WIB", () => {
+    const input = "2026-11-01T05:00";
+    expect(toWibInput(fromWibInput(input))).toBe(input);
   });
 
   it("todayDateOnly returns UTC midnight for current WIB date", () => {

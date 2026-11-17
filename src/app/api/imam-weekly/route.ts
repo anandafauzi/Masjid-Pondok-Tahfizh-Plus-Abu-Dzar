@@ -78,6 +78,9 @@ function parseWeeklyItems(raw: unknown[]): WeeklyImamItem[] | null {
 }
 
 export async function GET() {
+  const user = await getSessionUser();
+  if (!user) return unauthorized();
+
   try {
     const items = await getWeeklyImamSettings();
     return ok(items);

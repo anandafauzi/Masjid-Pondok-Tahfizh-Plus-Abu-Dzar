@@ -42,11 +42,15 @@ export default function AdminPetugasPage() {
   async function load() {
     try {
       const res = await fetch("/api/petugas", { cache: "no-store" });
-      if (res.ok) {
-        setPetugas(await res.json());
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Gagal memuat daftar petugas");
       }
-    } catch {
-      toast.error("Gagal memuat daftar petugas");
+      setPetugas(data);
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Gagal memuat daftar petugas"
+      );
     } finally {
       setLoading(false);
     }

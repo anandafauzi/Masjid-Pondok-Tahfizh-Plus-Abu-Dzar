@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  isPrismaNotFound,
+  notFound,
   ok,
   parseIntOr,
   serverError,
@@ -54,6 +56,9 @@ export async function PUT(
 
     return ok(item);
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Running text tidak ditemukan");
+    }
     console.error(error);
     return serverError("Gagal memperbarui running text");
   }
@@ -80,6 +85,9 @@ export async function DELETE(
 
     return ok({ success: true });
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Running text tidak ditemukan");
+    }
     console.error(error);
     return serverError("Gagal menghapus running text");
   }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  isPrismaNotFound,
   notFound,
   ok,
   parseDateOnly,
@@ -88,6 +89,9 @@ export async function PUT(
     revalidateAllAppPaths();
     return ok(item);
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Imam rolling tidak ditemukan");
+    }
     console.error(error);
     return serverError("Gagal memperbarui imam rolling");
   }
@@ -112,6 +116,9 @@ export async function DELETE(
     revalidateAllAppPaths();
     return ok({ success: true });
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Imam rolling tidak ditemukan");
+    }
     console.error(error);
     return serverError("Gagal menghapus imam rolling");
   }

@@ -2,7 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { badRequest, getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
+import {
+  badRequest,
+  getSessionUser,
+  isPrismaNotFound,
+  notFound,
+  ok,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +128,9 @@ export async function PUT(
 
     return ok(updated);
   } catch (err) {
+    if (isPrismaNotFound(err)) {
+      return notFound("Pengguna tidak ditemukan");
+    }
     console.error(err);
     return serverError("Gagal memperbarui pengguna");
   }
@@ -177,6 +188,9 @@ export async function DELETE(
     });
     return ok({ success: true });
   } catch (err) {
+    if (isPrismaNotFound(err)) {
+      return notFound("Pengguna tidak ditemukan");
+    }
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       err.code === "P2003"

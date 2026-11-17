@@ -117,12 +117,15 @@ export default function AdminMasjidPage() {
       try {
         const res = await fetch("/api/mosque-settings", { cache: "no-store" });
         const data = await res.json();
-        if (res.ok && data) {
+        if (!res.ok) throw new Error(data?.error || "Gagal memuat pengaturan");
+        if (data) {
           setForm(data);
           setAdjustments(data.prayerAdjustments ?? {});
         }
-      } catch {
-        toast.error("Gagal memuat pengaturan");
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : "Gagal memuat pengaturan"
+        );
       } finally {
         setLoading(false);
       }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { addMinutes } from "@/lib/datetime";
+import { withSerializableRetry } from "@/lib/db-retry";
 
 export interface StartKhutbahInput {
   fridayDate: Date;
@@ -63,27 +64,6 @@ export async function getActiveKhutbah(now: Date = new Date()) {
   }
 
   return session;
-}
-
-async function withSerializableRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
-  let attempt = 0;
-  while (true) {
-    try {
-      return await fn();
-    } catch (error: unknown) {
-      const isP2034 =
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        (error as { code: string }).code === "P2034";
-      if (isP2034 && attempt < maxRetries) {
-        attempt++;
-        await new Promise((resolve) => setTimeout(resolve, attempt * 50 + Math.random() * 50));
-        continue;
-      }
-      throw error;
-    }
-  }
 }
 
 export async function startKhutbah(input: StartKhutbahInput) {

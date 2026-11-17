@@ -72,7 +72,8 @@ export default function AdminTvPage() {
       try {
         const res = await fetch("/api/display-settings", { cache: "no-store" });
         const data = await res.json();
-        if (res.ok && data) {
+        if (!res.ok) throw new Error(data?.error || "Gagal memuat pengaturan");
+        if (data) {
           setForm({
             ...DEFAULTS,
             ...data,
@@ -86,8 +87,10 @@ export default function AdminTvPage() {
             },
           });
         }
-      } catch {
-        toast.error("Gagal memuat pengaturan");
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : "Gagal memuat pengaturan"
+        );
       } finally {
         setLoading(false);
       }

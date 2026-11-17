@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { dateOnlyToString, fromWibInput } from "@/lib/datetime";
 import {
   Badge,
   Button,
@@ -35,7 +36,16 @@ interface KhutbahSession {
   scheduledStartAt: string | null;
 }
 
-const toYmd = (iso: string) => new Date(iso).toISOString().slice(0, 10);
+type StatusSession = Omit<KhutbahSession, "scheduledStartAt">;
+
+interface KhutbahStatus {
+  active: boolean;
+  serverTime: string;
+  session: StatusSession | null;
+  scheduled: StatusSession | null;
+}
+
+const toYmd = (iso: string) => dateOnlyToString(new Date(iso));
 
 function remaining(endsAt: string, nowMs: number) {
   const diff = Math.floor((new Date(endsAt).getTime() - nowMs) / 1000);
@@ -47,6 +57,8 @@ function remaining(endsAt: string, nowMs: number) {
 
 export default function AdminKhutbahPage() {
   const [sessions, setSessions] = useState<KhutbahSession[]>([]);
+  const [status, setStatus] = useState<KhutbahStatus | null>(null);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -59,11 +71,36 @@ export default function AdminKhutbahPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/khutbah/sessions", { cache: "no-store" });
-      const data = await res.json();
-      if (res.ok) setSessions(data);
-    } catch {
-      toast.error("Gagal memuat sesi khutbah");
+      const [sessionsRes, statusRes] = await Promise.all([
+        fetch("/api/khutbah/sessions", { cache: "no-store" }),
+        fetch("/api/khutbah/status", { cache: "no-store" }),
+      ]);
+
+      const sessionsData = await sessionsRes.json();
+      if (!sessionsRes.ok) {
+        throw new Error(sessionsData?.error || "Gagal memuat sesi khutbah");
+      }
+      setSessions(sessionsData);
+
+      if (!statusRes.ok) {
+        setStatus(null);
+        setOffset(0);
+        return;
+      }
+
+      const statusData = (await statusRes.json()) as KhutbahStatus;
+      const serverTime = new Date(statusData.serverTime).getTime();
+      if (!Number.isFinite(serverTime)) {
+        setStatus(null);
+        setOffset(0);
+        return;
+      }
+      setStatus(statusData);
+      setOffset(serverTime - Date.now());
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Gagal memuat sesi khutbah"
+      );
     } finally {
       setLoading(false);
     }
@@ -79,18 +116,9 @@ export default function AdminKhutbahPage() {
     };
   }, [load]);
 
-  const active =
-    sessions.find(
-      (s) =>
-        s.status === "ACTIVE" &&
-        new Date(s.startedAt).getTime() <= now &&
-        new Date(s.endsAt).getTime() > now
-    ) ?? null;
-  const scheduled =
-    sessions.find(
-      (s) =>
-        s.status === "ACTIVE" && new Date(s.startedAt).getTime() > now
-    ) ?? null;
+  const serverNow = now + offset;
+  const active = status?.session ?? null;
+  const scheduled = status?.scheduled ?? null;
 
   async function action(path: string, payload: Record<string, unknown>) {
     setBusy(true);
@@ -128,7 +156,7 @@ export default function AdminKhutbahPage() {
       startMode: mode,
       scheduledStartAt:
         mode === "AUTO" && scheduledStartAt
-          ? new Date(scheduledStartAt).toISOString()
+          ? fromWibInput(scheduledStartAt).toISOString()
           : undefined,
     });
 
@@ -223,7 +251,7 @@ export default function AdminKhutbahPage() {
                   <p className="text-sm text-slate-600">“{active.sermonTopic}”</p>
                 )}
                 <p className="mt-2 text-sm font-bold text-emerald-700">
-                  {remaining(active.endsAt, now)}
+                  {remaining(active.endsAt, serverNow)}
                 </p>
                 <p className="text-xs text-slate-500">
                   Durasi {active.durationMinutes} menit • Berakhir{" "}
@@ -329,7 +357,7 @@ export default function AdminKhutbahPage() {
                 onChange={(e) => setScheduledStartAt(e.target.value)}
               />
               <p className="mt-1 text-xs text-slate-500">
-                Gunakan waktu perangkat yang sesuai zona WIB.
+                Waktu diisi dalam WIB (UTC+7), bukan zona waktu perangkat.
               </p>
             </div>
           )}

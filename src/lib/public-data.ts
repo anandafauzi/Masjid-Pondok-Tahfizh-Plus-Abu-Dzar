@@ -135,19 +135,40 @@ const BUNDLE_TTL_MS = 20_000;
 // yang valid agar nama imam/muadzin tidak "hilang" lalu muncul lagi.
 const IMAM_LAST_GOOD_TTL_MS = 6 * 60 * 60 * 1000;
 
-let bundleCache: {
-  at: number;
-  version: number;
-  today: string;
-  bundle: PublicBundle;
-} | null = null;
+// Cache dipisah per tanggal agar permintaan ?date= tidak saling menggusur
+// cache halaman TV/beranda yang memakai tanggal hari ini.
+const bundleCache = new Map<string, { at: number; bundle: PublicBundle }>();
+const imamLastGood = new Map<
+  string,
+  { at: number; list: PublicBundle["imamToday"] }
+>();
 
-let imamLastGood: {
-  at: number;
-  version: number;
-  today: string;
-  list: PublicBundle["imamToday"];
-} | null = null;
+function cacheKey(version: number, ymd: string) {
+  return `${version}:${ymd}`;
+}
+
+function pruneCache<T extends { at: number }>(
+  cache: Map<string, T>,
+  ttlMs: number,
+  maxEntries: number
+) {
+  const cutoff = Date.now() - ttlMs;
+  for (const [key, entry] of cache) {
+    if (entry.at < cutoff) cache.delete(key);
+  }
+  while (cache.size > maxEntries) {
+    let oldestKey: string | null = null;
+    let oldestAt = Infinity;
+    for (const [key, entry] of cache) {
+      if (entry.at < oldestAt) {
+        oldestKey = key;
+        oldestAt = entry.at;
+      }
+    }
+    if (!oldestKey) break;
+    cache.delete(oldestKey);
+  }
+}
 
 /**
  * Ambil paket data publik (pengaturan, jadwal imam hari ini, jadwal Jumat,
@@ -169,14 +190,12 @@ async function loadPublicBundle(
 ): Promise<PublicBundle> {
   const ymd = dateOnlyToString(today);
   const version = getPublicDataVersion();
+  const key = cacheKey(version, ymd);
 
-  if (
-    bundleCache &&
-    bundleCache.version === version &&
-    bundleCache.today === ymd &&
-    Date.now() - bundleCache.at < BUNDLE_TTL_MS
-  ) {
-    return bundleCache.bundle;
+  pruneCache(bundleCache, BUNDLE_TTL_MS, 16);
+  const cachedBundle = bundleCache.get(key);
+  if (cachedBundle && Date.now() - cachedBundle.at < BUNDLE_TTL_MS) {
+    return cachedBundle.bundle;
   }
 
   const [
@@ -214,17 +233,15 @@ async function loadPublicBundle(
   ]);
 
   let imamToday = imamTodayRaw;
+  pruneCache(imamLastGood, IMAM_LAST_GOOD_TTL_MS, 32);
+  const imamKey = cacheKey(version, ymd);
   if (imamToday.length === 0) {
-    if (
-      imamLastGood &&
-      imamLastGood.version === version &&
-      imamLastGood.today === ymd &&
-      Date.now() - imamLastGood.at < IMAM_LAST_GOOD_TTL_MS
-    ) {
-      imamToday = imamLastGood.list;
+    const cachedImam = imamLastGood.get(imamKey);
+    if (cachedImam && Date.now() - cachedImam.at < IMAM_LAST_GOOD_TTL_MS) {
+      imamToday = cachedImam.list;
     }
   } else {
-    imamLastGood = { at: Date.now(), version, today: ymd, list: imamToday };
+    imamLastGood.set(imamKey, { at: Date.now(), list: imamToday });
   }
 
   const bundle: PublicBundle = {
@@ -243,7 +260,7 @@ async function loadPublicBundle(
     fridaySchedule,
   };
 
-  bundleCache = { at: Date.now(), version, today: ymd, bundle };
+  bundleCache.set(key, { at: Date.now(), bundle });
   return bundle;
 }
 

@@ -33,9 +33,10 @@ export default function AdminAuditPage() {
       try {
         const res = await fetch("/api/audit-logs", { cache: "no-store" });
         const data = await res.json();
-        if (res.ok) setLogs(data);
-      } catch {
-        toast.error("Gagal memuat log");
+        if (!res.ok) throw new Error(data?.error || "Gagal memuat log");
+        setLogs(data);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Gagal memuat log");
       } finally {
         setLoading(false);
       }
@@ -84,6 +85,7 @@ export default function AdminAuditPage() {
                       {new Date(log.createdAt).toLocaleString("id-ID", {
                         dateStyle: "short",
                         timeStyle: "medium",
+                        timeZone: "Asia/Jakarta",
                       })}
                     </td>
                     <td className="px-4 py-3">

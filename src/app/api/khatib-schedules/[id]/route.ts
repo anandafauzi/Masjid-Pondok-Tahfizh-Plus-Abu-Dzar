@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  isPrismaNotFound,
+  notFound,
   ok,
   parseDateOnly,
   serverError,
@@ -75,6 +77,9 @@ export async function PUT(
     revalidateAllAppPaths();
     return ok(item);
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Jadwal khatib tidak ditemukan");
+    }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
@@ -105,6 +110,9 @@ export async function DELETE(
     revalidateAllAppPaths();
     return ok({ success: true });
   } catch (error) {
+    if (isPrismaNotFound(error)) {
+      return notFound("Jadwal khatib tidak ditemukan");
+    }
     console.error(error);
     return serverError("Gagal menghapus jadwal khatib");
   }

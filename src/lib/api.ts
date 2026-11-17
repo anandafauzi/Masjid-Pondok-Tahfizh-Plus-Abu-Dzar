@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { dateOnlyToUTC } from "@/lib/datetime";
@@ -51,6 +52,14 @@ export function notFound(message = "Data tidak ditemukan") {
 
 export function serverError(message = "Terjadi kesalahan pada server") {
   return NextResponse.json({ error: message }, { status: 500 });
+}
+
+/** Prisma melaporkan record yang hilang saat update/delete dengan P2025. */
+export function isPrismaNotFound(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2025"
+  );
 }
 
 export function ok<T>(data: T, status = 200) {

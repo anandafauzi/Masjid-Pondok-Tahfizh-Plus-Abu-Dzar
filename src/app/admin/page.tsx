@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { fromWibInput } from "@/lib/datetime";
 import {
   Radio,
   Clock,
@@ -109,11 +110,19 @@ export default function AdminDashboardPage() {
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/khutbah/status", { cache: "no-store" });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setStatus(null);
+        setOffset(0);
+        return;
+      }
 
       const data = (await res.json()) as StatusResponse;
       const serverTime = new Date(data.serverTime).getTime();
-      if (!Number.isFinite(serverTime)) return;
+      if (!Number.isFinite(serverTime)) {
+        setStatus(null);
+        setOffset(0);
+        return;
+      }
 
       setStatus(data);
       setOffset(serverTime - Date.now());
@@ -149,7 +158,7 @@ export default function AdminDashboardPage() {
         startMode,
       };
       if (startMode === "AUTO" && scheduledStartAt) {
-        payload.scheduledStartAt = new Date(scheduledStartAt).toISOString();
+        payload.scheduledStartAt = fromWibInput(scheduledStartAt).toISOString();
       }
       const res = await fetch("/api/khutbah/start", {
         method: "POST",

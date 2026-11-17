@@ -44,6 +44,16 @@ export function combineDateTime(dateOnly: Date, hhmm: string): Date {
   return fromZonedTime(`${ymd}T${hhmm}:00`, TIMEZONE);
 }
 
+/** Parse a `datetime-local` value as wall time in WIB, not browser time. */
+export function fromWibInput(value: string): Date {
+  return fromZonedTime(value, TIMEZONE);
+}
+
+/** Format a date as a `datetime-local` value using wall time in WIB. */
+export function toWibInput(date: Date | string): string {
+  return formatInTimeZone(new Date(date), TIMEZONE, "yyyy-MM-dd'T'HH:mm");
+}
+
 /** Human readable Indonesian date for a @db.Date value. */
 export function formatDateOnlyLong(date: Date): string {
   return format(new Date(dateOnlyToString(date) + "T00:00:00"), "EEEE, dd MMMM yyyy", {
