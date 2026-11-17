@@ -70,7 +70,7 @@ export function PetugasSelect({
 
   if (isManualMode) {
     return (
-      <div className="relative flex items-center gap-1.5">
+      <div className="relative flex w-full min-w-0 items-center gap-1.5">
         <input
           id={selectId}
           type="text"
@@ -78,13 +78,13 @@ export function PetugasSelect({
           onChange={(e) => onChange(e.target.value)}
           placeholder="Ketik nama manual..."
           disabled={disabled}
-          className={`flex-1 rounded-xl border border-[#ded5c4] bg-white px-3 py-2 text-xs text-[#19261f] shadow-2xs transition-colors placeholder:text-slate-400 focus:border-[#2d946e] focus:outline-hidden focus:ring-2 focus:ring-[#2d946e]/20 sm:text-sm ${className}`}
+          className={`min-w-0 flex-1 rounded-xl border border-[#ded5c4] bg-white px-3 py-2 text-xs text-[#19261f] shadow-2xs transition-colors placeholder:text-slate-400 focus:border-[#2d946e] focus:outline-hidden focus:ring-2 focus:ring-[#2d946e]/20 sm:text-sm ${className}`}
         />
         <button
           type="button"
           onClick={() => setIsManualMode(false)}
           title="Kembali ke pilihan dropdown petugas"
-          className="rounded-lg border border-[#ded5c4] bg-[#faf7f2] p-2 text-xs font-semibold text-[#5c6e63] hover:bg-[#eaf6f0] hover:text-[#2d946e] transition-colors"
+          className="shrink-0 rounded-lg border border-[#ded5c4] bg-[#faf7f2] p-2 text-xs font-semibold text-[#5c6e63] transition-colors hover:bg-[#eaf6f0] hover:text-[#2d946e]"
         >
           <ListFilter className="h-4 w-4" />
         </button>
@@ -93,7 +93,7 @@ export function PetugasSelect({
   }
 
   return (
-    <div className="relative flex items-center gap-1.5">
+    <div className="relative flex w-full min-w-0 items-center gap-1.5">
       <select
         id={selectId}
         value={value}
@@ -105,7 +105,7 @@ export function PetugasSelect({
             onChange(e.target.value);
           }
         }}
-        className={`flex-1 rounded-xl border border-[#ded5c4] bg-white px-3 py-2 text-xs text-[#19261f] shadow-2xs transition-colors focus:border-[#2d946e] focus:outline-hidden focus:ring-2 focus:ring-[#2d946e]/20 sm:text-sm ${className}`}
+        className={`min-w-0 flex-1 rounded-xl border border-[#ded5c4] bg-white px-3 py-2 text-xs text-[#19261f] shadow-2xs transition-colors focus:border-[#2d946e] focus:outline-hidden focus:ring-2 focus:ring-[#2d946e]/20 sm:text-sm ${className}`}
       >
         <option value="">{`— ${placeholder} —`}</option>
 
@@ -131,7 +131,7 @@ export function PetugasSelect({
         type="button"
         onClick={() => setIsManualMode(true)}
         title="Ketik nama manual jika tidak ada di daftar"
-        className="rounded-lg border border-[#ded5c4] bg-[#faf7f2] p-2 text-xs text-[#5c6e63] hover:bg-[#eaf6f0] hover:text-[#2d946e] transition-colors"
+        className="shrink-0 rounded-lg border border-[#ded5c4] bg-[#faf7f2] p-2 text-xs text-[#5c6e63] transition-colors hover:bg-[#eaf6f0] hover:text-[#2d946e]"
       >
         <PenTool className="h-4 w-4" />
       </button>

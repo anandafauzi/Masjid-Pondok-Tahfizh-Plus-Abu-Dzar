@@ -11,7 +11,6 @@ import {
   LoadingState,
   PageHeader,
   SectionHeading,
-  Toggle,
 } from "@/components/ui";
 import {
   ArrowDown,
@@ -288,15 +287,15 @@ export default function AdminKhatibPage() {
         description="Kelola rotasi khatib dan jadwal khutbah Jumat."
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-6">
         <Card className="min-w-0">
           <SectionHeading
             icon={UserCheck}
             title="Rotasi Khatib"
             description="Urutan rotasi mengikuti daftar dari atas ke bawah. Gunakan tombol panah untuk mengubah urutan."
           />
-          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
+          <div className="mb-4 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="min-w-0">
               <Label htmlFor="rollName">Nama Khatib</Label>
               <PetugasSelect
                 id="rollName"
@@ -307,7 +306,7 @@ export default function AdminKhatibPage() {
                 petugasList={petugas}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="rollFrom">Berlaku Sejak</Label>
               <Input
                 id="rollFrom"
@@ -316,7 +315,7 @@ export default function AdminKhatibPage() {
                 onChange={(e) => setRollFrom(e.target.value)}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="rollUntil">Berlaku Sampai (opsional)</Label>
               <Input
                 id="rollUntil"
@@ -325,14 +324,18 @@ export default function AdminKhatibPage() {
                 onChange={(e) => setRollUntil(e.target.value)}
               />
             </div>
-            <div className="flex items-end">
-              <Toggle
-                checked={rollActive}
-                onChange={setRollActive}
-                label="Ikut Rotasi"
-              />
+            <div className="flex min-w-0 items-end">
+              <label className="flex w-full cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={rollActive}
+                  onChange={(e) => setRollActive(e.target.checked)}
+                  className="h-4 w-4 shrink-0 rounded border-slate-300 accent-sage-600"
+                />
+                <span className="truncate">Ikut Rotasi</span>
+              </label>
             </div>
-            <div className="flex gap-1.5 sm:col-span-2 lg:col-span-4">
+            <div className="flex min-w-0 flex-wrap gap-2 sm:col-span-2 xl:col-span-4">
               <Button onClick={submitRolling} disabled={saving || ordering}>
                 {editingRollingId ? (
                   <>
@@ -363,9 +366,9 @@ export default function AdminKhatibPage() {
               {rolling.map((r, index) => (
                 <li
                   key={r.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 transition-colors hover:border-amber-200 hover:bg-amber-50/30"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 transition-colors hover:border-amber-200 hover:bg-amber-50/30"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-800 ring-1 ring-amber-200">
                       {r.sequenceNumber}
                     </span>
@@ -384,7 +387,7 @@ export default function AdminKhatibPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex shrink-0 items-center gap-1">
                     <button
                       type="button"
                       className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-emerald-100 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-30"
@@ -436,8 +439,8 @@ export default function AdminKhatibPage() {
             title="Jadwal Khutbah Jumat"
             description="Jadwal khatib untuk tanggal Jumat tertentu."
           />
-          <div className="mb-4 grid gap-2 sm:grid-cols-2">
-            <div>
+          <div className="mb-4 grid min-w-0 gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
               <Label htmlFor="fridayDate">Tanggal Jumat</Label>
               <Input
                 id="fridayDate"
@@ -460,7 +463,7 @@ export default function AdminKhatibPage() {
                 </p>
               )}
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="khatib">Nama Khatib</Label>
               <PetugasSelect
                 id="khatib"
@@ -471,7 +474,7 @@ export default function AdminKhatibPage() {
                 petugasList={petugas}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="topic">Tema Khutbah</Label>
               <Input
                 id="topic"
@@ -480,7 +483,7 @@ export default function AdminKhatibPage() {
                 placeholder="Opsional"
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label htmlFor="backup">Khatib Cadangan</Label>
               <PetugasSelect
                 id="backup"
@@ -505,7 +508,7 @@ export default function AdminKhatibPage() {
               </button>
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               onClick={submitSchedule}
               disabled={saving || !fridayValid || isExistingDifferent}
@@ -527,8 +530,8 @@ export default function AdminKhatibPage() {
             )}
           </div>
 
-          <div className="mt-5 max-h-80 overflow-auto rounded-xl border border-slate-100">
-            <table className="w-full min-w-[560px] text-left text-xs">
+          <div className="mt-5 max-h-80 max-w-full overflow-auto rounded-xl border border-slate-100">
+            <table className="w-full table-auto text-left text-xs">
               <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="px-3 py-2.5">Tanggal</th>
@@ -551,16 +554,16 @@ export default function AdminKhatibPage() {
                       key={s.id}
                       className="transition-colors hover:bg-amber-50/40"
                     >
-                      <td className="px-3 py-2.5 text-slate-600">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">
                         {formatDateOnlyShort(new Date(s.fridayDate))}
                       </td>
-                      <td className="px-3 py-2.5 font-semibold text-slate-800">
+                      <td className="break-words px-3 py-2.5 font-semibold text-slate-800">
                         {s.khatibName}
                       </td>
-                      <td className="px-3 py-2.5 text-slate-500">
+                      <td className="break-words px-3 py-2.5 text-slate-500">
                         {s.backupKhatibName ?? "-"}
                       </td>
-                      <td className="px-3 py-2.5 text-slate-500">
+                      <td className="break-words px-3 py-2.5 text-slate-500">
                         {s.sermonTopic ?? "-"}
                       </td>
                       <td className="px-3 py-2.5">
