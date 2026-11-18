@@ -110,6 +110,35 @@ body {
   background-attachment: fixed;
 }
 
+/* Mode layar TV: kunci dokumen ke viewport. Hanya aktif di /tv dan /tv/preview. */
+html.tv-viewport-active,
+html.tv-viewport-active body {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important;
+}
+
+.tv-viewport-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #faf7f2;
+}
+
+.tv-viewport-stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -540px;
+  margin-left: -960px;
+  transform-origin: center center;
+  overflow: hidden;
+}
+
 .font-arabic {
   font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
 }
@@ -183,17 +212,19 @@ body {
   animation: marquee 35s linear infinite;
 }
 
+/* Track berisi teks yang duplikat, sehingga satu siklus = satu lebar teks. */
 @keyframes marquee-tv {
   0% {
-    transform: translate3d(100vw, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translate3d(-100%, 0, 0);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
 .animate-marquee-tv {
-  display: inline-block;
+  display: flex;
+  width: max-content;
   white-space: nowrap;
   animation: marquee-tv linear infinite;
   will-change: transform;

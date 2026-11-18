@@ -2,6 +2,7 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import { TvViewport } from "@/components/tv/tv-viewport";
 import { buildTvData } from "@/lib/public-data";
 import { TvDisplay } from "./TvDisplay";
 
@@ -15,5 +16,9 @@ export default async function TVPage() {
     console.error("[TV] Gagal menyiapkan data awal:", error);
   }
 
-  return <TvDisplay initialData={initialData} />;
+  return (
+    <TvViewport>
+      <TvDisplay initialData={initialData} />
+    </TvViewport>
+  );
 }

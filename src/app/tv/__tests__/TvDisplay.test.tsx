@@ -108,7 +108,9 @@ describe("TvDisplay layar shalat", () => {
     const { unmount } = render(<TvDisplay initialData={makeData(serverNow)} />);
 
     expect(screen.getByText("Luruskan & Rapatkan Shaf")).toBeTruthy();
-    expect(screen.getByText(/Kembali ke slide normal dalam/)).toBeTruthy();
+    expect(screen.queryByText(/Kembali ke slide normal dalam/)).toBeNull();
+    expect(screen.queryByText(/\d{2}:\d{2}:\d{2}/)).toBeNull();
+    expect(screen.getByText(/^\d{2}\.\d{2} WIB$/)).toBeTruthy();
     expect(
       screen.getByText("Selesai Shalat / Kembali ke Slide Normal"),
     ).toBeTruthy();
@@ -135,7 +137,8 @@ describe("TvDisplay layar shalat", () => {
     expect(
       screen.getByText("SHALAT BERJAMAAH SEDANG BERLANGSUNG"),
     ).toBeTruthy();
-    expect(screen.getByText(/Kembali ke slide normal dalam/)).toBeTruthy();
+    expect(screen.queryByText(/Kembali ke slide normal dalam/)).toBeNull();
+    expect(screen.queryByText(/\d{2}:\d{2}:\d{2}/)).toBeNull();
 
     unmount();
   });
@@ -160,7 +163,8 @@ describe("TvDisplay layar shalat", () => {
     );
 
     expect(screen.getByText("Luruskan & Rapatkan Shaf")).toBeTruthy();
-    expect(screen.getByText(/Kembali ke slide normal dalam/)).toBeTruthy();
+    expect(screen.queryByText(/Kembali ke slide normal dalam/)).toBeNull();
+    expect(screen.queryByText(/\d{2}:\d{2}:\d{2}/)).toBeNull();
 
     unmount();
   });

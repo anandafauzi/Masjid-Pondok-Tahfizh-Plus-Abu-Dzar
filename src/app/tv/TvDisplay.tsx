@@ -26,11 +26,11 @@ import {
   VolumeX,
 } from "lucide-react";
 
-function clockString(ms: number) {
+function clockString(ms: number, includeSeconds = true) {
   return new Intl.DateTimeFormat("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
+    ...(includeSeconds ? { second: "2-digit" } : {}),
     timeZone: "Asia/Jakarta",
   }).format(new Date(ms));
 }
@@ -649,7 +649,6 @@ export function TvDisplay({
           durationMinutes,
           isAligningShaf: elapsedMs < 60_000,
           dimProgress: getShalatScreenDimProgress(elapsedMs, durationMinutes),
-          remainingCountdown: countdown(endShalatMs, serverNow),
           imamName: imamInfo?.imamName ?? "Asatidz Pondok Tahfizh Abu Dzar",
           muadzinName: imamInfo?.muadzinName ?? null,
         };
@@ -663,7 +662,7 @@ export function TvDisplay({
   const renderFloatingControls = () => (
     <aside
       aria-label="Kontrol Layar TV"
-      className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0c1f16]/90 p-1.5 text-white backdrop-blur-md shadow-2xl transition-opacity duration-300 ${isMouseIdle ? "opacity-0 pointer-events-none" : "opacity-100"
+      className={`absolute bottom-4 right-4 z-50 flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0c1f16]/90 p-1.5 text-white backdrop-blur-md shadow-2xl transition-opacity duration-300 ${isMouseIdle ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
     >
       {/* WakeLock Anti-Sleep Status */}
@@ -724,7 +723,7 @@ export function TvDisplay({
 
   if (!data) {
     return (
-      <div suppressHydrationWarning className="flex min-h-dvh items-center justify-center bg-[#faf7f2] text-[#19261f] bg-islamic-pattern">
+      <div suppressHydrationWarning className="flex h-full w-full items-center justify-center bg-[#faf7f2] text-[#19261f] bg-islamic-pattern">
         <div className="relative text-center">
           <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-[#2d946e]/10 text-6xl ring-2 ring-[#2d946e]/30 animate-pulse">
             🕌
@@ -745,8 +744,8 @@ export function TvDisplay({
     tickerText ||
     "Selamat Datang di Masjid Pondok Tahfizh Plus Abu Dzar - Rumpin, Kabupaten Bogor";
   const tickerSpeed = Math.max(10, data.display.tickerSpeed || 50);
-  // Total jarak gerak dari luar kanan (100vw ~1920px) hingga keluar penuh di kiri
-  const totalDistancePx = 1920 + Math.max(600, tickerContent.length * 10);
+  // Satu siklus marquee = satu lebar teks (teks sengaja diduplikasi).
+  const totalDistancePx = Math.max(800, tickerContent.length * 12);
   const pxPerSecond = (tickerSpeed / 50) * 85;
   const tickerDuration = Math.max(16, Math.round(totalDistancePx / pxPerSecond));
 
@@ -760,7 +759,7 @@ export function TvDisplay({
   // KHUTBAH JUMAT FULLSCREEN MODE (Tampil hening dan khusyuk tanpa countdown / hitung mundur)
   if (khutbahVisible && activeKhutbah) {
     return (
-      <div suppressHydrationWarning className="relative flex min-h-dvh flex-col overflow-hidden bg-gradient-to-br from-[#faf7f2] via-[#eaf6f0] to-[#faf7f2] text-[#19261f] bg-islamic-pattern">
+      <div suppressHydrationWarning className="relative flex h-full w-full flex-col overflow-hidden bg-gradient-to-br from-[#faf7f2] via-[#eaf6f0] to-[#faf7f2] text-[#19261f] bg-islamic-pattern">
         <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#3eb489]/15 via-transparent to-transparent" />
 
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-6 text-center sm:px-10">
@@ -834,7 +833,7 @@ export function TvDisplay({
     return (
       <div
         suppressHydrationWarning
-        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#08130e] p-6 text-center text-white select-none animate-fade-in sm:p-12 ${isMouseIdle ? "cursor-none" : ""
+        className={`relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-[#08130e] p-6 text-center text-white select-none animate-fade-in sm:p-12 ${isMouseIdle ? "cursor-none" : ""
           }`}
       >
         <div
@@ -889,10 +888,6 @@ export function TvDisplay({
               </span>
             </div>
           )}
-
-          <p className="mt-5 text-xs font-semibold text-[#c1d1c7] sm:text-sm">
-            Kembali ke slide normal dalam {activeShalatMode.remainingCountdown}
-          </p>
         </div>
 
         <button
@@ -908,7 +903,7 @@ export function TvDisplay({
           className="absolute bottom-4 right-6 z-10 font-mono text-xs text-[#c1d1c7]"
           style={{ opacity: secondaryOpacity }}
         >
-          {clockString(serverNow)} WIB
+          {clockString(serverNow, false)} WIB
         </div>
 
         {renderFloatingControls()}
@@ -920,7 +915,7 @@ export function TvDisplay({
   return (
     <div
       suppressHydrationWarning
-      className={`relative flex h-screen h-dvh max-h-screen w-screen max-w-full flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none ${isMouseIdle ? "cursor-none" : ""
+      className={`relative flex h-full w-full flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none ${isMouseIdle ? "cursor-none" : ""
         }`}
     >
       {/* Background ambient lighting */}
@@ -1012,11 +1007,11 @@ export function TvDisplay({
             return (
               <div
                 suppressHydrationWarning
-                className="fixed inset-0 z-30 overflow-y-auto bg-[#0d1e15] text-center animate-fade-in select-none"
+                className="absolute inset-0 z-30 overflow-hidden bg-[#0d1e15] text-center animate-fade-in select-none"
               >
-                <div className="pointer-events-none fixed inset-0 bg-radial-gradient from-[#2d946e]/30 via-transparent to-transparent" />
+                <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/30 via-transparent to-transparent" />
 
-                <div className="relative z-10 flex min-h-full flex-col items-center justify-center p-4 sm:p-8">
+                <div className="relative z-10 flex h-full flex-col items-center justify-center p-4 sm:p-8">
                   <div className="flex w-full max-w-4xl flex-col items-center">
                     <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#2d946e]/20 border-2 border-[#2d946e]/40 text-4xl shadow-2xl animate-pulse">
                       🕌
@@ -1049,9 +1044,9 @@ export function TvDisplay({
           return (
             <div
               suppressHydrationWarning
-              className="fixed inset-0 z-30 overflow-y-auto bg-[#11231a] text-center animate-fade-in select-none"
+              className="absolute inset-0 z-30 overflow-hidden bg-[#11231a] text-center animate-fade-in select-none"
             >
-              <div className="flex min-h-full flex-col items-center justify-center p-3 sm:p-6 lg:p-8">
+              <div className="flex h-full flex-col items-center justify-center p-3 sm:p-6 lg:p-8">
                 <div
                   className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${isFinalCountdown
                       ? "bg-amber-400 text-slate-950 ring-4 ring-amber-400/50 animate-pulse font-black"
@@ -1586,7 +1581,7 @@ export function TvDisplay({
 
                     {ann.details && (
                       <div className="mt-4 max-w-3xl rounded-2xl bg-white/5 border border-white/10 p-4 sm:p-6 backdrop-blur-md">
-                        <p className="whitespace-pre-line text-base sm:text-xl lg:text-2xl font-medium text-slate-200 leading-relaxed">
+                        <p className="whitespace-pre-line break-words text-base sm:text-xl lg:text-2xl font-medium text-slate-200 leading-relaxed">
                           {ann.details}
                         </p>
                       </div>
@@ -1629,7 +1624,7 @@ export function TvDisplay({
 
                     {ann.details && (
                       <div className="mt-4 max-w-3xl rounded-2xl bg-white border border-[#ded5c4] p-4 sm:p-6 shadow-sm">
-                        <p className="whitespace-pre-line text-sm sm:text-lg lg:text-xl font-semibold text-[#3a4c41] leading-relaxed">
+                        <p className="whitespace-pre-line break-words text-sm sm:text-lg lg:text-xl font-semibold text-[#3a4c41] leading-relaxed">
                           {ann.details}
                         </p>
                       </div>
@@ -1672,7 +1667,7 @@ export function TvDisplay({
 
                   {ann.details && (
                     <div className="mt-4 max-w-3xl rounded-2xl bg-white border border-[#ded5c4] p-4 sm:p-6 shadow-sm">
-                      <p className="whitespace-pre-line text-sm sm:text-lg lg:text-xl font-semibold text-[#3a4c41] leading-relaxed">
+                      <p className="whitespace-pre-line break-words text-sm sm:text-lg lg:text-xl font-semibold text-[#3a4c41] leading-relaxed">
                         {ann.details}
                       </p>
                     </div>
@@ -1744,13 +1739,18 @@ export function TvDisplay({
               <span>INFO MASJID</span>
             </div>
             <div className="flex-1 overflow-hidden min-w-0 relative flex items-center">
-              <span
+              <div
                 key={tickerContent}
-                className="inline-block whitespace-nowrap animate-marquee-tv pl-4"
+                className="flex animate-marquee-tv"
                 style={{ animationDuration: `${tickerDuration}s` }}
               >
-                {tickerContent}
-              </span>
+                <span className="block whitespace-nowrap py-0.5 pl-4 pr-10">
+                  {tickerContent}
+                </span>
+                <span aria-hidden="true" className="block whitespace-nowrap py-0.5 pl-4 pr-10">
+                  {tickerContent}
+                </span>
+              </div>
             </div>
           </div>
         </footer>
@@ -1758,7 +1758,7 @@ export function TvDisplay({
 
       {/* Offline Status Warning Indicator */}
       {!connected && (
-        <div className="fixed bottom-16 right-3 z-40 flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-xl bg-red-600/90 px-3 py-2 text-[10px] font-bold text-white shadow-2xl backdrop-blur sm:bottom-14 sm:right-6 sm:px-4 sm:py-2.5 sm:text-xs">
+        <div className="absolute bottom-16 right-3 z-40 flex max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-xl bg-red-600/90 px-3 py-2 text-[10px] font-bold text-white shadow-2xl backdrop-blur sm:bottom-14 sm:right-6 sm:px-4 sm:py-2.5 sm:text-xs">
           <WifiOff className="h-4 w-4 shrink-0" />
           <span>Koneksi Offline — Menampilkan Data Tersimpan</span>
         </div>
