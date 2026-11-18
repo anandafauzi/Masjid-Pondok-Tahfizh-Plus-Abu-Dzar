@@ -3,11 +3,9 @@ import { getPetugasList } from "@/lib/petugas";
 import { getImamSchedulesBetween, getKhatibScheduleForDate } from "@/lib/schedule-data";
 import { getMosqueSettings } from "@/lib/settings";
 import {
-  addDaysUTC,
   dateOnlyToString,
   dateOnlyToUTC,
   formatDateOnlyLong,
-  todayDateOnly,
 } from "@/lib/datetime";
 import {
   buildReminderRecipients,
@@ -22,11 +20,20 @@ import {
   sendReminderEmail,
   type EmailConfig,
 } from "@/lib/email";
+import {
+  resolveReminderTargetDate,
+  type ReminderSettings,
+} from "@/lib/reminder-settings";
+import { getReminderSettings } from "@/lib/reminder-settings-store";
 import type { ReminderStatus } from "@prisma/client";
 
-/** Tanggal tugas H-1: besok menurut kalender WIB. */
-export function getTomorrowDateOnly(): Date {
-  return addDaysUTC(todayDateOnly(), 1);
+/**
+ * Tanggal tugas yang harus diingatkan pada invoke cron ini, mengikuti offset
+ * H- dan jam kirim yang diatur admin (WIB).
+ */
+export async function getReminderTargetDateOnly(now: Date = new Date()): Promise<Date> {
+  const settings = await getReminderSettings();
+  return resolveReminderTargetDate(now, settings);
 }
 
 export interface ReminderPlanRecipient extends ReminderRecipient {
@@ -54,6 +61,7 @@ export interface ReminderPlan {
   isFriday: boolean;
   mosqueName: string;
   email: EmailConfig;
+  settings: ReminderSettings;
   assignments: DutyAssignment[];
   unmatchedNames: string[];
   recipients: ReminderPlanRecipient[];
@@ -101,11 +109,12 @@ export async function buildReminderPlan(dateOnly: Date): Promise<ReminderPlan> {
   const ymd = dateOnlyToString(date);
   const isFriday = date.getUTCDay() === 5;
 
-  const [imamSchedules, khatib, petugas, mosque, logs] = await Promise.all([
+  const [imamSchedules, khatib, petugas, mosque, settings, logs] = await Promise.all([
     getImamSchedulesBetween(date, date),
     isFriday ? getKhatibScheduleForDate(date) : Promise.resolve(null),
     getPetugasList(),
     getMosqueSettings(),
+    getReminderSettings(),
     prisma.reminderLog
       .findMany({ where: { reminderDate: date }, orderBy: { createdAt: "desc" } })
       .catch((error) => {
@@ -120,9 +129,6 @@ export async function buildReminderPlan(dateOnly: Date): Promise<ReminderPlan> {
     if (item.imamName && !isPlaceholderName(item.imamName)) {
       assignments.push({ role: "IMAM", prayerName: item.prayerName, personName: item.imamName });
     }
-    if (item.muadzinName && !isPlaceholderName(item.muadzinName)) {
-      assignments.push({ role: "MUADZIN", prayerName: item.prayerName, personName: item.muadzinName });
-    }
   }
 
   if (isFriday && khatib?.khatibName && !isPlaceholderName(khatib.khatibName)) {
@@ -135,6 +141,7 @@ export async function buildReminderPlan(dateOnly: Date): Promise<ReminderPlan> {
     mosqueName: mosque.mosqueName,
     assignments,
     petugas,
+    settings,
   });
 
   const byKey = new Map(logs.map((log) => [log.dedupeKey, log]));
@@ -163,6 +170,7 @@ export async function buildReminderPlan(dateOnly: Date): Promise<ReminderPlan> {
     isFriday,
     mosqueName: mosque.mosqueName,
     email: getEmailConfig(),
+    settings,
     assignments,
     unmatchedNames,
     recipients: planRecipients,

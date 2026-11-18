@@ -21,9 +21,10 @@ khatib Jumat, kajian, countdown adzan–iqamah, dan panel admin lengkap.
   hari dan jam), lalu tampil otomatis setiap pekan tanpa input tanggal ulang.
   Satu pertemuan dapat dipindahkan ke hari/jam lain tanpa mengubah pekan
   lainnya, dan dapat dikembalikan ke jadwal semula.
-- **Pengingat Email H-1**: pengingat otomatis lewat Resend ke imam, muadzin,
-  dan khatib Jumat sehari sebelum bertugas, dengan pratinjau, kirim manual, dan
-  riwayat.
+- **Pengingat Email terjadwal**: pengingat otomatis lewat Resend ke imam dan
+  khatib Jumat. Offset H- dan jam kirim WIB, serta template imam/khatib, bisa
+  diubah admin; muadzin tidak menerima email. Tersedia pratinjau langsung,
+  kirim manual, dan riwayat.
 - **Rotasi berbasis tanggal**: urutan imam/khatib dihitung dari tanggal
   berlaku, bukan counter perangkat, dan urutannya dapat diubah dari panel
   admin (tombol naik/turun).
@@ -168,13 +169,17 @@ cd android
 Hasil: `android/app/build/outputs/apk/debug/app-debug.apk`. Untuk distribusi
 Play Store/APK release, tambahkan `signingConfig` release terlebih dahulu.
 
-## Pengingat Email H-1
+## Pengingat Email
 
-Pengingat otomatis dikirim **satu hari sebelum bertugas** kepada imam,
-muadzin, dan khatib Jumat. Alamat email diambil dari **Admin → Data Petugas**.
-Pengiriman memakai **Resend** lewat API resminya. Gateway pihak ketiga tidak
-dipakai. Paket gratis Resend menyediakan 3.000 email/bulan dan 100 email/hari,
-cukup untuk kebutuhan pengingat masjid.
+Pengingat otomatis dikirim kepada **imam dan khatib** sesuai jadwal yang diatur
+di **Admin → Pengingat Email**: admin bebas memilih offset **H- berapa** (0 =
+hari H, maksimal 30) dan **jam kirim WIB**. Alamat email diambil dari
+**Admin → Data Petugas**. Muadzin tetap tampil di jadwal, aplikasi, dan layar
+TV, tetapi sengaja tidak dikirimi email pengingat.
+
+Pengiriman memakai **Resend** lewat API resminya. Gateway WhatsApp/SMS pihak
+ketiga tidak dipakai. Paket gratis Resend menyediakan 3.000 email/bulan dan
+100 email/hari, cukup untuk kebutuhan pengingat masjid.
 
 1. Isi alamat email setiap petugas di menu **Data Petugas**.
 2. Siapkan Resend:
@@ -196,16 +201,28 @@ cukup untuk kebutuhan pengingat masjid.
 
    Tidak perlu message template atau proses persetujuan pesan. Panduan Resend:
    <https://resend.com/docs>.
-4. Pratinjau, kirim manual, dan lihat riwayat di **Admin → Pengingat Email**.
+4. Di **Admin → Pengingat Email**, atur offset H-, jam kirim WIB, dan dua
+   template pesan yang terpisah (**Imam** dan **Khatib**). Variabel yang bisa
+   dipakai: `{nama}`, `{masjid}`, `{tanggal}`, `{tugas}`, `{daftar_tugas}`.
+   Pratinjau pesan berubah seketika saat kolom template diedit, sebelum tombol
+   **Simpan pengaturan** ditekan. Jika seseorang memiliki tugas imam sekaligus
+   khatib, template **khatib** yang dipakai.
+5. Pratinjau penerima, kirim manual, dan lihat riwayat di halaman yang sama.
    Tombol kirim hanya aktif bila `RESEND_API_KEY` dan `EMAIL_FROM` sudah terisi.
-5. Di Vercel, cron berjalan otomatis setiap hari pukul **16.00 WIB** (09.00
-   UTC) melalui `/api/cron/h-1-reminders`. Endpoint ini hanya menerima
-   permintaan dengan header `Authorization: Bearer <CRON_SECRET>`.
+6. Pengiriman tetap otomatis lewat cron harian
+   `/api/cron/h-1-reminders` (header `Authorization: Bearer <CRON_SECRET>`).
+   Vercel Cron berjalan dalam UTC; pada paket **Hobby** cron harian hanya bisa
+   dipicu sekali per hari dan bisa meleset sampai sekitar ±1 jam. Endpoint
+   menghitung target dari jam WIB yang disimpan admin: bila invoke datang
+   sebelum jam itu, pengingat yang jatuh tempo sebelumnya dikirim pada invoke
+   terdekat. Untuk presisi menit, gunakan scheduler eksternal atau Vercel Pro.
 
 Pengiriman bersifat idempoten: satu penerima hanya menerima satu email per
 tanggal tugas (semua tugasnya digabung), dan riwayat disimpan di tabel
 `reminder_logs` dengan provider `email`. Pengiriman ulang hanya dilakukan lewat
-tombol **Kirim ulang** di panel admin.
+tombol **Kirim ulang** di panel admin. `vercel.json` memakai jadwal harian
+pukul 09.00 UTC (16.00 WIB) sebagai jadwal cron dasar; jam pengiriman yang
+dipilih admin tetap dipakai untuk menentukan tanggal target.
 
 Uji tanpa mengirim email:
 

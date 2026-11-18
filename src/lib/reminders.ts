@@ -1,4 +1,5 @@
 import type { PetugasItem } from "@/types/petugas";
+import type { ReminderSettings } from "@/lib/reminder-settings";
 import { normalizeEmail } from "@/lib/email";
 
 export type ReminderDutyRole = "IMAM" | "MUADZIN" | "KHATIB";
@@ -79,7 +80,7 @@ export function dutyLabel(role: ReminderDutyRole, prayerName: string | null): st
 
 /**
  * Cari petugas yang cocok. Prioritas: nama sama + peran sama, lalu nama sama
- * pada peran apa pun (mis. merangkap imam & muadzin).
+ * pada peran apa pun (mis. merangkap imam & khatib).
  */
 export function findPetugasForName(
   name: string,
@@ -98,18 +99,58 @@ export function findPetugasForName(
   return active.find((item) => normalizePersonName(item.name) === target) ?? null;
 }
 
+/** Template khatib dipakai bila ada tugas khatib; jika tidak, template imam. */
+function templateForDuties(duties: ReminderDuty[], settings: ReminderSettings): string {
+  return duties.some((duty) => duty.role === "KHATIB")
+    ? settings.khatibTemplate
+    : settings.imamTemplate;
+}
+
+/** Isi variabel template tanpa memakai regex agar aman untuk teks bebas. */
+export function renderReminderMessage({
+  template,
+  name,
+  dateLabel,
+  mosqueName,
+  duties,
+}: {
+  template: string;
+  name: string;
+  dateLabel: string;
+  mosqueName: string;
+  duties: ReminderDuty[];
+}): string {
+  const ringkas = duties.map((duty) => duty.label).join(", ");
+  const daftar = duties.map((duty) => `- ${duty.label}`).join("\n");
+  const values: Record<string, string> = {
+    "{nama}": name,
+    "{masjid}": mosqueName,
+    "{tanggal}": dateLabel,
+    "{tugas}": ringkas,
+    "{daftar_tugas}": daftar,
+  };
+
+  let result = template;
+  for (const [key, value] of Object.entries(values)) {
+    result = result.split(key).join(value);
+  }
+  return result;
+}
+
 export function buildReminderRecipients({
   dateYmd,
   dateLabel,
   mosqueName,
   assignments,
   petugas,
+  settings,
 }: {
   dateYmd: string;
   dateLabel: string;
   mosqueName: string;
   assignments: DutyAssignment[];
   petugas: PetugasItem[];
+  settings: ReminderSettings;
 }): ReminderRecipient[] {
   interface Draft {
     key: string;
@@ -121,6 +162,8 @@ export function buildReminderRecipients({
   const drafts = new Map<string, Draft>();
 
   for (const assignment of assignments) {
+    // Muadzin sengaja tidak termasuk dalam pengingat email.
+    if (assignment.role === "MUADZIN") continue;
     const rawName = assignment.personName?.trim() ?? "";
     if (isPlaceholderName(rawName)) continue;
 
@@ -168,7 +211,8 @@ export function buildReminderRecipients({
         rawEmail: draft.rawEmail,
         duties: draft.duties,
         roles: Array.from(new Set(draft.duties.map((duty) => duty.role))),
-        message: buildReminderMessage({
+        message: renderReminderMessage({
+          template: templateForDuties(draft.duties, settings),
           name: draft.name,
           dateLabel,
           mosqueName,
@@ -206,7 +250,8 @@ export function buildReminderRecipients({
       rawEmail: entry.rawEmail,
       duties: entry.duties,
       roles: Array.from(new Set(entry.duties.map((duty) => duty.role))),
-      message: buildReminderMessage({
+      message: renderReminderMessage({
+        template: templateForDuties(entry.duties, settings),
         name,
         dateLabel,
         mosqueName,
@@ -218,35 +263,7 @@ export function buildReminderRecipients({
   return [...withEmail, ...withoutEmail].sort((a, b) => a.name.localeCompare(b.name, "id"));
 }
 
-export function buildReminderMessage({
-  name,
-  dateLabel,
-  mosqueName,
-  duties,
-}: {
-  name: string;
-  dateLabel: string;
-  mosqueName: string;
-  duties: ReminderDuty[];
-}): string {
-  const lines = [
-    "🕌 PENGINGAT TUGAS BESOK",
-    `Assalamu'alaikum ${name},`,
-    "",
-    `Ini pengingat dari ${mosqueName} bahwa Anda bertugas besok:`,
-    "",
-    dateLabel,
-    ...duties.map((duty) => `- ${duty.label}`),
-    "",
-    "Mohon hadir 15 menit sebelum adzan. Jika berhalangan, mohon konfirmasi ke Pengurus DKM.",
-    "",
-    "Jazakumullahu khairan.",
-  ];
-
-  return lines.join("\n");
-}
-
-/** Ringkasan tugas untuk disimpan di kolom log (mis. "Imam Subuh, Muadzin Zuhur"). */
+/** Ringkasan tugas untuk disimpan di kolom log (mis. "Imam Subuh, Imam Zuhur"). */
 export function summarizeDuties(duties: ReminderDuty[]): string {
   return duties.map((duty) => duty.label).join(", ");
 }

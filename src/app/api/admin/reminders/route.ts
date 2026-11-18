@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import {
   buildReminderPlan,
-  getTomorrowDateOnly,
+  getReminderTargetDateOnly,
   sendRemindersForDate,
 } from "@/lib/reminder-service";
 
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const dateParam = request.nextUrl.searchParams.get("date");
-    const dateOnly = dateParam ? parseDateOnly(dateParam) : getTomorrowDateOnly();
+    const dateOnly = dateParam ? parseDateOnly(dateParam) : await getReminderTargetDateOnly();
     if (!dateOnly) return badRequest("Format tanggal harus yyyy-MM-dd");
 
     const plan = await buildReminderPlan(dateOnly);
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       force?: unknown;
     };
 
-    const dateOnly = body.date ? parseDateOnly(body.date) : getTomorrowDateOnly();
+    const dateOnly = body.date ? parseDateOnly(body.date) : await getReminderTargetDateOnly();
     if (!dateOnly) return badRequest("Format tanggal harus yyyy-MM-dd");
 
     const dedupeKeys = Array.isArray(body.dedupeKeys)

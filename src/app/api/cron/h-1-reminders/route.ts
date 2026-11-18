@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { badRequest, parseDateOnly, serverError } from "@/lib/api";
 import {
   buildReminderPlan,
-  getTomorrowDateOnly,
+  getReminderTargetDateOnly,
   sendRemindersForDate,
 } from "@/lib/reminder-service";
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const dateParam = request.nextUrl.searchParams.get("date");
-    const dateOnly = dateParam ? parseDateOnly(dateParam) : getTomorrowDateOnly();
+    const dateOnly = dateParam ? parseDateOnly(dateParam) : await getReminderTargetDateOnly();
     if (!dateOnly) return badRequest("Format tanggal harus yyyy-MM-dd");
 
     const dryRun = ["1", "true", "yes"].includes(
@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
         date: plan.date,
         dateLabel: plan.dateLabel,
         email: plan.email,
+        settings: plan.settings,
         recipients: plan.recipients.map((recipient) => ({
           name: recipient.name,
           email: recipient.email,
