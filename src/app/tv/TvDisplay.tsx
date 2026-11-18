@@ -94,7 +94,14 @@ function cleanKhatibName(name?: string | null): string {
   );
 }
 
-export function TvDisplay({ initialData = null }: { initialData?: TvData | null }) {
+export function TvDisplay({
+  initialData = null,
+  previewMode = false,
+}: {
+  initialData?: TvData | null;
+  /** Dipakai halaman pratinjau admin: data tidak di-refetch dari server. */
+  previewMode?: boolean;
+}) {
   const [data, setData] = useState<TvData | null>(initialData);
   const [offset, setOffset] = useState(0);
   // Nilai awal clock memakai waktu server agar render SSR dan hidrasi klien
@@ -177,6 +184,10 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
 
   useEffect(() => {
     if (initialData) {
+      // Halaman pratinjau mengirim data baru tiap kali fase/form diubah.
+      // Tanpa sinkronisasi ini, TvDisplay tetap memakai data render pertama.
+      setData(initialData);
+      setManualExitShalatKey(null);
       setOffset(new Date(initialData.serverTime).getTime() - Date.now());
     } else {
       // Fallback offline hanya dipakai bila server tidak mengirim data awal.
@@ -192,6 +203,8 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
         // Non-fatal
       }
     }
+
+    if (previewMode) return;
 
     load();
 
@@ -213,7 +226,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
       clearInterval(poll);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [load, initialData]);
+  }, [load, initialData, previewMode]);
 
   useEffect(() => {
     const clock = setInterval(() => setNow(Date.now()), 1000);
@@ -240,6 +253,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
 
   // 1. Screen Wake Lock API (Anti-Sleep TV Display)
   useEffect(() => {
+    if (previewMode) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let wakeLockSentinel: any = null;
 
@@ -272,7 +286,7 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
         wakeLockSentinel.release().catch(() => { });
       }
     };
-  }, []);
+  }, [previewMode]);
 
   // 2. Mouse Idle Detection & Fullscreen Listener
   useEffect(() => {

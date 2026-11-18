@@ -33,6 +33,10 @@ import {
   MAX_SHALAT_SCREEN_DURATION_MINUTES,
   MIN_SHALAT_SCREEN_DURATION_MINUTES,
 } from "@/lib/tv-display-settings";
+import {
+  readTvPreviewConfig,
+  writeTvPreviewConfig,
+} from "@/lib/tv-preview";
 
 interface DisplaySettingsForm {
   slideIntervalSeconds: number;
@@ -102,6 +106,25 @@ export default function AdminTvPage() {
       }
     })();
   }, []);
+
+  // Pratinjau di tab lain ikut berubah saat admin mengedit form, tanpa perlu
+  // menunggu simpan atau menunggu jadwal iqamah asli.
+  useEffect(() => {
+    writeTvPreviewConfig({
+      phase: readTvPreviewConfig()?.phase ?? "shalat-bright",
+      form,
+      updatedAt: Date.now(),
+    });
+  }, [form]);
+
+  function openPreview() {
+    writeTvPreviewConfig({
+      phase: readTvPreviewConfig()?.phase ?? "shalat-bright",
+      form,
+      updatedAt: Date.now(),
+    });
+    window.open("/tv/preview", "_blank", "noopener,noreferrer");
+  }
 
   async function save() {
     setSaving(true);
@@ -583,12 +606,28 @@ export default function AdminTvPage() {
               )}
             </Card>
 
-            {/* TOMBOL SIMPAN */}
-            <div className="flex justify-end">
-              <Button onClick={save} disabled={saving} className="w-full sm:w-auto">
-                <Save className="h-4 w-4" />
-                {saving ? "Menyimpan Pengaturan..." : "Simpan Semua Pengaturan TV"}
-              </Button>
+            {/* TOMBOL PRATINJAU & SIMPAN */}
+            <div className="space-y-3">
+              <div className="flex flex-col justify-end gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={openPreview}
+                  className="w-full sm:w-auto"
+                >
+                  <MonitorPlay className="h-4 w-4" />
+                  Pratinjau Layar TV
+                </Button>
+                <Button onClick={save} disabled={saving} className="w-full sm:w-auto">
+                  <Save className="h-4 w-4" />
+                  {saving ? "Menyimpan Pengaturan..." : "Simpan Semua Pengaturan TV"}
+                </Button>
+              </div>
+              <p className="text-right text-xs leading-relaxed text-slate-500">
+                Pratinjau memakai nilai form terbaru, termasuk yang belum disimpan.
+                Bila tab pratinjau sudah dibuka, tampilannya ikut berubah otomatis
+                saat Anda mengedit.
+              </p>
             </div>
           </div>
         </div>

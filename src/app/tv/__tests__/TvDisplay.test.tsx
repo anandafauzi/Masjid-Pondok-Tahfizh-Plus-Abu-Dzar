@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TvDisplay } from "@/app/tv/TvDisplay";
 import type { TvData } from "@/lib/public-data";
+import {
+  DEFAULT_TV_PREVIEW_CONFIG,
+  buildPreviewTvData,
+} from "@/lib/tv-preview";
 
 const IQAMAH_MS = Date.parse("2026-11-18T18:10:00+07:00");
 
@@ -131,6 +135,31 @@ describe("TvDisplay layar shalat", () => {
     expect(
       screen.getByText("SHALAT BERJAMAAH SEDANG BERLANGSUNG"),
     ).toBeTruthy();
+    expect(screen.getByText(/Kembali ke slide normal dalam/)).toBeTruthy();
+
+    unmount();
+  });
+
+  it("langsung menampilkan pratinjau shalat terang tanpa menunggu iqamah asli", () => {
+    const serverNow = IQAMAH_MS;
+    vi.spyOn(Date, "now").mockReturnValue(serverNow);
+    const base = makeData(serverNow, 5);
+    const previewData = buildPreviewTvData(base, {
+      ...DEFAULT_TV_PREVIEW_CONFIG,
+      phase: "shalat-bright",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve(previewData) }),
+      ),
+    );
+
+    const { unmount } = render(
+      <TvDisplay initialData={previewData} previewMode />,
+    );
+
+    expect(screen.getByText("Luruskan & Rapatkan Shaf")).toBeTruthy();
     expect(screen.getByText(/Kembali ke slide normal dalam/)).toBeTruthy();
 
     unmount();
