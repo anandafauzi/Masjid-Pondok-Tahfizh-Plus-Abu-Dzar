@@ -1,5 +1,5 @@
 import type { PetugasItem } from "@/types/petugas";
-import { normalizeWhatsAppNumber } from "@/lib/whatsapp";
+import { normalizeEmail } from "@/lib/email";
 
 export type ReminderDutyRole = "IMAM" | "MUADZIN" | "KHATIB";
 
@@ -21,8 +21,8 @@ export interface ReminderDuty {
 export interface ReminderRecipient {
   dedupeKey: string;
   name: string;
-  phone: string | null;
-  rawPhone: string | null;
+  email: string | null;
+  rawEmail: string | null;
   duties: ReminderDuty[];
   roles: ReminderDutyRole[];
   message: string;
@@ -114,7 +114,7 @@ export function buildReminderRecipients({
   interface Draft {
     key: string;
     name: string;
-    rawPhone: string | null;
+    rawEmail: string | null;
     duties: ReminderDuty[];
   }
 
@@ -145,27 +145,27 @@ export function buildReminderRecipients({
     drafts.set(personKey, {
       key: personKey,
       name: match?.name?.trim() || rawName,
-      rawPhone: match?.phone?.trim() || null,
+      rawEmail: match?.email?.trim() || null,
       duties: [duty],
     });
   }
 
-  // Gabungkan orang berbeda yang memakai nomor WhatsApp yang sama agar tidak
-  // menerima dua pesan terpisah untuk tanggal yang sama.
+  // Gabungkan orang berbeda yang memakai email yang sama agar tidak menerima
+  // dua pesan terpisah untuk tanggal yang sama.
   const merged = new Map<
     string,
-    { names: string[]; phone: string; rawPhone: string | null; duties: ReminderDuty[] }
+    { names: string[]; email: string; rawEmail: string | null; duties: ReminderDuty[] }
   >();
-  const withoutPhone: ReminderRecipient[] = [];
+  const withoutEmail: ReminderRecipient[] = [];
 
   for (const draft of drafts.values()) {
-    const normalized = normalizeWhatsAppNumber(draft.rawPhone);
+    const normalized = normalizeEmail(draft.rawEmail);
     if (!normalized) {
-      withoutPhone.push({
-        dedupeKey: `${dateYmd}:nophone:${draft.key}`,
+      withoutEmail.push({
+        dedupeKey: `${dateYmd}:noemail:${draft.key}`,
         name: draft.name,
-        phone: null,
-        rawPhone: draft.rawPhone,
+        email: null,
+        rawEmail: draft.rawEmail,
         duties: draft.duties,
         roles: Array.from(new Set(draft.duties.map((duty) => duty.role))),
         message: buildReminderMessage({
@@ -191,19 +191,19 @@ export function buildReminderRecipients({
 
     merged.set(normalized, {
       names: [draft.name],
-      phone: normalized,
-      rawPhone: draft.rawPhone,
+      email: normalized,
+      rawEmail: draft.rawEmail,
       duties: [...draft.duties],
     });
   }
 
-  const withPhone: ReminderRecipient[] = Array.from(merged.values()).map((entry) => {
+  const withEmail: ReminderRecipient[] = Array.from(merged.values()).map((entry) => {
     const name = entry.names.join(" & ");
     return {
-      dedupeKey: `${dateYmd}:wa:${entry.phone}`,
+      dedupeKey: `${dateYmd}:email:${entry.email}`,
       name,
-      phone: entry.phone,
-      rawPhone: entry.rawPhone,
+      email: entry.email,
+      rawEmail: entry.rawEmail,
       duties: entry.duties,
       roles: Array.from(new Set(entry.duties.map((duty) => duty.role))),
       message: buildReminderMessage({
@@ -215,7 +215,7 @@ export function buildReminderRecipients({
     };
   });
 
-  return [...withPhone, ...withoutPhone].sort((a, b) => a.name.localeCompare(b.name, "id"));
+  return [...withEmail, ...withoutEmail].sort((a, b) => a.name.localeCompare(b.name, "id"));
 }
 
 export function buildReminderMessage({
@@ -230,20 +230,17 @@ export function buildReminderMessage({
   duties: ReminderDuty[];
 }): string {
   const lines = [
-    "🕌 *PENGINGAT TUGAS BESOK*",
-    `_${mosqueName}_`,
+    "🕌 PENGINGAT TUGAS BESOK",
+    `Assalamu'alaikum ${name},`,
     "",
-    "السلام عليكم ورحمة الله وبركاته",
-    `*${name}*`,
+    `Ini pengingat dari ${mosqueName} bahwa Anda bertugas besok:`,
     "",
-    "Anda dijadwalkan bertugas besok:",
-    "",
-    `📅 *${dateLabel}*`,
-    ...duties.map((duty) => `• *${duty.label}*`),
+    dateLabel,
+    ...duties.map((duty) => `- ${duty.label}`),
     "",
     "Mohon hadir 15 menit sebelum adzan. Jika berhalangan, mohon konfirmasi ke Pengurus DKM.",
     "",
-    "جزاكم الله خيرا",
+    "Jazakumullahu khairan.",
   ];
 
   return lines.join("\n");

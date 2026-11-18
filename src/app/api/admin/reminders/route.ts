@@ -59,9 +59,9 @@ export async function POST(request: NextRequest) {
       return ok({ results: [], plan });
     }
 
-    if (!plan.gateway.configured) {
+    if (!plan.email.configured) {
       return NextResponse.json(
-        { error: plan.gateway.hint, gateway: plan.gateway, plan },
+        { error: plan.email.hint, email: plan.email, plan },
         { status: 503 }
       );
     }
@@ -71,6 +71,6 @@ export async function POST(request: NextRequest) {
     return ok({ results, plan: refreshed });
   } catch (error) {
     console.error("[admin] Gagal mengirim pengingat:", error);
-    return serverError("Gagal mengirim pengingat WhatsApp");
+    return serverError("Gagal mengirim pengingat email");
   }
 }

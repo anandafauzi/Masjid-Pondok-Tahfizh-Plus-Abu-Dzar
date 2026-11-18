@@ -12,11 +12,9 @@ import {
   ExternalLink,
   History,
   Loader2,
-  MessageCircle,
-  Phone,
+  Mail,
   RefreshCw,
   Send,
-  Smartphone,
   XCircle,
 } from "lucide-react";
 import { Badge, Button, Card, PageHeader, SectionHeading } from "@/components/ui";
@@ -105,12 +103,12 @@ export default function AdminPengingatPage() {
   async function send(dedupeKeys?: string[], force = false) {
     const key = dedupeKeys?.length === 1 ? dedupeKeys[0] : "__all__";
     if (!dedupeKeys?.length) {
-      const total = plan?.recipients.filter((r) => r.phone && r.status !== "SENT").length ?? 0;
+      const total = plan?.recipients.filter((r) => r.email && r.status !== "SENT").length ?? 0;
       if (!total) {
         toast.error("Tidak ada penerima yang perlu dikirimi pesan");
         return;
       }
-      if (!confirm(`Kirim pengingat WhatsApp ke ${total} penerima untuk tanggal ${plan?.dateLabel}?`)) {
+      if (!confirm(`Kirim pengingat email ke ${total} penerima untuk tanggal ${plan?.dateLabel}?`)) {
         return;
       }
     } else if (force) {
@@ -144,60 +142,59 @@ export default function AdminPengingatPage() {
     }
   }
 
-  const sendable = plan?.recipients.filter((r) => r.phone && r.status !== "SENT") ?? [];
-  const gateway = plan?.gateway;
+  const sendable = plan?.recipients.filter((r) => r.email && r.status !== "SENT") ?? [];
+  const emailConfig = plan?.email;
 
   return (
     <div className="space-y-6">
       <PageHeader
         icon={BellRing}
-        title="Pengingat WhatsApp H-1"
-        description="Kirim pengingat otomatis sehari sebelum bertugas kepada imam, muadzin, dan khatib lewat WhatsApp Cloud API resmi Meta. Nomor WhatsApp diambil dari menu Data Petugas."
+        title="Pengingat Email H-1"
+        description="Kirim pengingat otomatis sehari sebelum bertugas kepada imam, muadzin, dan khatib lewat email menggunakan Resend. Alamat email diambil dari menu Data Petugas."
       />
 
-      {/* Status gateway */}
-      <Card className={gateway?.configured ? "border-[#bde5d2] bg-[#f0f9f4]" : "border-[#ecd8a6] bg-[#faf4e6]"}>
+      {/* Status pengirim email */}
+      <Card className={emailConfig?.configured ? "border-[#bde5d2] bg-[#f0f9f4]" : "border-[#ecd8a6] bg-[#faf4e6]"}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                gateway?.configured ? "bg-[#2d946e] text-white" : "bg-[#c5a059] text-white"
+                emailConfig?.configured ? "bg-[#2d946e] text-white" : "bg-[#c5a059] text-white"
               }`}
             >
-              <MessageCircle className="h-5 w-5" />
+              <Mail className="h-5 w-5" />
             </div>
             <div>
               <p className="text-sm font-extrabold text-[#19261f]">
-                {gateway?.configured
-                  ? "WhatsApp Cloud API (Meta) aktif"
-                  : "WhatsApp Cloud API (Meta) belum aktif"}
+                {emailConfig?.configured
+                  ? "Resend (email) aktif"
+                  : "Resend (email) belum aktif"}
               </p>
               <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-[#5a685e]">
-                {gateway?.hint ??
+                {emailConfig?.hint ??
                   "Status koneksi akan tampil setelah data pengingat dimuat."}{" "}
-                Pesan proaktif H-1 dikirim memakai message template resmi yang sudah
-                disetujui Meta. Pratinjau di bawah hanya untuk memeriksa isi tugas.
+                Email dikirim langsung tanpa template persetujuan. Pratinjau di bawah
+                menampilkan isi email yang akan dikirim.
               </p>
-              {gateway?.missing?.length ? (
+              {emailConfig?.missing?.length ? (
                 <p className="mt-1 text-[11px] font-semibold text-[#8a6820]">
-                  Belum diisi: {gateway.missing.join(", ")}
+                  Belum diisi: {emailConfig.missing.join(", ")}
                 </p>
               ) : null}
-              {gateway?.configured ? (
+              {emailConfig?.configured ? (
                 <p className="mt-1 text-[11px] font-semibold text-[#1e6149]">
-                  Template: {gateway.templateName} • {gateway.templateLanguage} • API{" "}
-                  {gateway.apiVersion}
+                  Dari: {emailConfig.from}
                 </p>
               ) : null}
             </div>
           </div>
           <a
-            href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
+            href="https://resend.com/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-xl border border-[#ecd8a6] bg-white px-3 py-2 text-xs font-bold text-[#8a6820] hover:bg-[#fdf8ec]"
           >
-            <span>Panduan Meta</span>
+            <span>Panduan Resend</span>
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>
@@ -240,7 +237,7 @@ export default function AdminPengingatPage() {
           <Button
             type="button"
             onClick={() => void send()}
-            disabled={loading || !gateway?.configured || sending !== null || sendable.length === 0}
+            disabled={loading || !emailConfig?.configured || sending !== null || sendable.length === 0}
             className="min-w-[180px]"
           >
             {sending === "__all__" ? (
@@ -269,9 +266,9 @@ export default function AdminPengingatPage() {
       {/* Daftar penerima */}
       <Card className="border-[#ded5c4] bg-white">
         <SectionHeading
-          icon={Smartphone}
+          icon={Mail}
           title="Penerima pengingat"
-          description="Satu orang menerima satu pesan berisi seluruh tugasnya pada tanggal tersebut."
+          description="Satu alamat email menerima satu pesan berisi seluruh tugasnya pada tanggal tersebut."
         />
 
         {loading ? (
@@ -297,16 +294,16 @@ export default function AdminPengingatPage() {
                         <StatusBadge status={recipient.status} />
                       </div>
                       <p className="mt-1 flex items-center gap-1.5 text-xs text-[#5a685e]">
-                        <Phone className="h-3.5 w-3.5" />
-                        {recipient.phone ? (
-                          <span className="font-semibold text-[#2b594b]">+{recipient.phone}</span>
-                        ) : recipient.rawPhone ? (
+                        <Mail className="h-3.5 w-3.5" />
+                        {recipient.email ? (
+                          <span className="font-semibold text-[#2b594b]">{recipient.email}</span>
+                        ) : recipient.rawEmail ? (
                           <span className="font-semibold text-rose-600">
-                            Nomor tidak valid: {recipient.rawPhone}
+                            Email tidak valid: {recipient.rawEmail}
                           </span>
                         ) : (
                           <span className="font-semibold text-rose-600">
-                            Nomor WhatsApp belum diisi
+                            Email belum diisi
                           </span>
                         )}
                       </p>
@@ -337,15 +334,15 @@ export default function AdminPengingatPage() {
                         onClick={() => setExpanded(isExpanded ? null : recipient.dedupeKey)}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-[#ded5c4] bg-white px-3 py-2 text-xs font-bold text-[#5a685e] hover:bg-[#f4eee2]"
                       >
-                        <MessageCircle className="h-3.5 w-3.5" />
+                        <Mail className="h-3.5 w-3.5" />
                         {isExpanded ? "Tutup pesan" : "Lihat pesan"}
                       </button>
-                      {recipient.phone ? (
+                      {recipient.email ? (
                         <Button
                           type="button"
                           variant={recipient.status === "SENT" ? "secondary" : "primary"}
                           onClick={() => void send([recipient.dedupeKey], recipient.status === "SENT")}
-                          disabled={isSending || sending !== null || !gateway?.configured}
+                          disabled={isSending || sending !== null || !emailConfig?.configured}
                           className="px-3 py-2"
                         >
                           {isSending ? (
@@ -360,7 +357,7 @@ export default function AdminPengingatPage() {
                           href="/admin/petugas"
                           className="inline-flex items-center gap-1.5 rounded-xl border border-[#ecd8a6] bg-[#faf4e6] px-3 py-2 text-xs font-bold text-[#8a6820] hover:bg-[#f5ecd8]"
                         >
-                          Isi nomor
+                          Isi email
                           <ExternalLink className="h-3.5 w-3.5" />
                         </Link>
                       )}
@@ -398,7 +395,7 @@ export default function AdminPengingatPage() {
                 <tr className="border-b border-[#ded5c4] text-[10px] uppercase tracking-wider text-[#5c6e63]">
                   <th className="py-2 pr-3">Nama</th>
                   <th className="py-2 pr-3">Tugas</th>
-                  <th className="py-2 pr-3">Nomor</th>
+                  <th className="py-2 pr-3">Email</th>
                   <th className="py-2 pr-3">Status</th>
                   <th className="py-2 pr-3">Waktu</th>
                   <th className="py-2">Keterangan</th>
@@ -409,7 +406,7 @@ export default function AdminPengingatPage() {
                   <tr key={log.id} className="border-b border-[#f0ebe0] align-top">
                     <td className="py-2.5 pr-3 font-bold text-[#19261f]">{log.recipientName}</td>
                     <td className="py-2.5 pr-3 text-[#5a685e]">{log.duties || "-"}</td>
-                    <td className="py-2.5 pr-3 text-[#5a685e]">{log.phone ? `+${log.phone}` : "-"}</td>
+                    <td className="py-2.5 pr-3 text-[#5a685e]">{log.email ?? "-"}</td>
                     <td className="py-2.5 pr-3">
                       {log.status === "SENT" ? (
                         <span className="inline-flex items-center gap-1 font-bold text-[#1e6149]">

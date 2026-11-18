@@ -18,10 +18,10 @@ import {
   type ReminderRecipient,
 } from "@/lib/reminders";
 import {
-  getWhatsAppConfig,
-  sendWhatsAppMessage,
-  type WhatsAppConfig,
-} from "@/lib/whatsapp";
+  getEmailConfig,
+  sendReminderEmail,
+  type EmailConfig,
+} from "@/lib/email";
 import type { ReminderStatus } from "@prisma/client";
 
 /** Tanggal tugas H-1: besok menurut kalender WIB. */
@@ -39,7 +39,7 @@ export interface ReminderPlanRecipient extends ReminderRecipient {
 export interface ReminderLogSummary {
   id: string;
   recipientName: string;
-  phone: string | null;
+  email: string | null;
   duties: string;
   status: ReminderStatus;
   provider: string | null;
@@ -53,7 +53,7 @@ export interface ReminderPlan {
   dateLabel: string;
   isFriday: boolean;
   mosqueName: string;
-  gateway: WhatsAppConfig;
+  email: EmailConfig;
   assignments: DutyAssignment[];
   unmatchedNames: string[];
   recipients: ReminderPlanRecipient[];
@@ -63,7 +63,7 @@ export interface ReminderPlan {
 export interface ReminderSendResult {
   dedupeKey: string;
   name: string;
-  phone: string | null;
+  email: string | null;
   status: "SENT" | "FAILED" | "SKIPPED";
   error?: string;
 }
@@ -71,7 +71,7 @@ export interface ReminderSendResult {
 function serializeLog(log: {
   id: string;
   recipientName: string;
-  phone: string | null;
+  email: string | null;
   duties: string;
   status: ReminderStatus;
   provider: string | null;
@@ -82,7 +82,7 @@ function serializeLog(log: {
   return {
     id: log.id,
     recipientName: log.recipientName,
-    phone: log.phone,
+    email: log.email,
     duties: log.duties,
     status: log.status,
     provider: log.provider,
@@ -162,7 +162,7 @@ export async function buildReminderPlan(dateOnly: Date): Promise<ReminderPlan> {
     dateLabel: formatDateOnlyLong(date),
     isFriday,
     mosqueName: mosque.mosqueName,
-    gateway: getWhatsAppConfig(),
+    email: getEmailConfig(),
     assignments,
     unmatchedNames,
     recipients: planRecipients,
@@ -181,7 +181,7 @@ async function deliverRecipient(
     reminderDate: date,
     dedupeKey: recipient.dedupeKey,
     recipientName: recipient.name,
-    phone: recipient.phone,
+    email: recipient.email,
     duties: dutiesText,
     message: recipient.message,
   };
@@ -194,7 +194,7 @@ async function deliverRecipient(
     return {
       dedupeKey: recipient.dedupeKey,
       name: recipient.name,
-      phone: recipient.phone,
+      email: recipient.email,
       status: "SKIPPED",
       error: "Pengingat tanggal ini sudah pernah terkirim",
     };
@@ -220,7 +220,7 @@ async function deliverRecipient(
         return {
           dedupeKey: recipient.dedupeKey,
           name: recipient.name,
-          phone: recipient.phone,
+          email: recipient.email,
           status: "SKIPPED",
           error: "Pengingat tanggal ini sudah pernah terkirim",
         };
@@ -235,8 +235,8 @@ async function deliverRecipient(
     }
   }
 
-  if (!recipient.phone) {
-    const message = "Nomor WhatsApp petugas belum diisi di menu Data Petugas";
+  if (!recipient.email) {
+    const message = "Email petugas belum diisi di menu Data Petugas";
     await prisma.reminderLog.update({
       where: { id: log.id },
       data: { status: "SKIPPED", error: message },
@@ -244,18 +244,19 @@ async function deliverRecipient(
     return {
       dedupeKey: recipient.dedupeKey,
       name: recipient.name,
-      phone: null,
+      email: null,
       status: "SKIPPED",
       error: message,
     };
   }
 
-  const result = await sendWhatsAppMessage({
-    target: recipient.phone,
+  const result = await sendReminderEmail({
+    to: recipient.email,
     name: recipient.name,
     mosqueName,
     duties: dutiesText,
     dateLabel: formatDateOnlyLong(date),
+    text: recipient.message,
   });
 
   await prisma.reminderLog.update({
@@ -271,14 +272,14 @@ async function deliverRecipient(
       : {
           status: "FAILED",
           provider: result.provider,
-          error: result.error ?? "Gagal mengirim pesan",
+          error: result.error ?? "Gagal mengirim email",
         },
   });
 
   return {
     dedupeKey: recipient.dedupeKey,
     name: recipient.name,
-    phone: recipient.phone,
+    email: recipient.email,
     status: result.ok ? "SENT" : "FAILED",
     error: result.error,
   };
@@ -304,15 +305,15 @@ export async function sendRemindersForDate(
 
   const results: ReminderSendResult[] = [];
   for (const recipient of targets) {
-    // Penerima tanpa nomor tidak perlu dicatat ke database: statusnya sudah
+    // Penerima tanpa email tidak perlu dicatat ke database: statusnya sudah
     // terlihat di pratinjau admin dan tidak ada pesan yang dikirim.
-    if (!recipient.phone) {
+    if (!recipient.email) {
       results.push({
         dedupeKey: recipient.dedupeKey,
         name: recipient.name,
-        phone: null,
+        email: null,
         status: "SKIPPED",
-        error: "Nomor WhatsApp petugas belum diisi di menu Data Petugas",
+        error: "Email petugas belum diisi di menu Data Petugas",
       });
       continue;
     }

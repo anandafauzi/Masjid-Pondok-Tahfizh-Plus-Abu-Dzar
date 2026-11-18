@@ -21,8 +21,9 @@ khatib Jumat, kajian, countdown adzan–iqamah, dan panel admin lengkap.
   hari dan jam), lalu tampil otomatis setiap pekan tanpa input tanggal ulang.
   Satu pertemuan dapat dipindahkan ke hari/jam lain tanpa mengubah pekan
   lainnya, dan dapat dikembalikan ke jadwal semula.
-- **Pengingat WhatsApp H-1**: pengingat otomatis ke imam, muadzin, dan khatib
-  Jumat sehari sebelum bertugas, dengan pratinjau, kirim manual, dan riwayat.
+- **Pengingat Email H-1**: pengingat otomatis lewat Resend ke imam, muadzin,
+  dan khatib Jumat sehari sebelum bertugas, dengan pratinjau, kirim manual, dan
+  riwayat.
 - **Rotasi berbasis tanggal**: urutan imam/khatib dihitung dari tanggal
   berlaku, bukan counter perangkat, dan urutannya dapat diubah dari panel
   admin (tombol naik/turun).
@@ -167,52 +168,46 @@ cd android
 Hasil: `android/app/build/outputs/apk/debug/app-debug.apk`. Untuk distribusi
 Play Store/APK release, tambahkan `signingConfig` release terlebih dahulu.
 
-## Pengingat WhatsApp H-1
+## Pengingat Email H-1
 
 Pengingat otomatis dikirim **satu hari sebelum bertugas** kepada imam,
-muadzin, dan khatib Jumat. Nomor WhatsApp diambil dari **Admin → Data
-Petugas**. Pengiriman memakai **WhatsApp Cloud API resmi dari Meta**; gateway
-pihak ketiga sengaja tidak dipakai agar tidak rentan diblokir.
+muadzin, dan khatib Jumat. Alamat email diambil dari **Admin → Data Petugas**.
+Pengiriman memakai **Resend** lewat API resminya. Gateway pihak ketiga tidak
+dipakai. Paket gratis Resend menyediakan 3.000 email/bulan dan 100 email/hari,
+cukup untuk kebutuhan pengingat masjid.
 
-1. Isi nomor WhatsApp setiap petugas di menu **Data Petugas**.
-2. Siapkan WhatsApp Business Platform di Meta:
-   - Buat/Hubungkan WhatsApp Business Account (WABA) dan nomor bisnis.
-   - Buat **System User** dengan izin WhatsApp dan salin **access token
-     permanen** (bukan token sementara dari API Setup).
-   - Buat dan ajukan **Message Template** berbahasa Indonesia yang disetujui.
-     Contoh isi template (category `UTILITY`):
-
-     ```text
-     Assalamu'alaikum {{1}}, ini pengingat dari {{2}} bahwa Anda bertugas {{3}} pada {{4}}. Mohon hadir 15 menit sebelum adzan. Jika berhalangan, mohon konfirmasi ke Pengurus DKM. Jazakumullahu khairan.
-     ```
-
-     Urutan variabel wajib: `{{1}}` nama petugas, `{{2}}` nama masjid,
-     `{{3}}` ringkasan tugas, `{{4}}` tanggal tugas.
+1. Isi alamat email setiap petugas di menu **Data Petugas**.
+2. Siapkan Resend:
+   - Buat akun di <https://resend.com>, lalu buat **API key** dengan izin kirim
+     email.
+   - Verifikasi domain masjid di **Domains**. Ikuti petunjuk Resend untuk
+     menambahkan record **SPF**, **DKIM**, dan **DMARC** agar email tidak masuk
+     spam.
+   - Gunakan alamat dari domain yang sudah diverifikasi sebagai `EMAIL_FROM`.
+     Alamat `onboarding@resend.dev` hanya bisa mengirim ke email pemilik akun,
+     jadi jangan dipakai untuk produksi.
 3. Isi `.env`:
 
    ```env
-   WHATSAPP_CLOUD_PHONE_NUMBER_ID="id-nomor-bisnis"
-   WHATSAPP_CLOUD_ACCESS_TOKEN="token-permanen-system-user"
-   WHATSAPP_CLOUD_TEMPLATE_NAME="pengingat_h1"
-   WHATSAPP_CLOUD_TEMPLATE_LANGUAGE="id_ID"
+   RESEND_API_KEY="re_..."
+   EMAIL_FROM="pengingat@domain-masjid.example"
    CRON_SECRET="string-acak-panjang"
    ```
 
-   `WHATSAPP_CLOUD_API_VERSION` opsional; default `v26.0`. Panduan resmi:
-   https://developers.facebook.com/docs/whatsapp/cloud-api/get-started
-4. Pratinjau, kirim manual, dan lihat riwayat di **Admin → Pengingat WA**.
-   Karena pesan H-1 dikirim di luar jendela layanan 24 jam, Meta mewajibkan
-   template; teks pratinjau di admin hanya untuk memeriksa isi tugas.
+   Tidak perlu message template atau proses persetujuan pesan. Panduan Resend:
+   <https://resend.com/docs>.
+4. Pratinjau, kirim manual, dan lihat riwayat di **Admin → Pengingat Email**.
+   Tombol kirim hanya aktif bila `RESEND_API_KEY` dan `EMAIL_FROM` sudah terisi.
 5. Di Vercel, cron berjalan otomatis setiap hari pukul **16.00 WIB** (09.00
    UTC) melalui `/api/cron/h-1-reminders`. Endpoint ini hanya menerima
    permintaan dengan header `Authorization: Bearer <CRON_SECRET>`.
 
-Pengiriman bersifat idempoten: satu penerima hanya menerima satu pesan per
+Pengiriman bersifat idempoten: satu penerima hanya menerima satu email per
 tanggal tugas (semua tugasnya digabung), dan riwayat disimpan di tabel
-`reminder_logs`. Pengiriman ulang hanya dilakukan lewat tombol **Kirim ulang**
-di panel admin.
+`reminder_logs` dengan provider `email`. Pengiriman ulang hanya dilakukan lewat
+tombol **Kirim ulang** di panel admin.
 
-Uji tanpa mengirim pesan:
+Uji tanpa mengirim email:
 
 ```bash
 curl "http://localhost:3000/api/cron/h-1-reminders?dryRun=1&secret=$CRON_SECRET"

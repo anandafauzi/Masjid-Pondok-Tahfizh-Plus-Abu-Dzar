@@ -46,18 +46,18 @@ export async function GET(request: NextRequest) {
         dryRun: true,
         date: plan.date,
         dateLabel: plan.dateLabel,
-        gateway: plan.gateway,
+        email: plan.email,
         recipients: plan.recipients.map((recipient) => ({
           name: recipient.name,
-          phone: recipient.phone,
+          email: recipient.email,
           duties: recipient.duties.map((duty) => duty.label),
         })),
       });
     }
 
-    if (!plan.gateway.configured) {
+    if (!plan.email.configured) {
       return NextResponse.json(
-        { error: plan.gateway.hint, gateway: plan.gateway, date: plan.date },
+        { error: plan.email.hint, email: plan.email, date: plan.date },
         { status: 503 }
       );
     }

@@ -31,7 +31,7 @@ export default function AdminPetugasPage() {
   // Form State
   const [name, setName] = useState("");
   const [roles, setRoles] = useState<PetugasRole[]>(["IMAM"]);
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -73,7 +73,7 @@ export default function AdminPetugasPage() {
   function resetForm() {
     setName("");
     setRoles(["IMAM"]);
-    setPhone("");
+    setEmail("");
     setNotes("");
     setEditingId(null);
   }
@@ -81,7 +81,7 @@ export default function AdminPetugasPage() {
   function startEdit(item: PetugasItem) {
     setName(item.name);
     setRoles(item.roles);
-    setPhone(item.phone ?? "");
+    setEmail(item.email ?? "");
     setNotes(item.notes ?? "");
     setEditingId(item.id);
   }
@@ -101,7 +101,7 @@ export default function AdminPetugasPage() {
                 ...p,
                 name: name.trim(),
                 roles,
-                phone: phone.trim() || null,
+                email: email.trim() || null,
                 notes: notes.trim() || null,
               }
             : p
@@ -111,7 +111,7 @@ export default function AdminPetugasPage() {
           id: `p-${Date.now()}`,
           name: name.trim(),
           roles,
-          phone: phone.trim() || null,
+          email: email.trim() || null,
           notes: notes.trim() || null,
           isActive: true,
           createdAt: new Date().toISOString().slice(0, 10),
@@ -184,7 +184,7 @@ export default function AdminPetugasPage() {
     return petugas.filter((p) => {
       const matchSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.phone && p.phone.includes(search));
+        (p.email && p.email.toLowerCase().includes(search.toLowerCase()));
       const matchRole =
         roleFilter === "ALL" || p.roles.includes(roleFilter as PetugasRole);
       return matchSearch && matchRole;
@@ -207,7 +207,7 @@ export default function AdminPetugasPage() {
       <PageHeader
         icon={Users}
         title="Data Petugas & Asatidz"
-        description="Kelola daftar nama imam, muadzin, khatib, dan pemateri kajian. Data ini langsung muncul sebagai pilihan saat mengatur jadwal."
+        description="Kelola daftar nama imam, muadzin, khatib, dan pemateri kajian. Isi email untuk pengingat H-1; data ini juga muncul sebagai pilihan saat mengatur jadwal."
       />
 
       {/* Stats Cards */}
@@ -282,14 +282,18 @@ export default function AdminPetugasPage() {
               </div>
 
               <div>
-                <Label htmlFor="phone">Nomor Telepon / WhatsApp (Opsional)</Label>
+                <Label htmlFor="petugasEmail">Email untuk Pengingat (Opsional)</Label>
                 <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Contoh: 0812-3456-7890"
+                  id="petugasEmail"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Contoh: ustadz@abudzar.sch.id"
                   className="bg-white"
                 />
+                <p className="mt-1 text-[11px] text-[#5c6e63]">
+                  Email ini dipakai untuk pengingat otomatis sehari sebelum bertugas.
+                </p>
               </div>
 
               <div>
@@ -345,7 +349,7 @@ export default function AdminPetugasPage() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari nama / no. hp..."
+                  placeholder="Cari nama / email..."
                   className="w-full rounded-xl border border-[#ded5c4] bg-white pl-8 pr-3 py-1.5 text-xs text-[#19261f] focus:border-[#2d946e] focus:outline-none"
                 />
               </div>
@@ -417,9 +421,9 @@ export default function AdminPetugasPage() {
                               {r}
                             </span>
                           ))}
-                          {item.phone && (
+                          {item.email && (
                             <span className="text-[10px] text-[#5c6e63] ml-1">
-                              • {item.phone}
+                              • {item.email}
                             </span>
                           )}
                         </div>

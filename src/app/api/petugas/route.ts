@@ -7,6 +7,7 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { normalizeEmail } from "@/lib/email";
 import { getPetugasList, savePetugasList } from "@/lib/petugas";
 import { PetugasItem, PetugasRole } from "@/types/petugas";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
@@ -38,6 +39,13 @@ function parsePetugasItems(raw: unknown[]): PetugasItem[] | null {
       : [];
     if (roles.length === 0) return null;
 
+    const email = normalizeEmail(
+      typeof item.email === "string" ? item.email : null
+    );
+    if (typeof item.email === "string" && item.email.trim() && !email) {
+      return null;
+    }
+
     items.push({
       id:
         typeof item.id === "string" && item.id.trim()
@@ -45,10 +53,7 @@ function parsePetugasItems(raw: unknown[]): PetugasItem[] | null {
           : `p-${Date.now()}-${items.length}`,
       name,
       roles,
-      phone:
-        typeof item.phone === "string" && item.phone.trim()
-          ? item.phone.trim()
-          : null,
+      email,
       notes:
         typeof item.notes === "string" && item.notes.trim()
           ? item.notes.trim()
@@ -64,7 +69,7 @@ function parsePetugasItems(raw: unknown[]): PetugasItem[] | null {
 }
 
 export async function GET() {
-  // Daftar petugas memuat nomor HP, jadi hanya boleh diakses admin.
+  // Daftar petugas memuat alamat email, jadi hanya boleh diakses admin.
   const user = await getSessionUser();
   if (!user) return unauthorized();
 
@@ -90,7 +95,7 @@ export async function POST(request: NextRequest) {
       const items = parsePetugasItems(body.items);
       if (!items) {
         return badRequest(
-          "Data petugas tidak valid: nama wajib diisi dan minimal satu peran valid"
+          "Data petugas tidak valid: nama wajib diisi, minimal satu peran valid, dan email harus valid"
         );
       }
       await savePetugasList(items);
@@ -113,12 +118,17 @@ export async function POST(request: NextRequest) {
               typeof role === "string" && VALID_ROLES.has(role as PetugasRole)
           )
         : [];
+      const email = normalizeEmail(body.email ? String(body.email) : null);
+      if (body.email && String(body.email).trim() && !email) {
+        return badRequest("Alamat email tidak valid");
+      }
+
       const existing = await getPetugasList();
       const newPetugas: PetugasItem = {
         id: `p-${Date.now()}`,
         name: String(body.name).trim(),
         roles: roles.length > 0 ? roles : ["IMAM"],
-        phone: body.phone ? String(body.phone).trim() : null,
+        email,
         notes: body.notes ? String(body.notes).trim() : null,
         isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
         createdAt: new Date().toISOString().slice(0, 10),

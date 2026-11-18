@@ -14,7 +14,7 @@ const petugas: PetugasItem[] = [
     id: "p1",
     name: "Ust. Ahmad Fauzi",
     roles: ["IMAM"],
-    phone: "0812-3456-7890",
+    email: "Ahmad@AbuDzar.sch.id",
     isActive: true,
     createdAt: "2026-01-01T00:00:00.000Z",
   },
@@ -22,7 +22,7 @@ const petugas: PetugasItem[] = [
     id: "p2",
     name: "Umar",
     roles: ["MUADZIN", "KHATIB"],
-    phone: "+62 813 1111 2222",
+    email: "umar@gmail.com",
     isActive: true,
     createdAt: "2026-01-01T00:00:00.000Z",
   },
@@ -30,7 +30,7 @@ const petugas: PetugasItem[] = [
     id: "p3",
     name: "Utsman",
     roles: ["IMAM"],
-    phone: null,
+    email: null,
     isActive: true,
     createdAt: "2026-01-01T00:00:00.000Z",
   },
@@ -83,12 +83,12 @@ describe("buildReminderRecipients", () => {
     petugas,
   });
 
-  it("menggabungkan seluruh tugas satu orang menjadi satu pesan", () => {
+  it("menggabungkan seluruh tugas satu orang menjadi satu email", () => {
     const ahmad = recipients.find((item) => item.name === "Ust. Ahmad Fauzi");
     expect(ahmad).toBeDefined();
     expect(ahmad?.duties.map((duty) => duty.label)).toEqual(["Imam Subuh", "Imam Zuhur"]);
-    expect(ahmad?.phone).toBe("6281234567890");
-    expect(ahmad?.dedupeKey).toBe("2026-11-20:wa:6281234567890");
+    expect(ahmad?.email).toBe("ahmad@abudzar.sch.id");
+    expect(ahmad?.dedupeKey).toBe("2026-11-20:email:ahmad@abudzar.sch.id");
   });
 
   it("menggabungkan tugas imam, muadzin, dan khatib pada orang yang sama", () => {
@@ -99,10 +99,10 @@ describe("buildReminderRecipients", () => {
     ]);
   });
 
-  it("menyertakan penerima tanpa nomor agar admin bisa melengkapinya", () => {
+  it("menyertakan penerima tanpa email agar admin bisa melengkapinya", () => {
     const utsman = recipients.find((item) => item.name === "Utsman");
-    expect(utsman?.phone).toBeNull();
-    expect(utsman?.dedupeKey).toBe("2026-11-20:nophone:p3");
+    expect(utsman?.email).toBeNull();
+    expect(utsman?.dedupeKey).toBe("2026-11-20:noemail:p3");
   });
 
   it("tidak mengirim pesan ke nama pengganti", () => {
@@ -119,7 +119,7 @@ describe("buildReminderRecipients", () => {
     expect(extra).toHaveLength(0);
   });
 
-  it("menggabungkan orang berbeda yang memakai nomor yang sama", () => {
+  it("menggabungkan orang berbeda yang memakai email yang sama", () => {
     const shared = buildReminderRecipients({
       dateYmd: "2026-11-20",
       dateLabel: "Jumat, 20 November 2026",
@@ -129,17 +129,32 @@ describe("buildReminderRecipients", () => {
         { role: "MUADZIN", prayerName: "Subuh", personName: "Umar" },
       ],
       petugas: petugas.map((item) =>
-        item.id === "p2" ? { ...item, phone: "0812 3456 7890" } : item
+        item.id === "p2" ? { ...item, email: "AHMAD@abudzar.sch.id" } : item
       ),
     });
     expect(shared).toHaveLength(1);
     expect(shared[0].duties).toHaveLength(2);
     expect(shared[0].name).toContain("&");
   });
+
+  it("menganggap email tidak valid sebagai belum diisi", () => {
+    const invalid = buildReminderRecipients({
+      dateYmd: "2026-11-20",
+      dateLabel: "Jumat, 20 November 2026",
+      mosqueName: "Masjid Abu Dzar",
+      assignments: [{ role: "IMAM", prayerName: "Subuh", personName: "Umar" }],
+      petugas: petugas.map((item) =>
+        item.id === "p2" ? { ...item, email: "bukan-email" } : item
+      ),
+    });
+    expect(invalid[0].email).toBeNull();
+    expect(invalid[0].rawEmail).toBe("bukan-email");
+    expect(invalid[0].dedupeKey).toBe("2026-11-20:noemail:p2");
+  });
 });
 
 describe("buildReminderMessage", () => {
-  it("memuat sapaan, tanggal, dan seluruh tugas", () => {
+  it("memuat sapaan, tanggal, dan seluruh tugas tanpa markup", () => {
     const message = buildReminderMessage({
       name: "Ust. Ahmad Fauzi",
       dateLabel: "Jumat, 20 November 2026",
@@ -151,11 +166,12 @@ describe("buildReminderMessage", () => {
     });
 
     expect(message).toContain("PENGINGAT TUGAS BESOK");
+    expect(message).toContain("Assalamu'alaikum Ust. Ahmad Fauzi");
     expect(message).toContain("Masjid Abu Dzar");
-    expect(message).toContain("*Ust. Ahmad Fauzi*");
     expect(message).toContain("Jumat, 20 November 2026");
-    expect(message).toContain("• *Imam Subuh*");
-    expect(message).toContain("• *Khatib Jumat*");
-    expect(message).toContain("جزاكم الله خيرا");
+    expect(message).toContain("- Imam Subuh");
+    expect(message).toContain("- Khatib Jumat");
+    expect(message).toContain("Jazakumullahu khairan");
+    expect(message).not.toContain("*");
   });
 });

@@ -370,7 +370,7 @@ model ReminderLog {
   reminderDate  DateTime       @db.Date
   dedupeKey     String         @unique
   recipientName String
-  phone         String?
+  email         String?
   duties        String         @db.Text
   message       String         @db.Text
   status        ReminderStatus @default(PENDING)

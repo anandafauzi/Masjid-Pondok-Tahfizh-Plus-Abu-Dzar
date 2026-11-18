@@ -4,7 +4,7 @@ export interface PetugasItem {
   id: string;
   name: string;
   roles: PetugasRole[];
-  phone?: string | null;
+  email?: string | null;
   isActive: boolean;
   notes?: string | null;
   createdAt: string;
