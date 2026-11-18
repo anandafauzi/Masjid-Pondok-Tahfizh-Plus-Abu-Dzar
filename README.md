@@ -171,22 +171,39 @@ Play Store/APK release, tambahkan `signingConfig` release terlebih dahulu.
 
 Pengingat otomatis dikirim **satu hari sebelum bertugas** kepada imam,
 muadzin, dan khatib Jumat. Nomor WhatsApp diambil dari **Admin → Data
-Petugas**.
+Petugas**. Pengiriman memakai **WhatsApp Cloud API resmi dari Meta**; gateway
+pihak ketiga sengaja tidak dipakai agar tidak rentan diblokir.
 
 1. Isi nomor WhatsApp setiap petugas di menu **Data Petugas**.
-2. Buat akun gateway (disarankan **Fonnte** paket Free: 1.000 pesan teks per
-   bulan), hubungkan perangkat WhatsApp, lalu salin token ke `.env`:
+2. Siapkan WhatsApp Business Platform di Meta:
+   - Buat/Hubungkan WhatsApp Business Account (WABA) dan nomor bisnis.
+   - Buat **System User** dengan izin WhatsApp dan salin **access token
+     permanen** (bukan token sementara dari API Setup).
+   - Buat dan ajukan **Message Template** berbahasa Indonesia yang disetujui.
+     Contoh isi template (category `UTILITY`):
+
+     ```text
+     Assalamu'alaikum {{1}}, ini pengingat dari {{2}} bahwa Anda bertugas {{3}} pada {{4}}. Mohon hadir 15 menit sebelum adzan. Jika berhalangan, mohon konfirmasi ke Pengurus DKM. Jazakumullahu khairan.
+     ```
+
+     Urutan variabel wajib: `{{1}}` nama petugas, `{{2}}` nama masjid,
+     `{{3}}` ringkasan tugas, `{{4}}` tanggal tugas.
+3. Isi `.env`:
 
    ```env
-   FONNTE_TOKEN="token-dari-dashboard-fonnte"
+   WHATSAPP_CLOUD_PHONE_NUMBER_ID="id-nomor-bisnis"
+   WHATSAPP_CLOUD_ACCESS_TOKEN="token-permanen-system-user"
+   WHATSAPP_CLOUD_TEMPLATE_NAME="pengingat_h1"
+   WHATSAPP_CLOUD_TEMPLATE_LANGUAGE="id_ID"
    CRON_SECRET="string-acak-panjang"
    ```
 
-   Gateway lain juga didukung: `WHATSAPP_PROVIDER=wablas` dengan
-   `WABLAS_DOMAIN` + `WABLAS_TOKEN`, atau `WHATSAPP_PROVIDER=webhook` dengan
-   `WHATSAPP_WEBHOOK_URL` (menerima JSON `{ target, message, type }`).
-3. Pratinjau, kirim manual, dan lihat riwayat di **Admin → Pengingat WA**.
-4. Di Vercel, cron berjalan otomatis setiap hari pukul **16.00 WIB** (09.00
+   `WHATSAPP_CLOUD_API_VERSION` opsional; default `v26.0`. Panduan resmi:
+   https://developers.facebook.com/docs/whatsapp/cloud-api/get-started
+4. Pratinjau, kirim manual, dan lihat riwayat di **Admin → Pengingat WA**.
+   Karena pesan H-1 dikirim di luar jendela layanan 24 jam, Meta mewajibkan
+   template; teks pratinjau di admin hanya untuk memeriksa isi tugas.
+5. Di Vercel, cron berjalan otomatis setiap hari pukul **16.00 WIB** (09.00
    UTC) melalui `/api/cron/h-1-reminders`. Endpoint ini hanya menerima
    permintaan dengan header `Authorization: Bearer <CRON_SECRET>`.
 

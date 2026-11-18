@@ -152,7 +152,7 @@ export default function AdminPengingatPage() {
       <PageHeader
         icon={BellRing}
         title="Pengingat WhatsApp H-1"
-        description="Kirim pengingat otomatis sehari sebelum bertugas kepada imam, muadzin, dan khatib. Nomor WhatsApp diambil dari menu Data Petugas."
+        description="Kirim pengingat otomatis sehari sebelum bertugas kepada imam, muadzin, dan khatib lewat WhatsApp Cloud API resmi Meta. Nomor WhatsApp diambil dari menu Data Petugas."
       />
 
       {/* Status gateway */}
@@ -168,27 +168,36 @@ export default function AdminPengingatPage() {
             </div>
             <div>
               <p className="text-sm font-extrabold text-[#19261f]">
-                {gateway?.configured ? "Gateway WhatsApp aktif" : "Gateway WhatsApp belum aktif"}
+                {gateway?.configured
+                  ? "WhatsApp Cloud API (Meta) aktif"
+                  : "WhatsApp Cloud API (Meta) belum aktif"}
               </p>
               <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-[#5a685e]">
                 {gateway?.hint ??
-                  "Status gateway akan tampil setelah data pengingat dimuat."}{" "}
-                Fonnte Free mendukung 1.000 pesan teks per bulan, cukup untuk kebutuhan masjid.
+                  "Status koneksi akan tampil setelah data pengingat dimuat."}{" "}
+                Pesan proaktif H-1 dikirim memakai message template resmi yang sudah
+                disetujui Meta. Pratinjau di bawah hanya untuk memeriksa isi tugas.
               </p>
               {gateway?.missing?.length ? (
                 <p className="mt-1 text-[11px] font-semibold text-[#8a6820]">
                   Belum diisi: {gateway.missing.join(", ")}
                 </p>
               ) : null}
+              {gateway?.configured ? (
+                <p className="mt-1 text-[11px] font-semibold text-[#1e6149]">
+                  Template: {gateway.templateName} • {gateway.templateLanguage} • API{" "}
+                  {gateway.apiVersion}
+                </p>
+              ) : null}
             </div>
           </div>
           <a
-            href="https://fonnte.com"
+            href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-xl border border-[#ecd8a6] bg-white px-3 py-2 text-xs font-bold text-[#8a6820] hover:bg-[#fdf8ec]"
           >
-            <span>Buka Fonnte</span>
+            <span>Panduan Meta</span>
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>

@@ -173,14 +173,16 @@ export async function buildReminderPlan(dateOnly: Date): Promise<ReminderPlan> {
 async function deliverRecipient(
   date: Date,
   recipient: ReminderRecipient,
+  mosqueName: string,
   force = false
 ): Promise<ReminderSendResult> {
+  const dutiesText = summarizeDuties(recipient.duties);
   const base = {
     reminderDate: date,
     dedupeKey: recipient.dedupeKey,
     recipientName: recipient.name,
     phone: recipient.phone,
-    duties: summarizeDuties(recipient.duties),
+    duties: dutiesText,
     message: recipient.message,
   };
 
@@ -250,7 +252,10 @@ async function deliverRecipient(
 
   const result = await sendWhatsAppMessage({
     target: recipient.phone,
-    message: recipient.message,
+    name: recipient.name,
+    mosqueName,
+    duties: dutiesText,
+    dateLabel: formatDateOnlyLong(date),
   });
 
   await prisma.reminderLog.update({
@@ -313,7 +318,12 @@ export async function sendRemindersForDate(
     }
 
     results.push(
-      await deliverRecipient(dateOnlyToUTC(plan.date), recipient, options.force === true)
+      await deliverRecipient(
+        dateOnlyToUTC(plan.date),
+        recipient,
+        plan.mosqueName,
+        options.force === true
+      )
     );
   }
 

@@ -1,18 +1,27 @@
 /**
- * Pengirim WhatsApp via gateway pihak ketiga.
+ * Pengirim pengingat WhatsApp memakai WhatsApp Cloud API dari Meta (resmi).
+ * Gateway pihak ketiga sengaja tidak didukung lagi karena rentan diblokir.
  *
- * Secara default memakai Fonnte (paket Free: 1.000 pesan teks/bulan), tetapi
- * bisa diganti ke Wablas atau webhook generik lewat environment variable.
- * Tidak ada kredensial yang disimpan di source code.
+ * Pesan H-1 bersifat proaktif (di luar jendela layanan 24 jam), jadi Meta
+ * mewajibkan pengiriman memakai message template yang sudah disetujui.
+ * Template yang dipakai harus memiliki 4 variabel body secara berurutan:
+ *   {{1}} nama petugas
+ *   {{2}} nama masjid
+ *   {{3}} ringkasan tugas (mis. "Imam Subuh, Muadzin Zuhur")
+ *   {{4}} tanggal tugas
  */
 
-export type WhatsAppProvider = "fonnte" | "wablas" | "webhook";
+export type WhatsAppProvider = "cloud";
 
 export interface WhatsAppConfig {
   provider: WhatsAppProvider;
   configured: boolean;
   missing: string[];
   hint: string;
+  phoneNumberId: string | null;
+  templateName: string | null;
+  templateLanguage: string;
+  apiVersion: string;
 }
 
 export interface WhatsAppSendResult {
@@ -22,47 +31,57 @@ export interface WhatsAppSendResult {
   error?: string;
 }
 
-const PROVIDER_LABELS: Record<WhatsAppProvider, string> = {
-  fonnte: "Fonnte",
-  wablas: "Wablas",
-  webhook: "Webhook generik",
-};
+export interface WhatsAppTemplateMessage {
+  target: string;
+  name: string;
+  mosqueName: string;
+  duties: string;
+  dateLabel: string;
+}
+
+const PROVIDER_LABEL = "WhatsApp Cloud API (Meta)";
+const DEFAULT_API_VERSION = "v26.0";
+const DEFAULT_TEMPLATE_LANGUAGE = "id_ID";
+const MAX_PARAMETER_LENGTH = 1024;
 
 function env(name: string): string {
   return (process.env[name] ?? "").trim();
 }
 
-/** Tentukan gateway aktif. Token eksplisit lebih diutamakan saat auto-detect. */
-export function getWhatsAppConfig(): WhatsAppConfig {
-  const requested = env("WHATSAPP_PROVIDER").toLowerCase();
-  let provider: WhatsAppProvider =
-    requested === "fonnte" || requested === "wablas" || requested === "webhook"
-      ? requested
-      : "fonnte";
+function normalizeApiVersion(value: string): string {
+  return /^v\d+\.\d+$/.test(value) ? value : DEFAULT_API_VERSION;
+}
 
-  if (!requested) {
-    if (env("FONNTE_TOKEN")) provider = "fonnte";
-    else if (env("WABLAS_TOKEN") && env("WABLAS_DOMAIN")) provider = "wablas";
-    else if (env("WHATSAPP_WEBHOOK_URL")) provider = "webhook";
-  }
+function normalizeTemplateLanguage(value: string): string {
+  return value || DEFAULT_TEMPLATE_LANGUAGE;
+}
+
+/** Status konfigurasi WhatsApp Cloud API. Tidak mengandung token/rahasia. */
+export function getWhatsAppConfig(): WhatsAppConfig {
+  const phoneNumberId = env("WHATSAPP_CLOUD_PHONE_NUMBER_ID");
+  const accessToken = env("WHATSAPP_CLOUD_ACCESS_TOKEN");
+  const templateName = env("WHATSAPP_CLOUD_TEMPLATE_NAME");
+  const templateLanguage = normalizeTemplateLanguage(
+    env("WHATSAPP_CLOUD_TEMPLATE_LANGUAGE")
+  );
+  const apiVersion = normalizeApiVersion(env("WHATSAPP_CLOUD_API_VERSION"));
 
   const missing: string[] = [];
-  if (provider === "fonnte" && !env("FONNTE_TOKEN")) missing.push("FONNTE_TOKEN");
-  if (provider === "wablas") {
-    if (!env("WABLAS_TOKEN")) missing.push("WABLAS_TOKEN");
-    if (!env("WABLAS_DOMAIN")) missing.push("WABLAS_DOMAIN");
-  }
-  if (provider === "webhook" && !env("WHATSAPP_WEBHOOK_URL")) {
-    missing.push("WHATSAPP_WEBHOOK_URL");
-  }
+  if (!phoneNumberId) missing.push("WHATSAPP_CLOUD_PHONE_NUMBER_ID");
+  if (!accessToken) missing.push("WHATSAPP_CLOUD_ACCESS_TOKEN");
+  if (!templateName) missing.push("WHATSAPP_CLOUD_TEMPLATE_NAME");
 
   return {
-    provider,
+    provider: "cloud",
     configured: missing.length === 0,
     missing,
     hint: missing.length
-      ? `Lengkapi ${missing.join(", ")} di environment variable untuk mengaktifkan ${PROVIDER_LABELS[provider]}.`
-      : `${PROVIDER_LABELS[provider]} siap digunakan.`,
+      ? `Lengkapi ${missing.join(", ")} di environment variable untuk mengaktifkan ${PROVIDER_LABEL}.`
+      : `${PROVIDER_LABEL} siap digunakan dengan template "${templateName}" (${templateLanguage}).`,
+    phoneNumberId: phoneNumberId || null,
+    templateName: templateName || null,
+    templateLanguage,
+    apiVersion,
   };
 }
 
@@ -86,9 +105,28 @@ export function normalizeWhatsAppNumber(value: string | null | undefined): strin
   return digits;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
 function responseError(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null;
-  const data = payload as Record<string, unknown>;
+  if (typeof payload === "string") return payload.slice(0, 500);
+  const data = asRecord(payload);
+  if (!data) return null;
+
+  const graphError = asRecord(data.error);
+  if (graphError) {
+    const title =
+      typeof graphError.message === "string"
+        ? graphError.message
+        : "Gagal mengirim pesan WhatsApp";
+    const code = graphError.code ? ` [${String(graphError.code)}]` : "";
+    const subcode = graphError.error_subcode
+      ? ` (subcode ${String(graphError.error_subcode)})`
+      : "";
+    return `${title}${code}${subcode}`;
+  }
+
   if (data.status === false || data.success === false || data.error === true) {
     const reason =
       data.reason ?? data.message ?? data.error_message ?? data.error ?? "Gagal mengirim pesan";
@@ -97,107 +135,116 @@ function responseError(payload: unknown): string | null {
   return null;
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-}
-
 function responseReference(payload: unknown): string | undefined {
   const data = asRecord(payload);
   if (!data) return undefined;
-  const raw =
-    data.id ??
-    data.messageId ??
-    asRecord(data.data)?.id ??
-    asRecord(data.result)?.id;
-  const list = Array.isArray(raw) ? raw : raw === undefined || raw === null ? [] : [raw];
-  return list.length ? list.map(String).join(",") : undefined;
+
+  const ids: string[] = [];
+  const messages = Array.isArray(data.messages) ? data.messages : [];
+  for (const item of messages) {
+    const id = asRecord(item)?.id;
+    if (id !== undefined && id !== null) ids.push(String(id));
+  }
+  if (!ids.length) {
+    const raw = data.id ?? data.messageId ?? asRecord(data.data)?.id ?? asRecord(data.result)?.id;
+    const list = Array.isArray(raw) ? raw : raw === undefined || raw === null ? [] : [raw];
+    ids.push(...list.map(String));
+  }
+  return ids.length ? ids.join(",") : undefined;
+}
+
+function templateText(value: string): string {
+  const clean = value.trim() || "-";
+  return clean.length > MAX_PARAMETER_LENGTH
+    ? `${clean.slice(0, MAX_PARAMETER_LENGTH - 1)}…`
+    : clean;
 }
 
 async function postJson(url: string, init: RequestInit): Promise<unknown> {
-  const response = await fetch(url, {
-    ...init,
-    signal: AbortSignal.timeout(20_000),
-  });
-  const text = await response.text();
-  let payload: unknown = null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
-    payload = text ? JSON.parse(text) : null;
-  } catch {
-    payload = text.slice(0, 500);
-  }
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    const text = await response.text();
+    let payload: unknown = null;
+    try {
+      payload = text ? JSON.parse(text) : null;
+    } catch {
+      payload = text.slice(0, 500);
+    }
 
-  if (!response.ok) {
-    const detail = responseError(payload) ?? (typeof payload === "string" ? payload : "");
-    throw new Error(
-      `HTTP ${response.status}${detail ? `: ${detail}` : ""}`
-    );
+    if (!response.ok) {
+      const detail = responseError(payload);
+      throw new Error(`HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
+    }
+    return payload;
+  } finally {
+    clearTimeout(timeout);
   }
-  return payload;
 }
 
 export async function sendWhatsAppMessage({
   target,
-  message,
-}: {
-  target: string;
-  message: string;
-}): Promise<WhatsAppSendResult> {
+  name,
+  mosqueName,
+  duties,
+  dateLabel,
+}: WhatsAppTemplateMessage): Promise<WhatsAppSendResult> {
   const config = getWhatsAppConfig();
   if (!config.configured) {
-    return { ok: false, provider: config.provider, error: config.hint };
+    return { ok: false, provider: "cloud", error: config.hint };
   }
 
   const phone = normalizeWhatsAppNumber(target);
   if (!phone) {
-    return { ok: false, provider: config.provider, error: `Nomor WhatsApp tidak valid: ${target}` };
+    return { ok: false, provider: "cloud", error: `Nomor WhatsApp tidak valid: ${target}` };
   }
 
+  const accessToken = env("WHATSAPP_CLOUD_ACCESS_TOKEN");
+  const url = `https://graph.facebook.com/${config.apiVersion}/${encodeURIComponent(
+    config.phoneNumberId!
+  )}/messages`;
+
+  const payload = {
+    messaging_product: "whatsapp",
+    to: phone,
+    type: "template",
+    template: {
+      name: config.templateName,
+      language: { code: config.templateLanguage },
+      components: [
+        {
+          type: "body",
+          parameters: [name, mosqueName, duties, dateLabel].map((text) => ({
+            type: "text",
+            text: templateText(text),
+          })),
+        },
+      ],
+    },
+  };
+
   try {
-    if (config.provider === "fonnte") {
-      const payload = await postJson("https://api.fonnte.com/send", {
-        method: "POST",
-        headers: {
-          Authorization: env("FONNTE_TOKEN"),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ target: phone, message, countryCode: "62" }),
-      });
-      const error = responseError(payload);
-      if (error) return { ok: false, provider: config.provider, error };
-      return { ok: true, provider: config.provider, reference: responseReference(payload) };
-    }
-
-    if (config.provider === "wablas") {
-      const domain = env("WABLAS_DOMAIN").replace(/\/+$/, "");
-      const payload = await postJson(`${domain}/api/send-message`, {
-        method: "POST",
-        headers: {
-          Authorization: env("WABLAS_TOKEN"),
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({ phone, message }).toString(),
-      });
-      const error = responseError(payload);
-      if (error) return { ok: false, provider: config.provider, error };
-      return { ok: true, provider: config.provider, reference: responseReference(payload) };
-    }
-
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    const webhookToken = env("WHATSAPP_WEBHOOK_TOKEN");
-    if (webhookToken) headers.Authorization = `Bearer ${webhookToken}`;
-    const payload = await postJson(env("WHATSAPP_WEBHOOK_URL"), {
+    const response = await postJson(url, {
       method: "POST",
-      headers,
-      body: JSON.stringify({ target: phone, message, type: "H1_REMINDER" }),
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
     });
-    const error = responseError(payload);
-    if (error) return { ok: false, provider: config.provider, error };
-    return { ok: true, provider: config.provider, reference: responseReference(payload) };
+    const error = responseError(response);
+    if (error) return { ok: false, provider: "cloud", error };
+    return {
+      ok: true,
+      provider: "cloud",
+      reference: responseReference(response) ?? `template:${config.templateName}`,
+    };
   } catch (error) {
     return {
       ok: false,
-      provider: config.provider,
-      error: error instanceof Error ? error.message : "Gagal menghubungi gateway WhatsApp",
+      provider: "cloud",
+      error: error instanceof Error ? error.message : "Gagal menghubungi WhatsApp Cloud API",
     };
   }
 }
