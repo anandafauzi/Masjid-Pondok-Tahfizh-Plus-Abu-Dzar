@@ -45,6 +45,7 @@ export interface TvData {
   tarawihToday: {
     id: string;
     imamName: string;
+    imamName2: string | null;
     notes: string | null;
   } | null;
   prayerTimes: PrayerTimesStrings;
@@ -440,6 +441,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
       ? {
           id: tarawihToday.id,
           imamName: tarawihToday.imamName,
+          imamName2: tarawihToday.imamName2,
           notes: tarawihToday.notes,
         }
       : null,

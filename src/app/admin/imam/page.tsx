@@ -35,11 +35,13 @@ import { PetugasItem } from "@/types/petugas";
 import { ScheduleExportActions } from "@/components/schedule-export-actions";
 import { PetugasSelect } from "@/components/admin/petugas-select";
 import { dateOnlyToString } from "@/lib/datetime";
+import { tarawihImamLabel } from "@/lib/tarawih";
 
 interface Tarawih {
   id: string;
   scheduleDate: string;
   imamName: string;
+  imamName2: string | null;
   notes: string | null;
 }
 
@@ -111,6 +113,8 @@ export default function AdminImamPage() {
   // Tarawih form state
   const [tarawihDate, setTarawihDate] = useState(todayYmd());
   const [tarawihImam, setTarawihImam] = useState("");
+  const [tarawihImam2, setTarawihImam2] = useState("");
+  const [tarawihTwoImams, setTarawihTwoImams] = useState(false);
   const [tarawihNotes, setTarawihNotes] = useState("");
   const [editingTarawihId, setEditingTarawihId] = useState<string | null>(null);
 
@@ -411,6 +415,8 @@ export default function AdminImamPage() {
   function resetTarawihForm() {
     setTarawihDate(todayYmd());
     setTarawihImam("");
+    setTarawihImam2("");
+    setTarawihTwoImams(false);
     setTarawihNotes("");
     setEditingTarawihId(null);
   }
@@ -418,12 +424,23 @@ export default function AdminImamPage() {
   function beginEditTarawih(item: Tarawih) {
     setTarawihDate(toYmd(item.scheduleDate));
     setTarawihImam(item.imamName);
+    setTarawihImam2(item.imamName2 ?? "");
+    setTarawihTwoImams(Boolean(item.imamName2));
     setTarawihNotes(item.notes ?? "");
     setEditingTarawihId(item.id);
   }
 
   async function submitTarawih() {
     if (!tarawihImam.trim()) return toast.error("Nama imam wajib diisi");
+    if (tarawihTwoImams && !tarawihImam2.trim()) {
+      return toast.error("Nama imam kedua wajib diisi");
+    }
+    if (
+      tarawihTwoImams &&
+      tarawihImam.trim() === tarawihImam2.trim()
+    ) {
+      return toast.error("Imam kedua harus berbeda dari imam pertama");
+    }
     setSaving(true);
     try {
       const res = await fetch(
@@ -436,6 +453,7 @@ export default function AdminImamPage() {
           body: JSON.stringify({
             scheduleDate: tarawihDate,
             imamName: tarawihImam,
+            imamName2: tarawihTwoImams ? tarawihImam2.trim() : null,
             notes: tarawihNotes || null,
           }),
         }
@@ -1005,7 +1023,9 @@ export default function AdminImamPage() {
             <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs leading-relaxed text-emerald-800">
               Data tetap tersimpan di database kapan saja, tetapi tampilan publik
               dan notifikasi otomatis hanya aktif saat kalender Hijriah Umm
-              al-Qura menunjukkan Ramadan (bulan ke-9).
+              al-Qura menunjukkan Ramadan (bulan ke-9). Imam pertama otomatis
+              menjadi Imam Isya pada tanggal yang sama. Jika memakai 2 imam,
+              imam kedua hanya bertugas untuk Tarawih.
             </div>
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <div className="min-w-0">
@@ -1019,7 +1039,7 @@ export default function AdminImamPage() {
                 />
               </div>
               <div className="min-w-0">
-                <Label htmlFor="tarawihImam">Nama Imam</Label>
+                <Label htmlFor="tarawihImam">Nama Imam Pertama</Label>
                 <PetugasSelect
                   id="tarawihImam"
                   value={tarawihImam}
@@ -1030,6 +1050,42 @@ export default function AdminImamPage() {
                   petugasList={petugas}
                 />
               </div>
+              <div className="sm:col-span-2">
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#ded5c4] bg-white px-3 py-2 shadow-xs hover:border-[#2d946e]">
+                  <input
+                    id="tarawihTwoImams"
+                    type="checkbox"
+                    checked={tarawihTwoImams}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setTarawihTwoImams(checked);
+                      if (!checked) setTarawihImam2("");
+                    }}
+                    className="h-4 w-4 rounded border-[#ded5c4] text-[#2d946e] focus:ring-[#2d946e]"
+                  />
+                  <span className="text-xs font-bold text-[#19261f]">
+                    Satu Tarawih dengan 2 Imam
+                  </span>
+                </label>
+                <p className="mt-1 text-[11px] text-[#5c6e63]">
+                  Imam pertama otomatis menjadi Imam Isya. Imam kedua hanya
+                  ditampilkan untuk Tarawih.
+                </p>
+              </div>
+              {tarawihTwoImams && (
+                <div className="min-w-0">
+                  <Label htmlFor="tarawihImam2">Nama Imam Kedua</Label>
+                  <PetugasSelect
+                    id="tarawihImam2"
+                    value={tarawihImam2}
+                    onChange={setTarawihImam2}
+                    roleFilter="IMAM"
+                    placeholder="Pilih Imam Kedua"
+                    className="bg-[#fcfaf6]"
+                    petugasList={petugas}
+                  />
+                </div>
+              )}
               <div className="sm:col-span-2">
                 <Label htmlFor="tarawihNotes">Catatan (Opsional)</Label>
                 <Input
@@ -1088,7 +1144,8 @@ export default function AdminImamPage() {
                         {formatDateId(toYmd(item.scheduleDate))}
                       </p>
                       <p className="text-xs text-slate-600">
-                        Imam: {item.imamName}
+                        Imam:{" "}
+                        {tarawihImamLabel(item.imamName, item.imamName2)}
                         {item.notes ? ` · ${item.notes}` : ""}
                       </p>
                     </div>

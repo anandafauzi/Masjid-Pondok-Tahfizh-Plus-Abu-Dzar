@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TvData } from "@/lib/public-data";
 import { kajianTypeLabel } from "@/lib/kajian-type";
+import { tarawihImamLabel } from "@/lib/tarawih";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import {
   playCountdownBeep,
@@ -471,6 +472,12 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
     data?.display?.themeSettings?.specialAnnouncement?.enabled
   );
   const hasTarawih = Boolean(data?.isRamadan && data?.tarawihToday);
+  const tarawihImamText = data?.tarawihToday
+    ? tarawihImamLabel(
+        data.tarawihToday.imamName,
+        data.tarawihToday.imamName2
+      )
+    : "";
 
   // Available slides (0: Jadwal, 1: Iqamah, 2: Petugas, 3: Jumat,
   // 4: Nasihat, 5: Pengumuman Khusus, 6: Imam Tarawih saat Ramadan)
@@ -1671,8 +1678,14 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
                 <div className="font-arabic text-3xl sm:text-5xl lg:text-6xl text-[#eddcb2] font-bold leading-relaxed">
                   التراويح
                 </div>
-                <h2 className="mt-4 text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white break-words">
-                  {data.tarawihToday.imamName}
+                <h2
+                  className={`mt-4 font-black tracking-tight text-white break-words ${
+                    data.tarawihToday.imamName2
+                      ? "text-3xl sm:text-5xl lg:text-6xl"
+                      : "text-4xl sm:text-6xl lg:text-7xl"
+                  }`}
+                >
+                  {tarawihImamText}
                 </h2>
                 {data.tarawihToday.notes && (
                   <p className="mt-4 max-w-2xl text-sm sm:text-lg lg:text-xl font-medium text-[#b8d4c5]">

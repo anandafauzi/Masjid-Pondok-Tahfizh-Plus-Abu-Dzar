@@ -9,6 +9,7 @@ import {
   nextFriday,
 } from "@/lib/schedule-data";
 import { isRamadanDate } from "@/lib/ramadan";
+import { tarawihImamLabel } from "@/lib/tarawih";
 import { getMosqueSettings } from "@/lib/settings";
 import { resolveRolling } from "@/lib/rolling";
 import {
@@ -70,6 +71,7 @@ export default async function JadwalImamPage() {
 
   const dates = Array.from(grouped.keys()).sort();
   const todayKey = dateOnlyToString(today);
+  const todayTarawih = tarawihForDate(todayKey);
 
   // Serialized data for interactive client buttons
   const serializedSchedules = schedules.map((s) => ({
@@ -158,7 +160,14 @@ export default async function JadwalImamPage() {
                   })}
                   {hasRamadanDates && (
                     <td className="border border-black p-1 text-[8pt] align-top">
-                      <div className="font-bold text-black">{tarawihForDate(key)?.imamName || "-"}</div>
+                      <div className="font-bold text-black">
+                        {(() => {
+                          const tarawih = tarawihForDate(key);
+                          return tarawih
+                            ? tarawihImamLabel(tarawih.imamName, tarawih.imamName2)
+                            : "-";
+                        })()}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -240,7 +249,7 @@ export default async function JadwalImamPage() {
         )}
 
         {/* Imam Tarawih Malam Ini (Ramadan only) */}
-        {tarawihForDate(todayKey) && (
+        {todayTarawih && (
           <section className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-800 border border-emerald-200">
@@ -253,11 +262,11 @@ export default async function JadwalImamPage() {
             </div>
             <div className="mt-3">
               <h2 className="text-2xl font-bold text-slate-900">
-                {tarawihForDate(todayKey)?.imamName}
+                {tarawihImamLabel(todayTarawih.imamName, todayTarawih.imamName2)}
               </h2>
-              {tarawihForDate(todayKey)?.notes && (
+              {todayTarawih.notes && (
                 <p className="mt-1 text-xs text-emerald-900/80">
-                  {tarawihForDate(todayKey)?.notes}
+                  {todayTarawih.notes}
                 </p>
               )}
             </div>
@@ -340,28 +349,37 @@ export default async function JadwalImamPage() {
                             </td>
                           </tr>
                         ))}
-                        {tarawihForDate(key) && (
-                          <tr className="bg-emerald-50/70">
-                            <td className="px-6 py-3.5 font-bold text-emerald-900 flex items-center gap-2">
-                              <span className="font-arabic text-xs text-emerald-600">
-                                التراويح
-                              </span>
-                              <span>Tarawih</span>
-                            </td>
-                            <td className="px-6 py-3.5 text-slate-800 font-medium">
-                              <div className="flex items-center gap-1.5">
-                                <UserCheck className="h-4 w-4 text-emerald-600" />
-                                <span>{tarawihForDate(key)?.imamName}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-3.5 text-slate-500">
-                              <div className="flex items-center gap-1.5">
-                                <Mic className="h-3.5 w-3.5 text-slate-400" />
-                                <span>-</span>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
+                        {(() => {
+                          const tarawih = tarawihForDate(key);
+                          if (!tarawih) return null;
+                          return (
+                            <tr className="bg-emerald-50/70">
+                              <td className="px-6 py-3.5 font-bold text-emerald-900 flex items-center gap-2">
+                                <span className="font-arabic text-xs text-emerald-600">
+                                  التراويح
+                                </span>
+                                <span>Tarawih</span>
+                              </td>
+                              <td className="px-6 py-3.5 text-slate-800 font-medium">
+                                <div className="flex items-center gap-1.5">
+                                  <UserCheck className="h-4 w-4 text-emerald-600" />
+                                  <span>
+                                    {tarawihImamLabel(
+                                      tarawih.imamName,
+                                      tarawih.imamName2
+                                    )}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-3.5 text-slate-500">
+                                <div className="flex items-center gap-1.5">
+                                  <Mic className="h-3.5 w-3.5 text-slate-400" />
+                                  <span>-</span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })()}
                       </tbody>
                     </table>
                   </div>

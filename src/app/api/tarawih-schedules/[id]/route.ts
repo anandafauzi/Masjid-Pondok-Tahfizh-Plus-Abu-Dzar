@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   badRequest,
@@ -12,6 +13,11 @@ import {
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { tarawihImamLabel } from "@/lib/tarawih";
+import {
+  assignIsyaImamFromTarawih,
+  clearAutoIsyaImam,
+} from "@/lib/tarawih-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -25,32 +31,52 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    let scheduleDate: Date | undefined;
+    const existing = await prisma.tarawihSchedule.findUnique({ where: { id } });
+    if (!existing) return notFound("Jadwal Tarawih tidak ditemukan");
+
+    let scheduleDate = existing.scheduleDate;
     if (body.scheduleDate !== undefined) {
       const parsed = parseDateOnly(body.scheduleDate);
       if (!parsed) return badRequest("Tanggal tidak valid");
       scheduleDate = parsed;
     }
-    const imamName =
-      body.imamName !== undefined ? String(body.imamName).trim() : undefined;
-    if (imamName !== undefined && !imamName) {
-      return badRequest("Nama imam wajib diisi");
+
+    let imamName = existing.imamName;
+    if (body.imamName !== undefined) {
+      imamName = String(body.imamName).trim();
+      if (!imamName) return badRequest("Nama imam wajib diisi");
     }
 
-    const item = await prisma.tarawihSchedule.update({
-      where: { id },
-      data: {
-        ...(scheduleDate ? { scheduleDate } : {}),
-        ...(imamName !== undefined ? { imamName } : {}),
-        ...(body.notes !== undefined
-          ? {
-              notes:
-                typeof body.notes === "string" && body.notes.trim()
-                  ? body.notes.trim()
-                  : null,
-            }
-          : {}),
-      },
+    let imamName2 = existing.imamName2;
+    if (body.imamName2 !== undefined) {
+      const parsedImam2 =
+        body.imamName2 === null ? "" : String(body.imamName2).trim();
+      imamName2 = parsedImam2 || null;
+    }
+    if (imamName2 && imamName2 === imamName) {
+      return badRequest("Imam kedua harus berbeda dari imam pertama");
+    }
+
+    let notes = existing.notes;
+    if (body.notes !== undefined) {
+      notes =
+        typeof body.notes === "string" && body.notes.trim()
+          ? body.notes.trim()
+          : null;
+    }
+
+    const item = await prisma.$transaction(async (tx) => {
+      const dateChanged = existing.scheduleDate.getTime() !== scheduleDate.getTime();
+      if (dateChanged) {
+        await clearAutoIsyaImam(tx, existing.scheduleDate, existing.imamName);
+      }
+
+      const updated = await tx.tarawihSchedule.update({
+        where: { id },
+        data: { scheduleDate, imamName, imamName2, notes },
+      });
+      await assignIsyaImamFromTarawih(tx, scheduleDate, imamName, user.id);
+      return updated;
     });
 
     await writeAudit({
@@ -58,11 +84,17 @@ export async function PUT(
       action: "UPDATE_TARAWIH_SCHEDULE",
       entityType: "TarawihSchedule",
       entityId: item.id,
-      changeSummary: `Mengubah jadwal imam Tarawih ${item.imamName}`,
+      changeSummary: `Mengubah jadwal imam Tarawih ${tarawihImamLabel(item.imamName, item.imamName2)}`,
     });
     revalidateAllAppPaths();
     return ok(item);
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return badRequest("Jadwal Tarawih untuk tanggal tersebut sudah ada");
+    }
     if (isPrismaNotFound(error)) return notFound("Jadwal Tarawih tidak ditemukan");
     console.error(error);
     return serverError("Gagal mengubah jadwal Tarawih");
@@ -77,13 +109,20 @@ export async function DELETE(
   if (!user) return unauthorized();
   try {
     const { id } = await params;
-    const item = await prisma.tarawihSchedule.delete({ where: { id } });
+    const existing = await prisma.tarawihSchedule.findUnique({ where: { id } });
+    if (!existing) return notFound("Jadwal Tarawih tidak ditemukan");
+
+    await prisma.$transaction(async (tx) => {
+      await clearAutoIsyaImam(tx, existing.scheduleDate, existing.imamName);
+      await tx.tarawihSchedule.delete({ where: { id } });
+    });
+
     await writeAudit({
       adminId: user.id,
       action: "DELETE_TARAWIH_SCHEDULE",
       entityType: "TarawihSchedule",
-      entityId: item.id,
-      changeSummary: `Menghapus jadwal imam Tarawih ${item.imamName}`,
+      entityId: existing.id,
+      changeSummary: `Menghapus jadwal imam Tarawih ${tarawihImamLabel(existing.imamName, existing.imamName2)}`,
     });
     revalidateAllAppPaths();
     return ok({ success: true });

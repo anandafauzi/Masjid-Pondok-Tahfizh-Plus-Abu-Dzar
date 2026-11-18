@@ -15,6 +15,8 @@ import {
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { assignIsyaImamFromTarawih } from "@/lib/tarawih-sync";
+import { tarawihImamLabel } from "@/lib/tarawih";
 
 export const dynamic = "force-dynamic";
 
@@ -48,16 +50,25 @@ export async function POST(request: NextRequest) {
     if (!scheduleDate) return badRequest("Tanggal tidak valid");
     const imamName = String(body.imamName ?? "").trim();
     if (!imamName) return badRequest("Nama imam wajib diisi");
+    const imamName2 = body.imamName2 ? String(body.imamName2).trim() : null;
+    if (imamName2 && imamName2 === imamName) {
+      return badRequest("Imam kedua harus berbeda dari imam pertama");
+    }
 
-    const item = await prisma.tarawihSchedule.create({
-      data: {
-        scheduleDate,
-        imamName,
-        notes:
-          typeof body.notes === "string" && body.notes.trim()
-            ? body.notes.trim()
-            : null,
-      },
+    const item = await prisma.$transaction(async (tx) => {
+      const created = await tx.tarawihSchedule.create({
+        data: {
+          scheduleDate,
+          imamName,
+          imamName2: imamName2 || null,
+          notes:
+            typeof body.notes === "string" && body.notes.trim()
+              ? body.notes.trim()
+              : null,
+        },
+      });
+      await assignIsyaImamFromTarawih(tx, scheduleDate, imamName, user.id);
+      return created;
     });
 
     await writeAudit({
@@ -65,7 +76,7 @@ export async function POST(request: NextRequest) {
       action: "CREATE_TARAWIH_SCHEDULE",
       entityType: "TarawihSchedule",
       entityId: item.id,
-      changeSummary: `Menambah imam Tarawih ${item.imamName}`,
+      changeSummary: `Menambah imam Tarawih ${tarawihImamLabel(item.imamName, item.imamName2)}`,
     });
     revalidateAllAppPaths();
     return ok(item, 201);

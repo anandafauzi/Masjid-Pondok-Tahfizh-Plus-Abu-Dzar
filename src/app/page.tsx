@@ -6,6 +6,7 @@ import { formatDateOnlyLong, todayDateOnly } from "@/lib/datetime";
 import { nextFriday } from "@/lib/schedule-data";
 import { getPublicBundle } from "@/lib/public-data";
 import { kajianTypeLabel } from "@/lib/kajian-type";
+import { tarawihImamLabel } from "@/lib/tarawih";
 import {
   CalendarClock,
   Users,
@@ -333,7 +334,10 @@ export default async function Home() {
                       Imam Tarawih Malam Ini
                     </p>
                     <p className="truncate text-xs sm:text-sm font-extrabold text-[#19261f]">
-                      {bundle.tarawihToday.imamName}
+                      {tarawihImamLabel(
+                        bundle.tarawihToday.imamName,
+                        bundle.tarawihToday.imamName2
+                      )}
                     </p>
                     {bundle.tarawihToday.notes && (
                       <p className="truncate text-[11px] text-emerald-800/80">

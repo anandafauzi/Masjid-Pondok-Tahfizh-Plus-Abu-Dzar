@@ -119,6 +119,7 @@ model TarawihSchedule {
   id           String   @id @default(cuid())
   scheduleDate DateTime @db.Date
   imamName     String
+  imamName2    String?
   notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
