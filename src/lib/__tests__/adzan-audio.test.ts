@@ -10,6 +10,7 @@ type NativeWindow = Window & {
   MasjidNative?: {
     syncAdzanSettings?: (raw: string) => void;
     requestNotifications?: () => boolean | void | Promise<boolean | void>;
+    areNotificationsEnabled?: () => boolean;
   };
 };
 
@@ -41,6 +42,36 @@ describe("jembatan native Android untuk adzan", () => {
     const granted = await requestAdzanNotificationPermission();
 
     expect(requestNotifications).toHaveBeenCalledOnce();
+    expect(granted).toBe(true);
+  });
+
+  it("tidak menganggap void dari bridge native sebagai izin granted", async () => {
+    nativeWindow().MasjidNative = { requestNotifications: () => undefined };
+    vi.stubGlobal("Notification", {
+      permission: "denied",
+      requestPermission: vi.fn(async () => "denied"),
+    });
+
+    const granted = await requestAdzanNotificationPermission();
+
+    expect(granted).toBe(false);
+  });
+
+  it("mendeteksi izin native setelah dialog diizinkan", async () => {
+    let osGranted = false;
+    nativeWindow().MasjidNative = {
+      requestNotifications: () => {
+        osGranted = true;
+      },
+      areNotificationsEnabled: () => osGranted,
+    };
+    vi.stubGlobal("Notification", {
+      permission: "denied",
+      requestPermission: vi.fn(async () => "denied"),
+    });
+
+    const granted = await requestAdzanNotificationPermission();
+
     expect(granted).toBe(true);
   });
 

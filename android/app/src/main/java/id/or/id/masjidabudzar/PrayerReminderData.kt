@@ -34,6 +34,9 @@ object ReminderConfig {
     const val EXTRA_MUADZIN_NAME = "muadzin_name"
     const val EXTRA_DATE = "event_date"
     const val EXTRA_OPEN_PATH = "open_path"
+
+    /** ID notifikasi fallback saat foreground service gagal dipulai dari alarm. */
+    const val ADHAN_FALLBACK_NOTIFICATION_ID = 1003
 }
 
 data class PrayerEvent(
@@ -219,7 +222,9 @@ object PrayerReminderRepository {
 
             events.add(
                 PrayerEvent(
-                    key = rawKey.ifBlank { key },
+                    // Simpan key kanonik agar resolveReciter("fajr-makkah") bekerja
+                    // walaupun API mengirim "Subuh"/"Fajr" dengan huruf lain.
+                    key = key,
                     label = label,
                     adhanTime = item.optString("adhanTime"),
                     iqamahTime = item.optString("iqamahTime"),

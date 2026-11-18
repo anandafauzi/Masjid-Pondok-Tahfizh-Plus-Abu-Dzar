@@ -19,8 +19,9 @@ class ReminderRefreshReceiver : BroadcastReceiver() {
                     context.applicationContext,
                     ReminderSettings.getClockOffset(context),
                 )
-                ReminderSettings.setClockOffset(context, snapshot.clockOffset)
                 if (snapshot.events.isNotEmpty()) {
+                    // Fetch gagal menghasilkan clockOffset ~0; jangan hapus offset baik.
+                    ReminderSettings.setClockOffset(context, snapshot.clockOffset)
                     PrayerReminderScheduler.scheduleFrom(context.applicationContext, snapshot)
                 } else {
                     PrayerReminderScheduler.ensureRefreshAlarm(context.applicationContext)

@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import kotlin.math.max
 
 class AdhanAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -71,7 +72,13 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                     .bigText("Iqamah ${event.iqamahTime}\n$petugas")
             )
             .setContentIntent(openPendingIntent)
-            .setOngoing(true)
+            // Jangan sticky: pengguna harus bisa menghapus notifikasi fallback.
+            .setOngoing(false)
+            .setAutoCancel(true)
+            // Pastikan notifikasi hilang sendiri setelah iqamah walau aplikasi tidak dibuka.
+            .setTimeoutAfter(
+                max(1_000L, event.iqamahTarget - System.currentTimeMillis() + 60_000L)
+            )
             .setOnlyAlertOnce(true)
             .setSound(null)
             .setVibrate(longArrayOf(0))
@@ -81,7 +88,7 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
             .build()
 
         try {
-            manager.notify(event.id.hashCode() and Int.MAX_VALUE, notification)
+            manager.notify(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID, notification)
         } catch (_: Exception) {
             // Abaikan bila notifikasi tidak bisa ditampilkan.
         }

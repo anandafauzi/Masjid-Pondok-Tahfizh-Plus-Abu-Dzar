@@ -12,6 +12,7 @@ const STORAGE_KEY = "abu_dzar_adzan_settings";
 interface MasjidNativeBridge {
   syncAdzanSettings?: (raw: string) => void;
   requestNotifications?: () => boolean | void | Promise<boolean | void>;
+  areNotificationsEnabled?: () => boolean;
 }
 
 function getNativeBridge(): MasjidNativeBridge | undefined {
@@ -163,9 +164,26 @@ export async function requestAdzanNotificationPermission(): Promise<boolean> {
   if (nativeBridge?.requestNotifications) {
     try {
       const result = await nativeBridge.requestNotifications();
-      nativeGranted = typeof result === "boolean" ? result : true;
+      // bridge lama mengembalikan void: jangan dianggap sebagai izin granted.
+      nativeGranted = result === true;
     } catch {
       nativeGranted = false;
+    }
+
+    // Dialog izin Android asynchronous. Cek ulang status aslinya selama beberapa
+    // detik agar UI tidak menyimpan "notificationsEnabled: false" setelah izin diketuk.
+    if (!nativeGranted && nativeBridge.areNotificationsEnabled) {
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 250));
+        try {
+          if (nativeBridge.areNotificationsEnabled()) {
+            nativeGranted = true;
+            break;
+          }
+        } catch {
+          // Bridge belum siap; coba lagi.
+        }
+      }
     }
   }
 

@@ -52,9 +52,49 @@ class PrayerReminderService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var audioFocusRequest: AudioFocusRequest? = null
     private var audioFocusGranted = false
+    private var adhanBaseVolume = 0.8f
+    private var pausedByTransientLoss = false
 
     private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
-        if (focusChange == AudioManager.AUDIOFOCUS_LOSS) releaseAudio()
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                val player = mediaPlayer ?: return@OnAudioFocusChangeListener
+                try {
+                    player.setVolume(adhanBaseVolume, adhanBaseVolume)
+                    if (pausedByTransientLoss) {
+                        pausedByTransientLoss = false
+                        if (!player.isPlaying) player.start()
+                        setPlaybackState(PlaybackState.STATE_PLAYING)
+                    }
+                } catch (_: IllegalStateException) {
+                    // Pemutar sudah dilepas.
+                }
+            }
+
+            AudioManager.AUDIOFOCUS_LOSS -> releaseAudio()
+
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                val player = mediaPlayer ?: return@OnAudioFocusChangeListener
+                try {
+                    if (player.isPlaying) {
+                        player.pause()
+                        pausedByTransientLoss = true
+                        setPlaybackState(PlaybackState.STATE_PAUSED)
+                    }
+                } catch (_: IllegalStateException) {
+                    // Pemutar sudah dilepas.
+                }
+            }
+
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                try {
+                    val ducked = adhanBaseVolume * 0.25f
+                    mediaPlayer?.setVolume(ducked, ducked)
+                } catch (_: IllegalStateException) {
+                    // Pemutar sudah dilepas.
+                }
+            }
+        }
     }
 
     private val ticker = object : Runnable {
@@ -70,6 +110,7 @@ class PrayerReminderService : Service() {
         createChannels()
         destroyed.set(false)
         notificationManager.cancel(ADHAN_NOTIFICATION_ID)
+        notificationManager.cancel(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID)
 
         handlerThread = HandlerThread("prayer-reminder-ticker").also { thread ->
             thread.start()
@@ -130,8 +171,9 @@ class PrayerReminderService : Service() {
                 refreshing.set(false)
                 if (destroyed.get()) return@post
 
-                ReminderSettings.setClockOffset(applicationContext, fresh.clockOffset)
                 if (fresh.events.isNotEmpty()) {
+                    // Jangan timpa offset yang sudah baik dengan offset ~0 saat fetch gagal.
+                    ReminderSettings.setClockOffset(applicationContext, fresh.clockOffset)
                     snapshot = fresh
                     PrayerReminderScheduler.scheduleFrom(applicationContext, fresh)
                 } else {
@@ -146,6 +188,8 @@ class PrayerReminderService : Service() {
     private fun playAdhan(event: PrayerEvent) {
         currentAdhan = event
         adhanSkippedReason = null
+        // Service berhasil dipulai, jadi notifikasi fallback dari receiver tidak diperlukan.
+        notificationManager.cancel(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID)
         snapshot = snapshot?.let { current ->
             ReminderSnapshot.merge(
                 current,
@@ -199,6 +243,8 @@ class PrayerReminderService : Service() {
             player.setDataSource(this, Uri.parse(audioUrl))
             player.isLooping = false
             val volume = settings.volume.coerceIn(0f, 1f)
+            adhanBaseVolume = volume
+            pausedByTransientLoss = false
             player.setVolume(volume, volume)
             player.setOnPreparedListener { prepared ->
                 if (
@@ -208,16 +254,40 @@ class PrayerReminderService : Service() {
                 ) {
                     return@setOnPreparedListener
                 }
+                // Cek ulang: DND bisa aktif saat audio masih di-buffer.
+                if (isSilentOrDnd()) {
+                    adhanSkippedReason = "HP dalam mode silent/DND — audio dilewati."
+                    releaseAudio()
+                    updateNotifications()
+                    return@setOnPreparedListener
+                }
                 if (requestAudioFocus()) {
                     prepared.start()
                     setPlaybackState(PlaybackState.STATE_PLAYING)
                 } else {
                     adhanSkippedReason = "Audio tidak tersedia saat ini."
+                    releaseAudio()
                     updateNotifications()
                 }
             }
-            player.setOnCompletionListener { finishAdhanAudio() }
-            player.setOnErrorListener { _, _, _ ->
+            player.setOnCompletionListener { completed ->
+                if (
+                    destroyed.get() ||
+                    generation != audioGeneration.get() ||
+                    mediaPlayer !== completed
+                ) {
+                    return@setOnCompletionListener
+                }
+                finishAdhanAudio()
+            }
+            player.setOnErrorListener { errored, _, _ ->
+                if (
+                    destroyed.get() ||
+                    generation != audioGeneration.get() ||
+                    mediaPlayer !== errored
+                ) {
+                    return@setOnErrorListener true
+                }
                 adhanSkippedReason = "Gagal memutar audio adzan."
                 finishAdhanAudio()
                 true
@@ -281,6 +351,7 @@ class PrayerReminderService : Service() {
 
     private fun releaseAudio() {
         audioGeneration.incrementAndGet()
+        pausedByTransientLoss = false
         mediaPlayer?.let { player ->
             try {
                 if (player.isPlaying) player.stop()
@@ -358,6 +429,7 @@ class PrayerReminderService : Service() {
             currentAdhan = null
             adhanSkippedReason = null
             notificationManager.cancel(ADHAN_NOTIFICATION_ID)
+            notificationManager.cancel(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID)
         }
 
         val ongoing = buildOngoingNotification(now)

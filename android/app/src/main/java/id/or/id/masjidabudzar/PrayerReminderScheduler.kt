@@ -29,35 +29,56 @@ object PrayerReminderLauncher {
 }
 
 object PrayerReminderScheduler {
+    /**
+     * Refresh bisa dipanggil bersamaan dari service, receiver alarm, dan boot.
+     * Kunci ini mencegah cancel + schedule dari dua thread saling menimpa sehingga
+     * menyisakan alarm yatim yang tidak tercatat lagi di prefs.
+     */
+    private val scheduleLock = Any()
+
     fun scheduleFrom(context: Context, snapshot: ReminderSnapshot) {
-        if (snapshot.events.isEmpty()) {
-            ensureRefreshAlarm(context)
-            return
+        synchronized(scheduleLock) {
+            if (snapshot.events.isEmpty()) {
+                setRefreshAlarmLocked(context)
+                return
+            }
+
+            cancelAllLocked(context)
+
+            val now = snapshot.now()
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val scheduledIds = LinkedHashSet<String>()
+
+            for (event in snapshot.events) {
+                if (event.adhanTarget <= now) continue
+                scheduledIds.add(event.id)
+                alarmManager.setAdhanAlarm(context, event)
+            }
+
+            ReminderSettings.setScheduledEventIds(context, scheduledIds)
+            setRefreshAlarmLocked(context)
         }
-
-        cancelAll(context)
-
-        val now = snapshot.now()
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val scheduledIds = LinkedHashSet<String>()
-
-        for (event in snapshot.events) {
-            if (event.adhanTarget <= now) continue
-            scheduledIds.add(event.id)
-            alarmManager.setAdhanAlarm(context, event)
-        }
-
-        ReminderSettings.setScheduledEventIds(context, scheduledIds)
-        alarmManager.setRefreshAlarm(context)
     }
 
     /** Tetap pasang alarm refresh walau fetch gagal/empty, agar aplikasi bisa pulih sendiri. */
     fun ensureRefreshAlarm(context: Context) {
+        synchronized(scheduleLock) {
+            setRefreshAlarmLocked(context)
+        }
+    }
+
+    fun cancelAll(context: Context) {
+        synchronized(scheduleLock) {
+            cancelAllLocked(context)
+        }
+    }
+
+    private fun setRefreshAlarmLocked(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.setRefreshAlarm(context)
     }
 
-    fun cancelAll(context: Context) {
+    private fun cancelAllLocked(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val ids = ReminderSettings.getScheduledEventIds(context)
 

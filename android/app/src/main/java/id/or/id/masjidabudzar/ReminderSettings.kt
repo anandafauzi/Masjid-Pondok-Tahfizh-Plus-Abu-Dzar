@@ -51,6 +51,9 @@ object ReminderSettings {
                     .coerceIn(0f, 1f),
             )
 
+            // Bridge JS memanggil sync tiap 5 detik; jangan tulis ulang prefs
+            // bila tidak ada perubahan.
+            if (updated == current) return
             prefs(context).edit()
                 .putBoolean(KEY_SOUND_ENABLED, updated.soundEnabled)
                 .putBoolean(KEY_NOTIFICATIONS_ENABLED, updated.notificationsEnabled)
@@ -110,7 +113,9 @@ object ReminderSettings {
         prefs(context).getStringSet(KEY_SCHEDULED_IDS, emptySet()) ?: emptySet()
 
     fun setScheduledEventIds(context: Context, ids: Set<String>) {
-        prefs(context).edit().putStringSet(KEY_SCHEDULED_IDS, ids).apply()
+        // commit() memastikan pembacaan berikutnya (mis. dari receiver lain)
+        // melihat daftar ID terbaru sebelum alarm dijadwalkan ulang.
+        prefs(context).edit().putStringSet(KEY_SCHEDULED_IDS, ids).commit()
     }
 
     fun wasExactAlarmPrompted(context: Context): Boolean =

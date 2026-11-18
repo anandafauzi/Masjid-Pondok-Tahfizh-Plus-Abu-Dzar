@@ -277,10 +277,17 @@ class MainActivity : AppCompatActivity() {
             ReminderSettings.saveAdzanSettingsFromJson(applicationContext, raw)
         }
 
+        /** Kembalikan status saat ini, bukan asumsi "granted" setelah dialog dibuka. */
         @JavascriptInterface
-        fun requestNotifications() {
+        fun requestNotifications(): Boolean {
             runOnUiThread { ensureReminderPermissionAndStart() }
+            return NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled()
         }
+
+        /** Dipakai JS untuk mengecek ulang setelah dialog izin Android ditutup. */
+        @JavascriptInterface
+        fun areNotificationsEnabled(): Boolean =
+            NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled()
     }
 
     private companion object {
