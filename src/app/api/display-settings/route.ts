@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { normalizeShalatScreenDurationMinutes } from "@/lib/tv-display-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -37,10 +38,22 @@ export async function PUT(request: NextRequest) {
         ? (existing.themeSettings as Record<string, unknown>)
         : {};
 
+    const themePayload =
+      body.themeSettings && typeof body.themeSettings === "object"
+        ? (body.themeSettings as Record<string, unknown>)
+        : null;
+
     const mergedTheme =
-      body.themeSettings !== undefined
-        ? { ...existingTheme, ...(body.themeSettings as Record<string, unknown>) }
+      themePayload !== null
+        ? { ...existingTheme, ...themePayload }
         : undefined;
+
+    if (mergedTheme && mergedTheme.shalatScreenDurationMinutes !== undefined) {
+      mergedTheme.shalatScreenDurationMinutes =
+        normalizeShalatScreenDurationMinutes(
+          mergedTheme.shalatScreenDurationMinutes,
+        );
+    }
 
     const data = {
       slideIntervalSeconds:

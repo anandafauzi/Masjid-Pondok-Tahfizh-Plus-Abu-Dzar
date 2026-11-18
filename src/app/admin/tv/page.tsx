@@ -28,6 +28,11 @@ import {
   Megaphone,
 } from "lucide-react";
 import type { SpecialAnnouncement, TvThemeSettings } from "@/lib/settings";
+import {
+  DEFAULT_SHALAT_SCREEN_DURATION_MINUTES,
+  MAX_SHALAT_SCREEN_DURATION_MINUTES,
+  MIN_SHALAT_SCREEN_DURATION_MINUTES,
+} from "@/lib/tv-display-settings";
 
 interface DisplaySettingsForm {
   slideIntervalSeconds: number;
@@ -42,6 +47,7 @@ const DEFAULT_THEME_SETTINGS: TvThemeSettings = {
   showWeather: true,
   weatherCity: "Rumpin, Bogor",
   activePrayerGlow: true,
+  shalatScreenDurationMinutes: DEFAULT_SHALAT_SCREEN_DURATION_MINUTES,
   specialAnnouncement: {
     enabled: false,
     type: "duka",
@@ -272,6 +278,57 @@ export default function AdminTvPage() {
                       setForm({ ...form, showHijriDate: value })
                     }
                   />
+                </div>
+              </div>
+            </Card>
+
+            {/* DURASI LAYAR SAAT SHALAT */}
+            <Card>
+              <SectionHeading
+                icon={Moon}
+                title="Durasi Layar Saat Shalat"
+                description="Atur berapa lama TV menampilkan layar shalat setelah iqamah."
+              />
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="shalat-duration">
+                    Durasi Layar Shalat (menit)
+                  </Label>
+                  <Input
+                    id="shalat-duration"
+                    type="number"
+                    min={MIN_SHALAT_SCREEN_DURATION_MINUTES}
+                    max={MAX_SHALAT_SCREEN_DURATION_MINUTES}
+                    value={
+                      form.themeSettings.shalatScreenDurationMinutes ??
+                      DEFAULT_SHALAT_SCREEN_DURATION_MINUTES
+                    }
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        themeSettings: {
+                          ...form.themeSettings,
+                          shalatScreenDurationMinutes:
+                            e.target.value === ""
+                              ? DEFAULT_SHALAT_SCREEN_DURATION_MINUTES
+                              : Number(e.target.value),
+                        },
+                      })
+                    }
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Total dihitung sejak detik iqamah. 1 menit pertama layar
+                    tetap terang, kemudian meredup bertahap sampai durasi ini
+                    selesai.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-sage-200/70 bg-sage-50/60 px-4 py-3 text-xs leading-relaxed text-sage-800">
+                  <strong className="font-bold">Ringkas:</strong> cukup satu
+                  layar shalat. Tidak ada lagi perpindahan ke layar redup
+                  terpisah. Setelah durasi berakhir, TV kembali ke slide normal
+                  otomatis.
                 </div>
               </div>
             </Card>

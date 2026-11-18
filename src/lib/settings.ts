@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { MASJID_INFO } from "@/utils/constants";
 import type { IqamahSettingLike } from "@/lib/iqamah";
 import { getPublicDataVersion } from "@/lib/public-cache";
+import { DEFAULT_SHALAT_SCREEN_DURATION_MINUTES } from "@/lib/tv-display-settings";
 
 export interface MosqueSettingsData {
   mosqueName: string;
@@ -31,6 +32,11 @@ export interface TvThemeSettings {
   showWeather?: boolean;
   weatherCity?: string;
   activePrayerGlow?: boolean;
+  /**
+   * Total durasi layar shalat sejak iqamah (menit). 60 detik pertama terang,
+   * setelah itu meredup bertahap sampai durasi ini berakhir.
+   */
+  shalatScreenDurationMinutes?: number;
   specialAnnouncement?: SpecialAnnouncement;
 }
 
@@ -52,6 +58,7 @@ const PUBLIC_THEME_KEYS: Array<keyof TvThemeSettings> = [
   "showWeather",
   "weatherCity",
   "activePrayerGlow",
+  "shalatScreenDurationMinutes",
   "specialAnnouncement",
 ];
 
@@ -88,6 +95,7 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettingsData = {
     showWeather: true,
     weatherCity: "Rumpin, Bogor",
     activePrayerGlow: true,
+    shalatScreenDurationMinutes: DEFAULT_SHALAT_SCREEN_DURATION_MINUTES,
     specialAnnouncement: {
       enabled: false,
       type: "duka",

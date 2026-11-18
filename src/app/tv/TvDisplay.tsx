@@ -11,6 +11,10 @@ import {
   unlockTvAudio,
 } from "@/lib/tv-audio";
 import {
+  getShalatScreenDimProgress,
+  normalizeShalatScreenDurationMinutes,
+} from "@/lib/tv-display-settings";
+import {
   Clock,
   WifiOff,
   BookOpen,
@@ -21,15 +25,6 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-
-// Standard Shalat Duration per prayer (in minutes) for screen dimming
-const PRAYER_SHALAT_DURATIONS: Record<string, number> = {
-  fajr: 18,    // 18 menit Subuh
-  dhuhr: 15,   // 15 menit Dzuhur
-  asr: 15,     // 15 menit Ashar
-  maghrib: 12, // 12 menit Maghrib
-  isha: 15,    // 15 menit Isya
-};
 
 function clockString(ms: number) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -608,15 +603,19 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
     }
   }, [iqamahActive, prayerTimeReached, serverNow, audioMuted, khutbahVisible, isFriday]);
 
-  // 4. Shalat Mode Computation (Fase Rapatkan Shaf 60s + Mode Layar Redup Minimalis 15m)
+  // 4. Shalat Mode Computation (satu layar: terang 60s lalu meredup bertahap)
   const activeShalatMode = useMemo(() => {
     if (khutbahVisible || !data?.iqamahEvents) return null;
+
+    const durationMinutes = normalizeShalatScreenDurationMinutes(
+      data.display.themeSettings?.shalatScreenDurationMinutes,
+    );
+    const durationMs = durationMinutes * 60_000;
 
     for (const ev of data.iqamahEvents) {
       if (isFriday && ev.key === "dhuhr") continue; // Di hari Jumat, Zuhur digantikan Khutbah Jumat 40 menit
       const iqTarget = new Date(ev.iqamahTarget).getTime();
-      const durationMin = PRAYER_SHALAT_DURATIONS[ev.key] ?? 15;
-      const endShalatMs = iqTarget + durationMin * 60 * 1000;
+      const endShalatMs = iqTarget + durationMs;
 
       if (serverNow >= iqTarget && serverNow < endShalatMs) {
         const sessionKey = `${ev.key}-${iqTarget}`;
@@ -633,8 +632,9 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
           key: ev.key,
           label: ev.label,
           sessionKey,
-          isAligningShaf: elapsedMs < 60000,
-          shafSecondsLeft: Math.max(0, 60 - Math.floor(elapsedMs / 1000)),
+          durationMinutes,
+          isAligningShaf: elapsedMs < 60_000,
+          dimProgress: getShalatScreenDimProgress(elapsedMs, durationMinutes),
           remainingCountdown: countdown(endShalatMs, serverNow),
           imamName: imamInfo?.imamName ?? "Asatidz Pondok Tahfizh Abu Dzar",
           muadzinName: imamInfo?.muadzinName ?? null,
@@ -809,74 +809,91 @@ export function TvDisplay({ initialData = null }: { initialData?: TvData | null 
     );
   }
 
-  // 1. FASE RAPATKAN SHAF (0 s/d 60 detik setelah Iqamah)
-  if (activeShalatMode?.isAligningShaf) {
+  // MODE SHALAT BERLANGSUNG — satu layar sejak iqamah, terang 60 detik lalu
+  // meredup bertahap sampai durasi pengaturan admin berakhir.
+  if (activeShalatMode) {
+    const dim = activeShalatMode.dimProgress;
+    const contentOpacity = 1 - dim * 0.88;
+    const veilOpacity = dim * 0.95;
+    const secondaryOpacity = Math.max(0.16, 1 - dim * 0.82);
+
     return (
       <div
         suppressHydrationWarning
-        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#08130e] text-white p-6 sm:p-12 text-center select-none animate-fade-in ${isMouseIdle ? "cursor-none" : ""
+        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#08130e] p-6 text-center text-white select-none animate-fade-in sm:p-12 ${isMouseIdle ? "cursor-none" : ""
           }`}
       >
-        <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/20 via-transparent to-transparent" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/20 via-transparent to-transparent transition-opacity duration-1000"
+          style={{ opacity: secondaryOpacity }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-black transition-opacity duration-1000"
+          style={{ opacity: veilOpacity }}
+        />
 
-        <div className="relative z-10 max-w-4xl w-full flex flex-col items-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-sm animate-pulse">
+        <div
+          className="relative z-10 flex w-full max-w-5xl flex-col items-center transition-opacity duration-1000"
+          style={{ opacity: contentOpacity }}
+        >
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-sm">
             <span>🕌</span>
-            <span>SHALAT BERJAMAAH SEGERA DIMULAI</span>
+            <span>
+              {activeShalatMode.isAligningShaf
+                ? "SHALAT BERJAMAAH SEGERA DIMULAI"
+                : "SHALAT BERJAMAAH SEDANG BERLANGSUNG"}
+            </span>
           </div>
 
-          <div className="mb-3 font-arabic text-3xl font-bold text-[#eddcb2] sm:text-5xl leading-relaxed">
+          <div className="mb-3 font-arabic text-3xl font-bold leading-relaxed text-[#eddcb2] sm:text-5xl">
             سَوُّوا صُفُوفَكُمْ فَإِنَّ تَسْوِيَةَ الصُّفُوفِ مِنْ تَمَامِ الصَّلَاةِ
           </div>
 
           <h1 className="mt-2 text-4xl font-black tracking-tight text-white sm:text-6xl md:text-7xl">
-            Luruskan &amp; Rapatkan Shaf
+            {activeShalatMode.isAligningShaf
+              ? "Luruskan & Rapatkan Shaf"
+              : `Shalat ${activeShalatMode.label} Berjamaah`}
           </h1>
 
           <p className="mt-3 text-lg font-medium text-[#c1d1c7] sm:text-2xl">
-            Shalat {activeShalatMode.label} Berjamaah • Imam:{" "}
-            <strong className="text-white font-extrabold">{activeShalatMode.imamName}</strong>
+            Imam:{" "}
+            <strong className="font-extrabold text-white">
+              {activeShalatMode.imamName}
+            </strong>
+            {activeShalatMode.muadzinName
+              ? ` • Muadzin: ${activeShalatMode.muadzinName}`
+              : ""}
           </p>
 
-          <div className="my-6 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm font-semibold text-rose-200 sm:text-lg flex items-center gap-3">
-            <span className="text-xl">📴</span>
-            <span>Harap nonaktifkan atau senyapkan nada dering handphone Anda</span>
-          </div>
-        </div>
+          {activeShalatMode.isAligningShaf && (
+            <div className="my-6 flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm font-semibold text-rose-200 sm:text-lg">
+              <span className="text-xl">📴</span>
+              <span>
+                Harap nonaktifkan atau senyapkan nada dering handphone Anda
+              </span>
+            </div>
+          )}
 
-        {renderFloatingControls()}
-      </div>
-    );
-  }
-
-  // 2. FASE MODE SHALAT BERLANGSUNG (ULTRA-DIM MODE: Layar Redup Minimalis Anti-Silau 15 Menit)
-  if (activeShalatMode && !activeShalatMode.isAligningShaf) {
-    return (
-      <div
-        suppressHydrationWarning
-        className={`relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#030705] text-[#1e3428] p-6 text-center select-none transition-colors duration-1000 ${isMouseIdle ? "cursor-none" : ""
-          }`}
-      >
-        <div className="relative z-10 flex flex-col items-center opacity-40 hover:opacity-90 transition-opacity duration-500">
-          <div className="text-3xl sm:text-4xl mb-3">🕌</div>
-          <h2 className="text-xl font-bold text-[#2d503d] sm:text-3xl tracking-tight">
-            Shalat {activeShalatMode.label} Berjamaah Sedang Berlangsung
-          </h2>
-          <p className="mt-2 text-sm text-[#233d2f] sm:text-lg">
-            Imam: {activeShalatMode.imamName}
+          <p className="mt-5 text-xs font-semibold text-[#c1d1c7] sm:text-sm">
+            Kembali ke slide normal dalam {activeShalatMode.remainingCountdown}
           </p>
-
-          {/* Operator Skip button (shown subtle) */}
-          <button
-            type="button"
-            onClick={() => setManualExitShalatKey(activeShalatMode.sessionKey)}
-            className="mt-6 rounded-xl border border-white/5 bg-white/5 px-4 py-2 text-xs text-[#2d503d] hover:text-white hover:bg-white/10 transition-all"
-          >
-            Selesai Shalat / Kembali ke Slide Normal
-          </button>
         </div>
 
-        <div className="absolute bottom-4 right-6 text-xs text-[#1e3428] font-mono">
+        <button
+          type="button"
+          onClick={() => setManualExitShalatKey(activeShalatMode.sessionKey)}
+          className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 rounded-xl border border-white/15 bg-black/40 px-4 py-2 text-xs font-semibold text-white/90 backdrop-blur-sm transition-all hover:border-white/40 hover:bg-black/70 hover:text-white"
+          style={{ opacity: Math.max(0.28, 1 - dim * 0.6) }}
+        >
+          Selesai Shalat / Kembali ke Slide Normal
+        </button>
+
+        <div
+          className="absolute bottom-4 right-6 z-10 font-mono text-xs text-[#c1d1c7]"
+          style={{ opacity: secondaryOpacity }}
+        >
           {clockString(serverNow)} WIB
         </div>
 
