@@ -9,6 +9,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    // Mesin dengan memori terbatas sering kehabisan heap bila semua file
+    // dijalankan dalam fork paralel. Dua worker cukup untuk suite ini.
+    maxWorkers: 2,
+    minWorkers: 1,
   },
   resolve: {
     alias: {

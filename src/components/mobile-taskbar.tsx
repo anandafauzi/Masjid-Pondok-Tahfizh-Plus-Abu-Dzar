@@ -16,6 +16,7 @@ import {
   requestAdzanNotificationPermission,
   showAdzanNotification,
   unlockAudioContext,
+  isNativeAndroidApp,
 } from "@/lib/adzan-audio";
 import {
   Volume2,
@@ -282,6 +283,10 @@ export function MobilePrayerTaskbar() {
   // 4. Auto-trigger Adzan Audio & Notification when adzan target is reached
   useEffect(() => {
     if (!data || !prayerState || !mounted) return;
+
+    // Di APK, alarm native yang memutar adzan & notifikasi. Memutar juga dari
+    // WebView akan menggandakan suara dan mengabaikan aturan silent/DND native.
+    if (isNativeAndroidApp()) return;
 
     // Check each prayer event to see if current time just crossed adhanTarget (within a 60-second window)
     for (const e of adzanEvents) {

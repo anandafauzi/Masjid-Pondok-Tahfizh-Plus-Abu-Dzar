@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.Uri
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -23,6 +24,7 @@ import androidx.core.app.NotificationCompat
 import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
 
 class PrayerReminderService : Service() {
@@ -35,9 +37,16 @@ class PrayerReminderService : Service() {
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val refreshing = AtomicBoolean(false)
+    private val destroyed = AtomicBoolean(false)
+    private val audioGeneration = AtomicInteger(0)
 
+    @Volatile
     private var snapshot: ReminderSnapshot? = null
+
+    @Volatile
     private var currentAdhan: PrayerEvent? = null
+
+    @Volatile
     private var adhanSkippedReason: String? = null
 
     private var mediaPlayer: MediaPlayer? = null
@@ -59,6 +68,8 @@ class PrayerReminderService : Service() {
         super.onCreate()
         notificationManager = getSystemService(NotificationManager::class.java)
         createChannels()
+        destroyed.set(false)
+        notificationManager.cancel(ADHAN_NOTIFICATION_ID)
 
         handlerThread = HandlerThread("prayer-reminder-ticker").also { thread ->
             thread.start()
@@ -94,10 +105,12 @@ class PrayerReminderService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        destroyed.set(true)
+        mainHandler.removeCallbacksAndMessages(null)
         releaseAudio()
-        if (::tickHandler.isInitialized) tickHandler.removeCallbacks(ticker)
+        if (::tickHandler.isInitialized) tickHandler.removeCallbacksAndMessages(null)
         handlerThread?.quitSafely()
-        executor.shutdown()
+        executor.shutdownNow()
         if (::mediaSession.isInitialized) {
             mediaSession.isActive = false
             mediaSession.release()
@@ -109,12 +122,20 @@ class PrayerReminderService : Service() {
         if (!refreshing.compareAndSet(false, true)) return
 
         executor.execute {
-            val fresh = PrayerReminderRepository.fetch(applicationContext)
+            val fresh = PrayerReminderRepository.fetch(
+                applicationContext,
+                ReminderSettings.getClockOffset(applicationContext),
+            )
             mainHandler.post {
                 refreshing.set(false)
+                if (destroyed.get()) return@post
+
+                ReminderSettings.setClockOffset(applicationContext, fresh.clockOffset)
                 if (fresh.events.isNotEmpty()) {
                     snapshot = fresh
                     PrayerReminderScheduler.scheduleFrom(applicationContext, fresh)
+                } else {
+                    PrayerReminderScheduler.ensureRefreshAlarm(applicationContext)
                 }
                 updateNotifications()
                 scheduleTicker()
@@ -128,9 +149,13 @@ class PrayerReminderService : Service() {
         snapshot = snapshot?.let { current ->
             ReminderSnapshot.merge(
                 current,
-                ReminderSnapshot(current.fetchedAt, listOf(event)),
+                ReminderSnapshot(current.fetchedAt, current.serverTime, listOf(event)),
             )
-        } ?: ReminderSnapshot(System.currentTimeMillis(), listOf(event))
+        } ?: ReminderSnapshot(
+            System.currentTimeMillis(),
+            System.currentTimeMillis(),
+            listOf(event),
+        )
 
         updateNotifications()
         scheduleTicker()
@@ -163,17 +188,26 @@ class PrayerReminderService : Service() {
     ) {
         releaseAudio()
 
+        val generation = audioGeneration.incrementAndGet()
         try {
-            val player = MediaPlayer(this)
+            // MediaPlayer(Context) hanya ada di API 34; pakai konstruktor default agar aman di minSdk 24.
+            val player = MediaPlayer()
             mediaPlayer = player
             player.setAudioAttributes(adhanAudioAttributes())
-            player.setDataSource(
-                ReminderConfig.AUDIO_BASE_URL + resolveReciter(event.key, settings.selectedMuadzinId) + ".mp3"
-            )
+            val audioUrl = ReminderConfig.AUDIO_BASE_URL +
+                resolveReciter(event.key, settings.selectedMuadzinId) + ".mp3"
+            player.setDataSource(this, Uri.parse(audioUrl))
             player.isLooping = false
             val volume = settings.volume.coerceIn(0f, 1f)
             player.setVolume(volume, volume)
             player.setOnPreparedListener { prepared ->
+                if (
+                    destroyed.get() ||
+                    generation != audioGeneration.get() ||
+                    mediaPlayer !== prepared
+                ) {
+                    return@setOnPreparedListener
+                }
                 if (requestAudioFocus()) {
                     prepared.start()
                     setPlaybackState(PlaybackState.STATE_PLAYING)
@@ -246,6 +280,7 @@ class PrayerReminderService : Service() {
     }
 
     private fun releaseAudio() {
+        audioGeneration.incrementAndGet()
         mediaPlayer?.let { player ->
             try {
                 if (player.isPlaying) player.stop()
@@ -316,7 +351,8 @@ class PrayerReminderService : Service() {
     }
 
     private fun updateNotifications() {
-        val now = System.currentTimeMillis()
+        if (destroyed.get()) return
+        val now = snapshot?.now() ?: System.currentTimeMillis()
         val active = currentAdhan
         if (active != null && now >= active.iqamahTarget) {
             currentAdhan = null
@@ -406,7 +442,7 @@ class PrayerReminderService : Service() {
             .setContentText(body.replace("\n", " · "))
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setContentIntent(openAppPendingIntent("/adzan-iqamah"))
-            .setAutoCancel(true)
+            .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSound(null)
             .setVibrate(longArrayOf(0))

@@ -11,6 +11,8 @@ object ReminderSettings {
     private const val KEY_VOLUME = "adzan_volume"
     private const val KEY_SCHEDULED_IDS = "scheduled_event_ids"
     private const val KEY_EXACT_ALARM_PROMPTED = "exact_alarm_prompted"
+    private const val KEY_CLOCK_OFFSET = "server_clock_offset_ms"
+    private const val KEY_LAST_GOOD_PETUGAS = "last_good_petugas"
 
     data class AdzanSettings(
         val soundEnabled: Boolean = true,
@@ -58,6 +60,50 @@ object ReminderSettings {
         } catch (_: Exception) {
             // Abaikan payload yang bukan JSON pengaturan.
         }
+    }
+
+    fun getClockOffset(context: Context): Long =
+        prefs(context).getLong(KEY_CLOCK_OFFSET, 0L)
+
+    fun setClockOffset(context: Context, offsetMs: Long) {
+        prefs(context).edit().putLong(KEY_CLOCK_OFFSET, offsetMs).apply()
+    }
+
+    /** Nama petugas terakhir yang valid, dipakai saat API sesekali mengirim kosong. */
+    fun getLastGoodPetugas(context: Context, eventKey: String): Pair<String?, String?>? {
+        val raw = prefs(context).getString(KEY_LAST_GOOD_PETUGAS, null) ?: return null
+        val item = try {
+            JSONObject(raw).optJSONObject(eventKey)
+        } catch (_: Exception) {
+            null
+        } ?: return null
+
+        val imam = item.optString("imamName").trim().takeIf { it.isNotEmpty() }
+        val muadzin = item.optString("muadzinName").trim().takeIf { it.isNotEmpty() }
+        return if (imam == null && muadzin == null) null else imam to muadzin
+    }
+
+    fun saveLastGoodPetugas(
+        context: Context,
+        eventKey: String,
+        imamName: String?,
+        muadzinName: String?,
+    ) {
+        if (imamName.isNullOrBlank() && muadzinName.isNullOrBlank()) return
+        val preferences = prefs(context)
+        val root = try {
+            JSONObject(preferences.getString(KEY_LAST_GOOD_PETUGAS, null) ?: "{}")
+        } catch (_: Exception) {
+            JSONObject()
+        }
+        root.put(
+            eventKey,
+            JSONObject().apply {
+                put("imamName", imamName.orEmpty())
+                put("muadzinName", muadzinName.orEmpty())
+            },
+        )
+        preferences.edit().putString(KEY_LAST_GOOD_PETUGAS, root.toString()).apply()
     }
 
     fun getScheduledEventIds(context: Context): Set<String> =

@@ -30,10 +30,14 @@ object PrayerReminderLauncher {
 
 object PrayerReminderScheduler {
     fun scheduleFrom(context: Context, snapshot: ReminderSnapshot) {
-        cancelAll(context)
-        if (snapshot.events.isEmpty()) return
+        if (snapshot.events.isEmpty()) {
+            ensureRefreshAlarm(context)
+            return
+        }
 
-        val now = System.currentTimeMillis()
+        cancelAll(context)
+
+        val now = snapshot.now()
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val scheduledIds = LinkedHashSet<String>()
 
@@ -44,6 +48,12 @@ object PrayerReminderScheduler {
         }
 
         ReminderSettings.setScheduledEventIds(context, scheduledIds)
+        alarmManager.setRefreshAlarm(context)
+    }
+
+    /** Tetap pasang alarm refresh walau fetch gagal/empty, agar aplikasi bisa pulih sendiri. */
+    fun ensureRefreshAlarm(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.setRefreshAlarm(context)
     }
 
@@ -96,8 +106,8 @@ object PrayerReminderScheduler {
     }
 
     private fun refreshPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(ReminderConfig.ACTION_REFRESH_REMINDERS)
-            .setPackage(context.packageName)
+        val intent = Intent(context, ReminderRefreshReceiver::class.java)
+            .setAction(ReminderConfig.ACTION_REFRESH_REMINDERS)
         return PendingIntent.getBroadcast(
             context,
             REQUEST_CODE_REFRESH,

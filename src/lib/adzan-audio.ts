@@ -9,6 +9,21 @@ import {
 
 const STORAGE_KEY = "abu_dzar_adzan_settings";
 
+interface MasjidNativeBridge {
+  syncAdzanSettings?: (raw: string) => void;
+  requestNotifications?: () => boolean | void | Promise<boolean | void>;
+}
+
+function getNativeBridge(): MasjidNativeBridge | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as Window & { MasjidNative?: MasjidNativeBridge }).MasjidNative;
+}
+
+/** True when the page runs inside the Android WebView with the native bridge. */
+export function isNativeAndroidApp(): boolean {
+  return Boolean(getNativeBridge());
+}
+
 let globalAudio: HTMLAudioElement | null = null;
 let isAudioUnlocked = false;
 let onAudioEnded: (() => void) | null = null;
@@ -37,12 +52,7 @@ export function saveStoredAdzanSettings(settings: Partial<AdzanSettings>): Adzan
     const updated = { ...current, ...settings };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     try {
-      const nativeBridge = (
-        window as Window & {
-          MasjidNative?: { syncAdzanSettings?: (raw: string) => void };
-        }
-      ).MasjidNative;
-      nativeBridge?.syncAdzanSettings?.(JSON.stringify(updated));
+      getNativeBridge()?.syncAdzanSettings?.(JSON.stringify(updated));
     } catch {
       // Aplikasi Web biasa tidak punya bridge native.
     }
@@ -87,19 +97,12 @@ export function playAdzanSound(
     stopAdzanSound();
     onAudioEnded = onEnded ?? null;
 
-    let targetMuadzin: MuadzinOption;
-    if (isFajr) {
-      // Prioritize Fajr special if requested or user selected fajr
-      targetMuadzin =
-        MUADZIN_OPTIONS.find((m) => m.id === "fajr-makkah") ??
-        getMuadzinOption(muadzinId || "makkah");
-    } else {
-      const selectedId = muadzinId || getStoredAdzanSettings().selectedMuadzinId;
-      targetMuadzin = getMuadzinOption(selectedId);
-      // If user selected fajr-makkah but it's not Fajr, fallback to makkah
-      if (targetMuadzin.id === "fajr-makkah") {
-        targetMuadzin = getMuadzinOption("makkah");
-      }
+    const selectedId = muadzinId || getStoredAdzanSettings().selectedMuadzinId;
+    let targetMuadzin = getMuadzinOption(selectedId);
+    // "Khusus Subuh" hanya dipakai saat Subuh; untuk shalat lain pakai Makkah.
+    // Reciter pilihan pengguna tetap dihormati, termasuk untuk Subuh.
+    if (targetMuadzin.isFajrSpecial && !isFajr) {
+      targetMuadzin = getMuadzinOption("makkah");
     }
 
     const audio = new Audio(targetMuadzin.audioSrc);
@@ -151,17 +154,29 @@ export function stopAdzanSound(): void {
 }
 
 export async function requestAdzanNotificationPermission(): Promise<boolean> {
-  if (typeof window === "undefined" || !("Notification" in window)) {
-    return false;
+  if (typeof window === "undefined") return false;
+
+  // Di APK Android, izin yang dibutuhkan adalah POST_NOTIFICATIONS native.
+  // Web Notification API di WebView tidak meminta izin sistem operasi.
+  let nativeGranted = false;
+  const nativeBridge = getNativeBridge();
+  if (nativeBridge?.requestNotifications) {
+    try {
+      const result = await nativeBridge.requestNotifications();
+      nativeGranted = typeof result === "boolean" ? result : true;
+    } catch {
+      nativeGranted = false;
+    }
   }
-  if (Notification.permission === "granted") {
-    return true;
-  }
+
+  if (!("Notification" in window)) return nativeGranted;
+  if (Notification.permission === "granted") return true;
+
   try {
-    const res = await Notification.requestPermission();
-    return res === "granted";
+    const result = await Notification.requestPermission();
+    return result === "granted" || nativeGranted;
   } catch {
-    return false;
+    return nativeGranted;
   }
 }
 

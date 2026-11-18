@@ -88,10 +88,20 @@ data class ActivePrayer(
 )
 
 data class ReminderSnapshot(
+    /** Waktu lokal saat data diterima. */
     val fetchedAt: Long,
+    /** Waktu server yang dikirim API (epoch UTC). */
+    val serverTime: Long,
     val events: List<PrayerEvent>,
 ) {
-    fun active(now: Long = System.currentTimeMillis()): ActivePrayer? {
+    /** Selisih jam server terhadap jam perangkat. */
+    val clockOffset: Long
+        get() = serverTime - fetchedAt
+
+    /** Waktu "sekarang" yang sudah dikoreksi terhadap jam server. */
+    fun now(): Long = System.currentTimeMillis() + clockOffset
+
+    fun active(now: Long = now()): ActivePrayer? {
         for (event in events) {
             if (now >= event.adhanTarget && now < event.iqamahTarget) {
                 return ActivePrayer(event, true)
@@ -108,14 +118,14 @@ data class ReminderSnapshot(
     companion object {
         fun merge(vararg snapshots: ReminderSnapshot?): ReminderSnapshot {
             val byId = LinkedHashMap<String, PrayerEvent>()
-            var fetchedAt = 0L
-            for (snapshot in snapshots) {
-                if (snapshot == null) continue
-                fetchedAt = maxOf(fetchedAt, snapshot.fetchedAt)
+            val valid = snapshots.filterNotNull()
+            val newest = valid.maxByOrNull { it.fetchedAt }
+            for (snapshot in valid) {
                 snapshot.events.forEach { byId[it.id] = it }
             }
             return ReminderSnapshot(
-                fetchedAt = fetchedAt,
+                fetchedAt = newest?.fetchedAt ?: System.currentTimeMillis(),
+                serverTime = newest?.serverTime ?: System.currentTimeMillis(),
                 events = byId.values.sortedBy { it.adhanTarget },
             )
         }
@@ -130,17 +140,17 @@ object PrayerReminderRepository {
      * Ambil jadwal hari ini dan besok (WIB) agar notifikasi ongoing tetap punya
      * data petugas setelah shalat terakhir hari ini.
      */
-    fun fetch(@Suppress("UNUSED_PARAMETER") context: Context): ReminderSnapshot {
-        val now = System.currentTimeMillis()
+    fun fetch(context: Context, clockOffsetMs: Long = 0L): ReminderSnapshot {
+        val now = System.currentTimeMillis() + clockOffsetMs
         val today = wibDate(now)
         val tomorrow = wibDate(now + 24L * 60L * 60L * 1000L)
         return ReminderSnapshot.merge(
-            fetchForDate(today),
-            fetchForDate(tomorrow),
+            fetchForDate(context, today),
+            fetchForDate(context, tomorrow),
         )
     }
 
-    private fun fetchForDate(date: String?): ReminderSnapshot? {
+    private fun fetchForDate(context: Context, date: String?): ReminderSnapshot? {
         var connection: HttpURLConnection? = null
         return try {
             val endpoint = if (date.isNullOrBlank()) {
@@ -161,7 +171,7 @@ object PrayerReminderRepository {
             val root = JSONObject(body)
             val resolvedDate = date?.takeIf { it.isNotBlank() }
                 ?: root.optString("today").ifBlank { wibDate(System.currentTimeMillis()) }
-            parseSnapshot(root, resolvedDate)
+            parseSnapshot(context, root, resolvedDate)
         } catch (_: Exception) {
             null
         } finally {
@@ -169,50 +179,87 @@ object PrayerReminderRepository {
         }
     }
 
-    private fun parseSnapshot(root: JSONObject, date: String): ReminderSnapshot {
-        val imamByPrayer = HashMap<String, Pair<String?, String?>>()
+    private fun parseSnapshot(
+        context: Context,
+        root: JSONObject,
+        date: String,
+    ): ReminderSnapshot {
+        val imamByKey = HashMap<String, Pair<String?, String?>>()
         val imamArray = root.optJSONArray("imamToday") ?: JSONArray()
         for (i in 0 until imamArray.length()) {
             val item = imamArray.optJSONObject(i) ?: continue
-            val prayer = item.optString("prayerName").trim()
-            if (prayer.isEmpty()) continue
-            imamByPrayer[prayer] = item.optNullableString("imamName") to
-                item.optNullableString("muadzinName")
+            val key = canonicalPrayerKey(item.optString("prayerName")) ?: continue
+            val imam = cleanName(item.optNullableString("imamName"))
+            val muadzin = cleanName(item.optNullableString("muadzinName"))
+            if (imam != null || muadzin != null) {
+                imamByKey[key] = imam to muadzin
+            }
         }
 
         val events = ArrayList<PrayerEvent>()
         val eventArray = root.optJSONArray("iqamahEvents") ?: JSONArray()
         for (i in 0 until eventArray.length()) {
             val item = eventArray.optJSONObject(i) ?: continue
-            val key = item.optString("key").trim()
-            if (key.isEmpty()) continue
+            val rawKey = item.optString("key").trim()
+            val label = item.optString("label").ifBlank { rawKey }
+            val key = canonicalPrayerKey(rawKey) ?: canonicalPrayerKey(label) ?: continue
 
-            val label = item.optString("label").ifBlank { key }
             val adhan = parseIsoTimestamp(item.optString("adhanTarget")) ?: continue
             val iqamah = parseIsoTimestamp(item.optString("iqamahTarget"))
                 ?: (adhan + 10L * 60L * 1000L)
-            val petugas = imamByPrayer[label]
+
+            val petugas = imamByKey[key]
+            val fallback = ReminderSettings.getLastGoodPetugas(context, key)
+            val imam = petugas?.first?.let(::cleanName) ?: fallback?.first?.let(::cleanName)
+            val muadzin = petugas?.second?.let(::cleanName)
+                ?: fallback?.second?.let(::cleanName)
+            if (imam != null || muadzin != null) {
+                ReminderSettings.saveLastGoodPetugas(context, key, imam, muadzin)
+            }
 
             events.add(
                 PrayerEvent(
-                    key = key,
+                    key = rawKey.ifBlank { key },
                     label = label,
                     adhanTime = item.optString("adhanTime"),
                     iqamahTime = item.optString("iqamahTime"),
                     adhanTarget = adhan,
                     iqamahTarget = iqamah,
-                    imamName = petugas?.first,
-                    muadzinName = petugas?.second,
+                    imamName = imam,
+                    muadzinName = muadzin,
                     date = date,
                 )
             )
         }
 
+        val receivedAt = System.currentTimeMillis()
         return ReminderSnapshot(
-            fetchedAt = parseIsoTimestamp(root.optString("serverTime"))
-                ?: System.currentTimeMillis(),
+            fetchedAt = receivedAt,
+            serverTime = parseIsoTimestamp(root.optString("serverTime")) ?: receivedAt,
             events = events.sortedBy { it.adhanTarget },
         )
+    }
+
+    /** Samakan "Subuh", "Fajr", "Dzuhur", dll. dengan key iqamahEvents. */
+    private fun canonicalPrayerKey(value: String): String? {
+        val text = value.trim().lowercase(Locale.ROOT)
+        return when {
+            text.contains("subuh") || text.contains("fajr") -> "fajr"
+            text.contains("zuhur") || text.contains("dzuhur") || text.contains("dhuhr") -> "dhuhr"
+            text.contains("asar") || text.contains("ashar") || text.contains("asr") -> "asr"
+            text.contains("magrib") || text.contains("maghrib") -> "maghrib"
+            text.contains("isya") || text.contains("isha") -> "isha"
+            else -> null
+        }
+    }
+
+    private fun cleanName(value: String?): String? {
+        val text = value?.trim().orEmpty()
+        if (text.isEmpty()) return null
+        return when (text.lowercase(Locale.ROOT)) {
+            "-", "--", "n/a", "null", "belum ditentukan", "tidak ditentukan" -> null
+            else -> text
+        }
     }
 
     private fun JSONObject.optNullableString(name: String): String? =

@@ -43,6 +43,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var pendingGeoOrigin: String? = null
+    private var pendingGeoCallback: GeolocationPermissions.Callback? = null
+    private val requestLocationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val origin = pendingGeoOrigin
+        val callback = pendingGeoCallback
+        pendingGeoOrigin = null
+        pendingGeoCallback = null
+        callback?.invoke(origin, granted && origin != null && isAppOrigin(origin), false)
+    }
+
+    private var exactAlarmDialogShown = false
+
     private fun isAppOrigin(origin: String): Boolean {
         return try {
             val uri = Uri.parse(origin)
@@ -81,8 +95,22 @@ class MainActivity : AppCompatActivity() {
                     origin: String?,
                     callback: GeolocationPermissions.Callback?
                 ) {
-                    val allowed = origin != null && isAppOrigin(origin)
-                    callback?.invoke(origin, allowed, false)
+                    if (origin == null || !isAppOrigin(origin)) {
+                        callback?.invoke(origin, false, false)
+                        return
+                    }
+                    if (
+                        ContextCompat.checkSelfPermission(
+                            this@MainActivity,
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        callback?.invoke(origin, true, false)
+                        return
+                    }
+                    pendingGeoOrigin = origin
+                    pendingGeoCallback = callback
+                    requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 }
             }
 
@@ -143,7 +171,9 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        webView.loadUrl(appUrl)
+        val openPath = intent?.getStringExtra(ReminderConfig.EXTRA_OPEN_PATH)
+            ?.takeIf { it.startsWith("/") && !it.startsWith("//") }
+        webView.loadUrl(appUrl + (openPath.orEmpty()))
         ensureReminderPermissionAndStart()
     }
 
@@ -151,6 +181,7 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         val path = intent.getStringExtra(ReminderConfig.EXTRA_OPEN_PATH)
+            ?.takeIf { it.startsWith("/") && !it.startsWith("//") }
         if (!path.isNullOrBlank() && ::webView.isInitialized) {
             webView.loadUrl(appUrl + path)
         }
@@ -159,6 +190,16 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         webView.onResume()
+
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+        ) {
+            // User baru saja memberi izin alarm & pengingat dari Settings.
+            startReminderService()
+        } else {
+            maybeRequestExactAlarm()
+        }
     }
 
     override fun onPause() {
@@ -198,10 +239,8 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
 
         val alarmManager = getSystemService(AlarmManager::class.java)
-        if (alarmManager.canScheduleExactAlarms() || ReminderSettings.wasExactAlarmPrompted(this)) {
-            return
-        }
-        ReminderSettings.markExactAlarmPrompted(this)
+        if (alarmManager.canScheduleExactAlarms() || exactAlarmDialogShown) return
+        exactAlarmDialogShown = true
 
         AlertDialog.Builder(this)
             .setTitle("Izin alarm shalat")
@@ -210,6 +249,7 @@ class MainActivity : AppCompatActivity() {
                     "alarm & pengingat pada pengaturan berikut."
             )
             .setPositiveButton("Buka pengaturan") { _, _ ->
+                ReminderSettings.markExactAlarmPrompted(this)
                 try {
                     startActivity(
                         Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
@@ -223,7 +263,8 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                 }
             }
-            .setNegativeButton("Nanti", null)
+            .setNegativeButton("Nanti") { _, _ -> exactAlarmDialogShown = false }
+            .setOnCancelListener { exactAlarmDialogShown = false }
             .show()
     }
 
