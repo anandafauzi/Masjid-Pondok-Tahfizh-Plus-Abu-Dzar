@@ -12,7 +12,6 @@ import {
   Users,
   BookOpen,
   BookMarked,
-  MonitorPlay,
   ArrowRight,
   Sparkles,
   Quote,
@@ -70,15 +69,6 @@ const CARDS = [
     icon: Compass,
     badge: "Presisi",
     accent: "bg-[#7c6630]",
-  },
-  {
-    href: "/tv",
-    title: "TV Display Digital",
-    arabic: "شاشة المسجد الذكية",
-    desc: "Tampilan layar TV masjid beresolusi tinggi dengan slide otomatis dan mode khutbah.",
-    icon: MonitorPlay,
-    badge: "Full Screen",
-    accent: "bg-[#19261f]",
   },
 ];
 

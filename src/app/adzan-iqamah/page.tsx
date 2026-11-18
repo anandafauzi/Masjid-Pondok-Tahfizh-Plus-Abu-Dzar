@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { TvViewport } from "@/components/tv/tv-viewport";
 import type { TvData } from "@/lib/public-data";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
-import { CheckCircle2, Maximize2, Minimize2, Sparkles } from "lucide-react";
+import { CheckCircle2, Home, Maximize2, Minimize2, Sparkles } from "lucide-react";
 
 function countdown(targetMs: number, nowMs: number) {
   const total = Math.max(0, Math.floor((targetMs - nowMs) / 1000));
@@ -126,10 +126,10 @@ export default function AdzanIqamahPage() {
               </span>
             </div>
             <Link
-              href="/tv"
-              className="rounded-xl border border-[#ded5c4] bg-white px-4 py-2.5 text-sm font-bold text-[#1e6149] shadow-sm transition-colors hover:bg-[#eef8f3]"
+              href="/"
+              className="flex items-center gap-2 rounded-xl border border-[#ded5c4] bg-white px-4 py-2.5 text-sm font-bold text-[#1e6149] shadow-sm transition-colors hover:bg-[#eef8f3]"
             >
-              Layar TV
+              <Home className="h-4 w-4" /> Beranda
             </Link>
             <button
               type="button"

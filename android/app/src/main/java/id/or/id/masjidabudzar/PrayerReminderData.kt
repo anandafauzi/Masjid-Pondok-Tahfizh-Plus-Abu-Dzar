@@ -35,6 +35,8 @@ object ReminderConfig {
     const val EXTRA_DATE = "event_date"
     const val EXTRA_OPEN_PATH = "open_path"
 
+    const val DEFAULT_LOCATION = "Rumpin, Kabupaten Bogor"
+
     /** ID notifikasi fallback saat foreground service gagal dipulai dari alarm. */
     const val ADHAN_FALLBACK_NOTIFICATION_ID = 1003
 }
@@ -96,6 +98,10 @@ data class ReminderSnapshot(
     /** Waktu server yang dikirim API (epoch UTC). */
     val serverTime: Long,
     val events: List<PrayerEvent>,
+    /** Lokasi masjid ringkas untuk baris 1 notifikasi. */
+    val location: String = ReminderConfig.DEFAULT_LOCATION,
+    /** Tanggal Hijriyah untuk baris 1 notifikasi. */
+    val hijriDate: String = "",
 ) {
     /** Selisih jam server terhadap jam perangkat. */
     val clockOffset: Long
@@ -130,6 +136,9 @@ data class ReminderSnapshot(
                 fetchedAt = newest?.fetchedAt ?: System.currentTimeMillis(),
                 serverTime = newest?.serverTime ?: System.currentTimeMillis(),
                 events = byId.values.sortedBy { it.adhanTarget },
+                location = newest?.location?.takeIf { it.isNotBlank() }
+                    ?: ReminderConfig.DEFAULT_LOCATION,
+                hijriDate = newest?.hijriDate.orEmpty(),
             )
         }
     }
@@ -238,11 +247,45 @@ object PrayerReminderRepository {
         }
 
         val receivedAt = System.currentTimeMillis()
+        val serverMs = parseIsoTimestamp(root.optString("serverTime")) ?: receivedAt
+        val rawAddress = root.optJSONObject("mosque")?.optNullableString("address")
         return ReminderSnapshot(
             fetchedAt = receivedAt,
-            serverTime = parseIsoTimestamp(root.optString("serverTime")) ?: receivedAt,
+            serverTime = serverMs,
             events = events.sortedBy { it.adhanTarget },
+            location = shortLocation(rawAddress),
+            hijriDate = formatHijriDate(serverMs),
         )
+    }
+
+    /** Lokasi ringkas: maksimal dua segmen alamat, mengikuti tampilan web. */
+    private fun shortLocation(address: String?): String {
+        val source = address?.takeIf { it.isNotBlank() } ?: ReminderConfig.DEFAULT_LOCATION
+        return source
+            .split(",")
+            .take(2)
+            .joinToString(", ") { it.trim() }
+            .ifBlank { ReminderConfig.DEFAULT_LOCATION }
+    }
+
+    /** Format Hijriyah Umm al-Qura dengan locale Indonesia, tanpa suffix "H". */
+    fun formatHijriDate(millis: Long): String {
+        return try {
+            val zone = android.icu.util.TimeZone.getTimeZone("Asia/Jakarta")
+            val locale = Locale("id", "ID")
+            val calendar = android.icu.util.IslamicCalendar(zone, locale)
+            calendar.setTime(Date(millis))
+            val formatter = android.icu.text.DateFormat.getInstanceForSkeleton(
+                "d MMMM y",
+                locale,
+            )
+            formatter.setCalendar(calendar)
+            formatter.format(Date(millis))
+                .replace(Regex("\\s+H$", RegexOption.IGNORE_CASE), "")
+                .trim()
+        } catch (_: Exception) {
+            ""
+        }
     }
 
     /** Samakan "Subuh", "Fajr", "Dzuhur", dll. dengan key iqamahEvents. */

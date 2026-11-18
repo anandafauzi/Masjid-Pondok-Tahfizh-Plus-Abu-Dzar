@@ -21,7 +21,10 @@ import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
+import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -449,22 +452,7 @@ class PrayerReminderService : Service() {
     }
 
     private fun buildOngoingNotification(now: Long): android.app.Notification {
-        val active = snapshot?.active(now)
-        val title: String
-        val body: String
-
-        if (active == null) {
-            title = "Jadwal shalat"
-            body = "Menunggu jadwal terbaru dari masjid."
-        } else if (active.isAdhanWindow) {
-            val remain = max(0L, active.event.iqamahTarget - now)
-            title = "Adzan ${active.event.label} berkumandang"
-            body = "Menuju iqamah ${active.event.iqamahTime} · ${formatDuration(remain)} lagi\n" +
-                petugasLine(active.event)
-        } else {
-            title = "${active.event.label} pukul ${active.event.adhanTime}"
-            body = petugasLine(active.event) + "\nIqamah ${active.event.iqamahTime}"
-        }
+        val (line1, line2, line3) = taskbarLines(now)
 
         val refreshIntent = Intent(this, PrayerReminderService::class.java)
             .setAction(ReminderConfig.ACTION_REFRESH_DATA)
@@ -477,9 +465,14 @@ class PrayerReminderService : Service() {
 
         return NotificationCompat.Builder(this, ONGOING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_prayer_notification)
-            .setContentTitle(title)
-            .setContentText(body.replace("\n", " · "))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentTitle(line1)
+            .setContentText("$line2 · $line3")
+            .setStyle(
+                NotificationCompat.InboxStyle()
+                    .setBigContentTitle(line1)
+                    .addLine(line2)
+                    .addLine(line3),
+            )
             .setContentIntent(openAppPendingIntent("/"))
             .addAction(android.R.drawable.ic_popup_sync, "Perbarui", refreshPendingIntent)
             .setOngoing(true)
@@ -491,6 +484,56 @@ class PrayerReminderService : Service() {
             .build()
     }
 
+    /**
+     * Tiga baris notifikasi ongoing, mengikuti format taskbar web:
+     * 1. Lokasi | Tanggal Hijriyah
+     * 2. Shalat : Waktu Shalat/Iqamah | Mundur
+     * 3. Imam | Muadzin
+     */
+    private fun taskbarLines(now: Long): List<String> {
+        val current = snapshot
+        val location = current?.location?.takeIf { it.isNotBlank() }
+            ?: ReminderConfig.DEFAULT_LOCATION
+        val hijri = current?.hijriDate?.takeIf { it.isNotBlank() }
+            ?: PrayerReminderRepository.formatHijriDate(now)
+        val line1 = "$location | $hijri"
+
+        val active = current?.active(now)
+        val line2 = when {
+            active == null -> "Jadwal shalat belum tersedia | Perbarui data"
+            active.isAdhanWindow -> {
+                val remain = max(0L, active.event.iqamahTarget - now)
+                "${displayLabel(active.event)} : ${active.event.iqamahTime} | " +
+                    formatCountdown(remain)
+            }
+            else -> {
+                val remain = max(0L, active.event.adhanTarget - now)
+                "${displayLabel(active.event)} : ${active.event.adhanTime} | " +
+                    formatCountdown(remain)
+            }
+        }
+        val line3 = active?.event?.let(::petugasInline) ?: "- | -"
+
+        return listOf(line1, line2, line3)
+    }
+
+    private fun displayLabel(event: PrayerEvent): String {
+        return if (event.key == "dhuhr" && isFridayWib(event.date)) "Jumat" else event.label
+    }
+
+    private fun isFridayWib(date: String): Boolean {
+        return try {
+            val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            parser.timeZone = TimeZone.getTimeZone("Asia/Jakarta")
+            val parsed = parser.parse(date) ?: return false
+            val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Jakarta"), Locale.US)
+            calendar.time = parsed
+            calendar.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     private fun buildAdhanNotification(
         event: PrayerEvent,
         now: Long,
@@ -498,11 +541,11 @@ class PrayerReminderService : Service() {
         val remain = max(0L, event.iqamahTarget - now)
         val body = buildString {
             append("Iqamah ").append(event.iqamahTime).append(" · ")
-            append(formatDuration(remain)).append(" lagi")
+            append(formatCountdown(remain)).append(" lagi")
             adhanSkippedReason?.let { reason ->
                 append('\n').append(reason)
             }
-            append('\n').append(petugasLine(event))
+            append('\n').append(petugasInline(event))
         }
 
         return NotificationCompat.Builder(this, ADHAN_CHANNEL_ID)
@@ -540,26 +583,21 @@ class PrayerReminderService : Service() {
         )
     }
 
-    private fun petugasLine(event: PrayerEvent): String {
-        val imam = event.imamName?.takeIf { it.isNotBlank() }
-        val muadzin = event.muadzinName?.takeIf { it.isNotBlank() }
-        return when {
-            imam != null && muadzin != null -> "Imam: $imam • Muadzin: $muadzin"
-            imam != null -> "Imam: $imam"
-            muadzin != null -> "Muadzin: $muadzin"
-            else -> "Petugas belum diatur"
-        }
+    private fun petugasInline(event: PrayerEvent): String {
+        val imam = event.imamName?.takeIf { it.isNotBlank() } ?: "-"
+        val muadzin = event.muadzinName?.takeIf { it.isNotBlank() } ?: "-"
+        return "$imam | $muadzin"
     }
 
-    private fun formatDuration(millis: Long): String {
+    private fun formatCountdown(millis: Long): String {
         val totalSeconds = max(0L, millis / 1000L)
         val hours = totalSeconds / 3600L
         val minutes = (totalSeconds % 3600L) / 60L
         val seconds = totalSeconds % 60L
-        val ss = seconds.toString().padStart(2, '0')
-        return when {
-            hours > 0 -> "$hours" + "j " + minutes.toString().padStart(2, '0') + "m " + ss + "d"
-            else -> "${minutes}m ${ss}d"
+        return if (hours > 0) {
+            String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format(Locale.US, "%02d:%02d", minutes, seconds)
         }
     }
 

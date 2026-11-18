@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { MASJID_INFO } from "@/utils/constants";
-import { MobilePrayerTaskbar } from "@/components/mobile-taskbar";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import {
   Compass,
   Home,
-  Tv,
   MapPin,
   Calendar,
   Users,
@@ -55,7 +54,7 @@ export function PublicShell({
       </div>
 
       {/* Main Glass Header */}
-      <header className="sticky top-0 z-40 border-b border-[#ded5c4]/90 bg-[#faf7f2]/90 text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.02)] backdrop-blur-md print:hidden">
+      <header className="sticky top-0 z-40 border-b border-[#ded5c4]/90 bg-gradient-to-b from-white/95 to-[#f4f7f5]/95 text-slate-800 shadow-[0_4px_24px_rgba(25,38,31,0.05)] backdrop-blur-xl print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           {/* Logo / Mosque Title */}
           <Link href="/" className="group flex items-center gap-3">
@@ -102,17 +101,13 @@ export function PublicShell({
             })}
           </nav>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            <Link
-              href="/tv"
-              target="_blank"
-              aria-label="Buka TV Display"
-              className="flex items-center gap-1.5 rounded-lg bg-[#557a64] hover:bg-[#466553] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm active:scale-95 transition-all"
-            >
-              <Tv className="h-3.5 w-3.5 text-white" />
-              <span className="hidden sm:inline">TV Display</span>
-            </Link>
+          {/* Status WIB */}
+          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-[#d2dfd6] bg-white/80 px-3 py-1.5 text-[11px] font-bold text-[#466553] shadow-sm sm:flex">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2d946e] opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#2d946e]" />
+            </span>
+            WIB · UTC+7
           </div>
         </div>
 
@@ -191,11 +186,6 @@ export function PublicShell({
                     • Agenda Kajian Rutin &amp; Tabligh Akbar
                   </Link>
                 </li>
-                <li>
-                  <Link href="/tv" className="hover:text-[#557a64] transition-colors">
-                    • TV Display Digital Masjid
-                  </Link>
-                </li>
               </ul>
             </div>
 
@@ -240,9 +230,9 @@ export function PublicShell({
         </div>
       </footer>
 
-      {/* Mobile Sticky Shortcut Taskbar */}
+      {/* Mobile Bottom Navigation */}
       <div className="print:hidden">
-        <MobilePrayerTaskbar />
+        <MobileBottomNav />
       </div>
     </div>
   );
