@@ -121,7 +121,6 @@ export function TvDisplay({
   } | null>(null);
 
   // TV Controls & Wake Lock State
-  const [manualExitShalatKey, setManualExitShalatKey] = useState<string | null>(null);
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMouseIdle, setIsMouseIdle] = useState(false);
@@ -187,7 +186,6 @@ export function TvDisplay({
       // Halaman pratinjau mengirim data baru tiap kali fase/form diubah.
       // Tanpa sinkronisasi ini, TvDisplay tetap memakai data render pertama.
       setData(initialData);
-      setManualExitShalatKey(null);
       setOffset(new Date(initialData.serverTime).getTime() - Date.now());
     } else {
       // Fallback offline hanya dipakai bila server tidak mengirim data awal.
@@ -632,11 +630,6 @@ export function TvDisplay({
       const endShalatMs = iqTarget + durationMs;
 
       if (serverNow >= iqTarget && serverNow < endShalatMs) {
-        const sessionKey = `${ev.key}-${iqTarget}`;
-        if (manualExitShalatKey === sessionKey) {
-          continue;
-        }
-
         const elapsedMs = serverNow - iqTarget;
         const imamInfo = data.imamToday.find((s) =>
           s.prayerName.toLowerCase().includes(ev.label.toLowerCase())
@@ -645,7 +638,6 @@ export function TvDisplay({
         return {
           key: ev.key,
           label: ev.label,
-          sessionKey,
           durationMinutes,
           isAligningShaf: elapsedMs < 60_000,
           dimProgress: getShalatScreenDimProgress(elapsedMs, durationMinutes),
@@ -656,7 +648,7 @@ export function TvDisplay({
     }
 
     return null;
-  }, [data, serverNow, manualExitShalatKey, isFriday, khutbahVisible]);
+  }, [data, serverNow, isFriday, khutbahVisible]);
 
   // Floating Controls for TV Screen (WakeLock & Fullscreen)
   const renderFloatingControls = () => (
@@ -848,10 +840,10 @@ export function TvDisplay({
         />
 
         <div
-          className="relative z-10 flex w-full max-w-5xl flex-col items-center transition-opacity duration-1000"
+          className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-2.5 text-center transition-opacity duration-1000 sm:gap-4"
           style={{ opacity: contentOpacity }}
         >
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-sm">
             <span>🕌</span>
             <span>
               {activeShalatMode.isAligningShaf
@@ -860,17 +852,17 @@ export function TvDisplay({
             </span>
           </div>
 
-          <div className="mb-3 font-arabic text-3xl font-bold leading-relaxed text-[#eddcb2] sm:text-5xl">
+          <div className="font-arabic text-3xl font-bold leading-relaxed text-[#eddcb2] sm:text-5xl">
             سَوُّوا صُفُوفَكُمْ فَإِنَّ تَسْوِيَةَ الصُّفُوفِ مِنْ تَمَامِ الصَّلَاةِ
           </div>
 
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-white sm:text-6xl md:text-7xl">
+          <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl md:text-7xl">
             {activeShalatMode.isAligningShaf
               ? "Luruskan & Rapatkan Shaf"
               : `Shalat ${activeShalatMode.label} Berjamaah`}
           </h1>
 
-          <p className="mt-3 text-lg font-medium text-[#c1d1c7] sm:text-2xl">
+          <p className="text-lg font-medium text-[#c1d1c7] sm:text-2xl">
             Imam:{" "}
             <strong className="font-extrabold text-white">
               {activeShalatMode.imamName}
@@ -881,7 +873,7 @@ export function TvDisplay({
           </p>
 
           {activeShalatMode.isAligningShaf && (
-            <div className="my-6 flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm font-semibold text-rose-200 sm:text-lg">
+            <div className="mt-1 flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-6 py-3 text-sm font-semibold text-rose-200 sm:mt-2 sm:text-lg">
               <span className="text-xl">📴</span>
               <span>
                 Harap nonaktifkan atau senyapkan nada dering handphone Anda
@@ -889,15 +881,6 @@ export function TvDisplay({
             </div>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={() => setManualExitShalatKey(activeShalatMode.sessionKey)}
-          className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 rounded-xl border border-white/15 bg-black/40 px-4 py-2 text-xs font-semibold text-white/90 backdrop-blur-sm transition-all hover:border-white/40 hover:bg-black/70 hover:text-white"
-          style={{ opacity: Math.max(0.28, 1 - dim * 0.6) }}
-        >
-          Selesai Shalat / Kembali ke Slide Normal
-        </button>
 
         <div
           className="absolute bottom-4 right-6 z-10 font-mono text-xs text-[#c1d1c7]"
@@ -1046,9 +1029,9 @@ export function TvDisplay({
               suppressHydrationWarning
               className="absolute inset-0 z-30 overflow-hidden bg-[#11231a] text-center animate-fade-in select-none"
             >
-              <div className="flex h-full flex-col items-center justify-center p-3 sm:p-6 lg:p-8">
+              <div className="flex h-full flex-col items-center justify-center gap-2 p-3 sm:gap-3 sm:p-6 lg:p-8">
                 <div
-                  className={`mb-3 rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:mb-4 sm:px-6 sm:py-2 sm:text-lg ${isFinalCountdown
+                  className={`rounded-full px-4 py-1.5 text-sm font-bold tracking-widest uppercase transition-all sm:px-6 sm:py-2 sm:text-lg ${isFinalCountdown
                       ? "bg-amber-400 text-slate-950 ring-4 ring-amber-400/50 animate-pulse font-black"
                       : "bg-[#c5a059]/20 text-[#eddcb2] border border-[#c5a059]/30"
                     }`}
@@ -1058,24 +1041,24 @@ export function TvDisplay({
                     : "MENUJU IQAMAH"}
                 </div>
 
-                <div className="mb-2 font-arabic text-3xl text-[#eddcb2] sm:text-4xl">
+                <div className="font-arabic text-3xl text-[#eddcb2] sm:text-4xl">
                   حَيَّ عَلَى الصَّلَاةِ
                 </div>
                 <h2 className="text-5xl font-black text-white md:text-8xl tracking-tight sm:text-6xl">
                   {activeEv.label}
                 </h2>
-                <p className="mt-2 text-lg text-[#b8ccc0] font-medium sm:mt-4 sm:text-2xl md:text-3xl">
+                <p className="text-lg text-[#b8ccc0] font-medium sm:text-2xl md:text-3xl">
                   Adzan {activeEv.adhanTime} • Waktu Iqamah {activeEv.iqamahTime}
                 </p>
 
                 {/* Imam yang bertugas */}
-                <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-[#1e6149]/40 border border-[#3eb489]/40 px-5 py-2 text-sm sm:text-lg text-white shadow-sm">
+                <div className="inline-flex items-center gap-2 rounded-2xl bg-[#1e6149]/40 border border-[#3eb489]/40 px-5 py-2 text-sm sm:text-lg text-white shadow-sm">
                   <span className="text-[#a5e4cb] font-semibold">Imam Shalat:</span>
                   <span className="font-extrabold text-amber-300">{imamName}</span>
                 </div>
 
                 <div
-                  className={`my-4 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:my-8 sm:px-12 sm:py-6 ${isFinalCountdown
+                  className={`mt-1 rounded-3xl border px-5 py-4 shadow-2xl transition-all sm:mt-2 sm:px-12 sm:py-6 ${isFinalCountdown
                       ? "border-amber-400 bg-amber-500/20 ring-4 ring-amber-400/60 animate-bounce"
                       : "border-[#c5a059]/40 bg-[#0a1811]/70 ring-2 ring-[#c5a059]/30"
                     }`}

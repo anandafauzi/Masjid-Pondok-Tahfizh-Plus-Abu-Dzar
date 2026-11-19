@@ -112,8 +112,8 @@ describe("TvDisplay layar shalat", () => {
     expect(screen.queryByText(/\d{2}:\d{2}:\d{2}/)).toBeNull();
     expect(screen.getByText(/^\d{2}\.\d{2} WIB$/)).toBeTruthy();
     expect(
-      screen.getByText("Selesai Shalat / Kembali ke Slide Normal"),
-    ).toBeTruthy();
+      screen.queryByText("Selesai Shalat / Kembali ke Slide Normal"),
+    ).toBeNull();
 
     unmount();
   });
@@ -139,6 +139,9 @@ describe("TvDisplay layar shalat", () => {
     ).toBeTruthy();
     expect(screen.queryByText(/Kembali ke slide normal dalam/)).toBeNull();
     expect(screen.queryByText(/\d{2}:\d{2}:\d{2}/)).toBeNull();
+    expect(
+      screen.queryByText("Selesai Shalat / Kembali ke Slide Normal"),
+    ).toBeNull();
 
     unmount();
   });
@@ -165,6 +168,9 @@ describe("TvDisplay layar shalat", () => {
     expect(screen.getByText("Luruskan & Rapatkan Shaf")).toBeTruthy();
     expect(screen.queryByText(/Kembali ke slide normal dalam/)).toBeNull();
     expect(screen.queryByText(/\d{2}:\d{2}:\d{2}/)).toBeNull();
+    expect(
+      screen.queryByText("Selesai Shalat / Kembali ke Slide Normal"),
+    ).toBeNull();
 
     unmount();
   });
