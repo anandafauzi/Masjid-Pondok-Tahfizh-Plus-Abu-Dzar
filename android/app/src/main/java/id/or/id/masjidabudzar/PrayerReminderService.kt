@@ -507,8 +507,9 @@ class PrayerReminderService : Service() {
         val current = snapshot
         val location = current?.location?.takeIf { it.isNotBlank() }
             ?: ReminderConfig.DEFAULT_LOCATION
-        val hijri = current?.hijriDate?.takeIf { it.isNotBlank() }
-            ?: PrayerReminderRepository.formatHijriDate(now)
+        // Hitung live setiap update agar tanggal tidak basi saat HP menyala
+        // terus melewati tengah malam (snapshot jadwal bisa lebih lama).
+        val hijri = PrayerReminderRepository.formatHijriDate(now)
         val line1 = "$location | $hijri"
 
         val active = current?.active(now)

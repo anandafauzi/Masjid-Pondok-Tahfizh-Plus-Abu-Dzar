@@ -268,18 +268,29 @@ object PrayerReminderRepository {
             .ifBlank { ReminderConfig.DEFAULT_LOCATION }
     }
 
-    /** Format Hijriyah Umm al-Qura dengan locale Indonesia, tanpa suffix "H". */
+    /**
+     * Format Hijriyah Umm al-Qura dengan locale Indonesia, tanpa suffix "H".
+     *
+     * Penting: `IslamicCalendar()` tanpa argumen memakai varian *Islamic Civil*
+     * yang bisa selisih 1–3 hari dari Kalender Hijriah Kemenag (Umm al-Qura).
+     * Web memakai `id-ID-u-ca-islamic-umalqura`, jadi Android harus memakai
+     * kalender yang sama supaya tanggal di notifikasi identik dengan web.
+     */
     fun formatHijriDate(millis: Long): String {
         return try {
             val zone = android.icu.util.TimeZone.getTimeZone("Asia/Jakarta")
             val locale = Locale("id", "ID")
-            val calendar = android.icu.util.IslamicCalendar(zone, locale)
-            calendar.setTime(Date(millis))
+            val calendar = android.icu.util.IslamicCalendar(zone, locale).apply {
+                setCalculationType(
+                    android.icu.util.IslamicCalendar.CalculationType.ISLAMIC_UMALQURA,
+                )
+                setTime(Date(millis))
+            }
             val formatter = android.icu.text.DateFormat.getInstanceForSkeleton(
                 "d MMMM y",
                 locale,
             )
-            formatter.setCalendar(calendar)
+            formatter.calendar = calendar
             formatter.format(Date(millis))
                 .replace(Regex("\\s+H$", RegexOption.IGNORE_CASE), "")
                 .trim()
