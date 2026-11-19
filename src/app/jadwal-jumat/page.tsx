@@ -1,4 +1,5 @@
 import { PublicShell } from "@/components/public-shell";
+import { isAppWebView } from "@/lib/app-mode";
 import {
   getImamRollingActive,
   getKhatibRollingActive,
@@ -19,6 +20,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function JadwalJumatPage() {
+  const appMode = await isAppWebView();
   const today = todayDateOnly();
   const firstFriday = nextFriday(today);
 
@@ -29,9 +31,22 @@ export default async function JadwalJumatPage() {
     getMosqueSettings(),
   ]);
 
-  const fridays = Array.from({ length: 6 }, (_, i) =>
-    addDaysUTC(firstFriday, i * 7)
-  );
+  const fridays: Date[] = appMode
+    ? (() => {
+        // Aplikasi: seluruh Jumat dalam 1 bulan ke depan (4–5 Jumat).
+        const monthEnd = addDaysUTC(today, 30);
+        const result: Date[] = [];
+        for (
+          let cursor = firstFriday;
+          cursor.getTime() <= monthEnd.getTime();
+          cursor = addDaysUTC(cursor, 7)
+        ) {
+          result.push(cursor);
+        }
+        return result;
+      })()
+    : // Web: rentang seperti semula, 6 Jumat ke depan.
+      Array.from({ length: 6 }, (_, i) => addDaysUTC(firstFriday, i * 7));
 
   const rows = fridays.map((friday) => {
     const key = dateOnlyToString(friday);
@@ -79,6 +94,7 @@ export default async function JadwalJumatPage() {
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}
+      appMode={appMode}
     >
       {/* Header Banner */}
       <div className="mb-8 rounded-3xl border border-slate-200/80 bg-white p-6 text-slate-800 shadow-sm sm:p-8">
@@ -92,7 +108,7 @@ export default async function JadwalJumatPage() {
               Jadwal Khatib Jumat
             </h1>
             <p className="mt-2 text-xs text-slate-500 sm:text-sm">
-              Daftar asatidzah penceramah khutbah dan imam Subuh Jumat berbasis rotasi berkala di {mosque.mosqueName}.
+              Daftar asatidzah penceramah khutbah dan imam Subuh Jumat berbasis rotasi berkala di {mosque.mosqueName}{appMode ? " untuk 1 bulan ke depan" : ""}.
             </p>
           </div>
 

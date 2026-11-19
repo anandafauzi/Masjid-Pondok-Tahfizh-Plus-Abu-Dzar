@@ -1,4 +1,5 @@
 import { PublicShell } from "@/components/public-shell";
+import { isAppWebView } from "@/lib/app-mode";
 import { getUpcomingKajian } from "@/lib/schedule-data";
 import { getMosqueSettings } from "@/lib/settings";
 import { kajianTypeLabel } from "@/lib/kajian-type";
@@ -20,6 +21,7 @@ function formatDateTime(iso: string) {
 }
 
 export default async function KajianPage() {
+  const appMode = await isAppWebView();
   const [kajian, mosque] = await Promise.all([
     getUpcomingKajian(new Date(), 30).catch(() => []),
     getMosqueSettings(),
@@ -33,6 +35,7 @@ export default async function KajianPage() {
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}
+      appMode={appMode}
     >
       {/* Header Banner */}
       <div className="mb-8 rounded-3xl border border-slate-200/80 bg-white p-6 text-slate-800 shadow-sm sm:p-8">

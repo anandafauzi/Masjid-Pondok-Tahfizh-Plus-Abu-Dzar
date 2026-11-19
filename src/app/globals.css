@@ -212,19 +212,17 @@ html.tv-viewport-active body {
   animation: marquee 35s linear infinite;
 }
 
-/* Track berisi teks yang duplikat, sehingga satu siklus = satu lebar teks. */
 @keyframes marquee-tv {
   0% {
-    transform: translate3d(0, 0, 0);
+    transform: translate3d(100vw, 0, 0);
   }
   100% {
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(-100%, 0, 0);
   }
 }
 
 .animate-marquee-tv {
-  display: flex;
-  width: max-content;
+  display: inline-block;
   white-space: nowrap;
   animation: marquee-tv linear infinite;
   will-change: transform;

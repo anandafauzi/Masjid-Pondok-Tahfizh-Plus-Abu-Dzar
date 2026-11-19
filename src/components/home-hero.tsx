@@ -3,17 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
-import { formatHijriDate } from "@/lib/hijri";
 import type { PrayerTimesStrings } from "@/lib/prayer-times";
-import {
-  ArrowRight,
-  CalendarDays,
-  Clock,
-  MapPin,
-  Sparkles,
-  Timer,
-  Users,
-} from "lucide-react";
+import { Clock, Calendar, Tv, ArrowRight, Sparkles } from "lucide-react";
 
 interface HomeHeroProps {
   prayerTimes: PrayerTimesStrings;
@@ -27,6 +18,7 @@ interface HomeHeroProps {
   mosqueName: string;
   mosqueAddress: string | null;
   logoUrl?: string | null;
+  /** Waktu server saat render, dipakai agar countdown tidak terpengaruh jam perangkat. */
   serverTime?: string;
 }
 
@@ -52,6 +44,8 @@ export function HomeHero({
   logoUrl,
   serverTime,
 }: HomeHeroProps) {
+  // `now` sengaja null saat render pertama (SSR) agar tidak terjadi hydration
+  // mismatch; setelah mount, waktu dihitung memakai offset jam server.
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
@@ -75,10 +69,6 @@ export function HomeHero({
       ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
       : `${pad(minutes)}:${pad(seconds)}`;
 
-  const ringProgress = mounted
-    ? Math.min(100, Math.max(4, (1 - diffSec / (12 * 3600)) * 100))
-    : 0;
-
   const timeString = new Intl.DateTimeFormat("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
@@ -94,143 +84,130 @@ export function HomeHero({
     timeZone: "Asia/Jakarta",
   }).format(new Date(currentMs));
 
-  const hijriString = formatHijriDate(currentMs);
-  const arabicName =
-    PRAYER_NAMES_ARABIC[nextPrayer.key as keyof typeof PRAYER_NAMES_ARABIC] ?? "";
+  let hijriString = "";
+  try {
+    hijriString = new Intl.DateTimeFormat("id-ID-u-ca-islamic-umalqura", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Jakarta",
+    }).format(new Date(currentMs));
+  } catch {
+    hijriString = "";
+  }
 
   return (
-    <section className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0b241a] via-[#103d2e] to-[#081a13] text-white shadow-[0_24px_70px_rgba(8,26,19,0.28)] ring-1 ring-white/10">
-      {/* Ambient light & geometric wash */}
-      <div className="pointer-events-none absolute -left-24 -top-32 h-80 w-80 rounded-full bg-emerald-300/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-20 h-96 w-96 rounded-full bg-amber-200/10 blur-3xl" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:28px_28px] opacity-40" />
+    <section className="relative overflow-hidden rounded-3xl bg-white p-6 text-slate-800 shadow-[0_4px_30px_rgba(0,0,0,0.03)] border border-slate-100 sm:p-10 lg:p-12">
+      {/* Subtle background ambient glow */}
+      <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-[#557a64]/5 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-[#557a64]/5 blur-3xl" />
 
-      <div className="relative z-10 p-6 sm:p-9 lg:p-11">
-        {/* Identity row */}
-        <div className="flex flex-col items-center text-center sm:flex-row sm:items-center sm:text-left">
-          <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-white/10 p-2 ring-1 ring-white/20 backdrop-blur sm:h-20 sm:w-20">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={logoUrl || "/logo-masjid.png"}
-              alt={mosqueName}
-              className="h-full w-full object-contain"
-            />
-          </div>
-          <div className="mt-4 min-w-0 sm:ml-5 sm:mt-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/20 bg-emerald-300/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100">
-              <Sparkles className="h-3 w-3" /> Sistem Informasi Masjid
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <div className="mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-white p-2 shadow-md ring-1 ring-[#ded5c4]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl || "/logo-masjid.png"}
+            alt={mosqueName}
+            className="h-full w-full object-contain"
+          />
+        </div>
+
+        {/* Mosque Badge & Name */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d2dfd6] bg-[#f4f7f5] px-4 py-1 text-xs font-semibold tracking-wide text-[#466553]">
+          <Sparkles className="h-3.5 w-3.5 text-[#557a64]" />
+          <span>SISTEM INFORMASI MASJID RESMI</span>
+        </div>
+
+        <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+          {mosqueName}
+        </h1>
+
+        <p className="mt-2 max-w-2xl text-xs text-slate-500 sm:text-sm">
+          {mosqueAddress ?? "Rumpin, Kabupaten Bogor, Jawa Barat"}
+        </p>
+
+        {/* Live Clock & Dual Calendar Pill */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-slate-600">
+          <div className="flex items-center gap-2 rounded-xl bg-[#fbfdfc] border border-slate-200/80 px-4 py-2 shadow-sm">
+            <Clock className="h-4 w-4 text-[#557a64]" />
+            <span
+              suppressHydrationWarning
+              className="font-mono text-base font-bold text-slate-900 sm:text-lg"
+            >
+              {mounted ? timeString : "--:--:--"}
             </span>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl lg:text-4xl">
-              {mosqueName}
-            </h1>
-            <p className="mt-1 flex items-center justify-center gap-1.5 text-xs text-emerald-100/70 sm:justify-start">
-              <MapPin className="h-3.5 w-3.5" />
-              {mosqueAddress ?? "Rumpin, Kabupaten Bogor, Jawa Barat"}
-            </p>
+            <span className="text-[11px] font-bold text-[#557a64]">WIB</span>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 sm:ml-auto sm:mt-0 sm:justify-end">
-            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2 backdrop-blur">
-              <Clock className="h-4 w-4 text-emerald-300" />
-              <span suppressHydrationWarning className="font-mono text-sm font-bold tabular-nums sm:text-base">
-                {mounted ? timeString : "--:--:--"}
-              </span>
-              <span className="text-[10px] font-bold text-emerald-300">WIB</span>
-            </div>
-            <div className="hidden items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2 backdrop-blur lg:flex">
-              <CalendarDays className="h-4 w-4 text-emerald-300" />
-              <span suppressHydrationWarning className="text-xs font-semibold text-emerald-50">
-                {mounted ? `${dateString} · ${hijriString} H` : "Memuat tanggal..."}
-              </span>
-            </div>
+          <div className="flex items-center gap-2 rounded-xl bg-[#fbfdfc] border border-slate-200/80 px-4 py-2 shadow-sm">
+            <Calendar className="h-4 w-4 text-[#557a64]" />
+            <span
+              suppressHydrationWarning
+              className="font-semibold text-slate-700"
+            >
+              {mounted ? dateString : "Memuat..."}
+            </span>
+            {hijriString && (
+              <>
+                <span className="text-slate-300">•</span>
+                <span
+                  suppressHydrationWarning
+                  className="font-semibold text-[#466553]"
+                >
+                  {mounted ? `${hijriString} H` : ""}
+                </span>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Spotlight */}
-        <div className="mt-8 grid items-center gap-6 lg:grid-cols-[1fr_auto]">
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.06] p-6 backdrop-blur-md sm:p-7">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-amber-300/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-100 ring-1 ring-amber-200/20">
+        {/* Next Prayer Spotlight Card */}
+        <div className="mt-8 w-full max-w-xl rounded-2xl border border-[#d2dfd6] bg-[#f8faf9] p-5 sm:p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <span className="inline-block rounded-md bg-[#e7efe9] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[#395243] border border-[#d2dfd6]">
                 Shalat Berikutnya
               </span>
-              {nextPrayer.tomorrow && (
-                <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-100/80">
-                  Besok
+              <div className="mt-1 flex items-baseline gap-2 justify-center sm:justify-start">
+                <span className="text-2xl font-black text-slate-900 sm:text-3xl">
+                  {nextPrayer.label}
                 </span>
-              )}
+                <span className="font-arabic text-lg text-[#557a64]">
+                  {PRAYER_NAMES_ARABIC[nextPrayer.key as keyof typeof PRAYER_NAMES_ARABIC] ?? ""}
+                </span>
+                {nextPrayer.tomorrow && (
+                  <span className="text-xs text-slate-400 font-medium">(Besok)</span>
+                )}
+              </div>
+              <p className="font-mono text-2xl font-extrabold text-[#466553] sm:text-3xl">
+                {nextPrayer.time} <span className="text-xs font-normal text-slate-500">WIB</span>
+              </p>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-1">
-              <h2 className="text-4xl font-black tracking-tight sm:text-5xl">
-                {nextPrayer.label}
-              </h2>
-              <span className="font-arabic text-2xl text-emerald-200/90 sm:text-3xl">
-                {arabicName}
-              </span>
-            </div>
-
-            <p className="mt-1 font-mono text-3xl font-black tracking-tight text-amber-200 sm:text-4xl">
-              {nextPrayer.time} <span className="text-xs font-bold text-emerald-100/60">WIB</span>
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/jadwal-shalat"
-                className="inline-flex items-center gap-2 rounded-2xl bg-amber-300 px-4 py-2.5 text-xs font-black text-slate-950 shadow-lg shadow-amber-300/10 transition-transform hover:-translate-y-0.5 active:translate-y-0"
-              >
-                Lihat Jadwal <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/adzan-iqamah"
-                className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-bold text-white backdrop-blur transition-colors hover:bg-white/10"
-              >
-                <Timer className="h-4 w-4 text-emerald-300" /> Hitung Mundur Iqamah
-              </Link>
-            </div>
-          </div>
-
-          {/* Countdown ring */}
-          <div className="relative mx-auto flex h-52 w-52 items-center justify-center sm:h-60 sm:w-60">
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: `conic-gradient(from 180deg, #eddcb2 ${ringProgress}%, rgba(255,255,255,0.10) 0)`,
-                filter: "drop-shadow(0 0 24px rgba(237,220,178,0.18))",
-              }}
-            />
-            <div className="absolute inset-[10px] rounded-full bg-gradient-to-br from-[#0d2c21] to-[#081a13] ring-1 ring-white/10" />
-            <div className="relative z-10 text-center">
-              <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200/70">
+            <div className="flex flex-col items-center rounded-xl bg-white border border-[#d2dfd6] px-5 py-3 shadow-sm">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                 Menuju Adzan
               </span>
               <span
                 suppressHydrationWarning
-                className="mt-1 block font-mono text-4xl font-black tabular-nums text-white sm:text-5xl"
+                className="font-mono text-3xl font-black text-[#395243] sm:text-4xl"
               >
-                {mounted ? countdownText : "--:--:--"}
+                {mounted ? countdownText : "--:--"}
               </span>
-              <span className="mt-1 block text-[10px] font-semibold text-emerald-100/60">
-                {mounted ? hijriString : "..."} H
-              </span>
+              <span className="text-[10px] font-semibold text-[#557a64]">Hitung Mundur</span>
             </div>
           </div>
         </div>
 
-        {/* 7-time grid */}
-        <div className="mt-9">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-100/70">
-              Jadwal Waktu Shalat Hari Ini
-            </p>
-            <Link
-              href="/jadwal-imam"
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-200 hover:text-amber-100"
-            >
-              <Users className="h-3.5 w-3.5" /> Imam &amp; Muadzin
-            </Link>
-          </div>
+        {/* 7 Daily Prayer Times Horizontal Grid */}
+        <div className="mt-8 w-full">
+          <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Jadwal Waktu Shalat Hari Ini
+          </p>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
             {PRAYERS_LIST.map(({ key, label }) => {
+              // Jika shalat berikutnya jatuh besok (mis. setelah Isya), jangan
+              // tandai jadwal Subuh hari ini sebagai "Aktif".
               const isNext = !nextPrayer.tomorrow && key === nextPrayer.key;
               const time = prayerTimes[key as keyof PrayerTimesStrings] ?? "--:--";
               const arabic = PRAYER_NAMES_ARABIC[key as keyof typeof PRAYER_NAMES_ARABIC];
@@ -238,30 +215,62 @@ export function HomeHero({
               return (
                 <div
                   key={key}
-                  className={`relative flex flex-col items-center justify-center rounded-2xl px-2 py-3.5 text-center transition-all ${
+                  className={`group relative flex flex-col items-center justify-center rounded-xl p-3.5 transition-all duration-200 ${
                     isNext
-                      ? "bg-amber-300 text-slate-950 shadow-lg shadow-amber-300/15 ring-2 ring-amber-200/40"
-                      : "border border-white/10 bg-white/[0.05] text-white hover:bg-white/10"
+                      ? "border border-[#395243] bg-[#466553] text-white shadow-md ring-2 ring-[#466553]/20 scale-105"
+                      : "border border-slate-200/80 bg-white hover:border-[#b0c7b7] hover:bg-[#fbfdfc] shadow-sm text-slate-800"
                   }`}
                 >
                   {isNext && (
-                    <span className="absolute -top-2 rounded-full bg-white px-2 py-0.5 text-[9px] font-black uppercase text-slate-900 shadow">
+                    <span className="absolute -top-2 rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase text-[#395243] shadow">
                       Aktif
                     </span>
                   )}
-                  <span className={`font-arabic text-xs ${isNext ? "text-slate-700" : "text-emerald-200/70"}`}>
+                  <span className={`font-arabic text-xs ${isNext ? "text-[#d2dfd6]" : "text-slate-400"}`}>
                     {arabic}
                   </span>
-                  <span className={`mt-0.5 text-[11px] font-bold ${isNext ? "text-slate-800" : "text-emerald-50/80"}`}>
+                  <span className={`mt-0.5 text-xs font-semibold ${isNext ? "text-white" : "text-slate-600"}`}>
                     {label}
                   </span>
-                  <span className={`mt-1 font-mono text-lg font-black ${isNext ? "text-slate-950" : "text-white"}`}>
+                  <span
+                    className={`mt-1 font-mono text-lg font-bold sm:text-xl ${
+                      isNext ? "text-white" : "text-slate-900"
+                    }`}
+                  >
                     {time}
                   </span>
                 </div>
               );
             })}
           </div>
+        </div>
+
+        {/* Quick CTA Actions */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/jadwal-shalat"
+            className="flex items-center gap-2 rounded-xl bg-[#557a64] hover:bg-[#466553] px-5 py-2.5 text-xs font-bold text-white shadow-sm active:scale-95 transition-all"
+          >
+            <span>Jadwal Shalat 7 Hari</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+
+          <Link
+            href="/tv"
+            target="_blank"
+            className="flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white hover:bg-[#fbfdfc] hover:border-[#b0c7b7] px-5 py-2.5 text-xs font-semibold text-slate-700 shadow-sm active:scale-95 transition-all"
+          >
+            <Tv className="h-4 w-4 text-[#557a64]" />
+            <span>Buka TV Display Masjid</span>
+          </Link>
+
+          <Link
+            href="/adzan-iqamah"
+            className="flex items-center gap-2 rounded-xl border border-[#d2dfd6] bg-[#f4f7f5] hover:bg-[#e7efe9] px-5 py-2.5 text-xs font-semibold text-[#395243] shadow-sm active:scale-95 transition-all"
+          >
+            <Sparkles className="h-4 w-4 text-[#557a64]" />
+            <span>Hitung Mundur Iqamah</span>
+          </Link>
         </div>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import { PublicShell } from "@/components/public-shell";
+import { isAppWebView } from "@/lib/app-mode";
 import { ScheduleExportActions } from "@/components/schedule-export-actions";
 import { PrintLetterhead, PrintSignatureBlock } from "@/components/print-letterhead";
 import {
@@ -23,6 +24,7 @@ const ROWS = ["imsak", "fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"] as 
 const PRAYER_COLS = ["fajr", "dhuhr", "asr", "maghrib", "isha"] as const;
 
 export default async function JadwalShalatPage() {
+  const appMode = await isAppWebView();
   const mosque = await getMosqueSettings();
   const iqamahSettings = await getIqamahSettings();
   const today = todayDateOnly();
@@ -58,6 +60,7 @@ export default async function JadwalShalatPage() {
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}
+      appMode={appMode}
     >
       {/* ========================================================
           PRINT ONLY VIEW (Formatted for Standard A4 Poster Print)

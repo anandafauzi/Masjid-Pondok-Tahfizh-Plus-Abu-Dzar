@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { MASJID_INFO } from "@/utils/constants";
+import { MobilePrayerTaskbar } from "@/components/mobile-taskbar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import {
   Compass,
   Home,
+  Tv,
   MapPin,
   Calendar,
   Users,
@@ -42,9 +44,11 @@ const DEFAULT_MOSQUE: PublicMosqueInfo = {
 export function PublicShell({
   children,
   mosque = DEFAULT_MOSQUE,
+  appMode = false,
 }: {
   children: React.ReactNode;
   mosque?: PublicMosqueInfo;
+  appMode?: boolean;
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-[#faf7f2] text-slate-800 print:bg-white print:text-black">
@@ -54,7 +58,13 @@ export function PublicShell({
       </div>
 
       {/* Main Glass Header */}
-      <header className="sticky top-0 z-40 border-b border-[#ded5c4]/90 bg-gradient-to-b from-white/95 to-[#f4f7f5]/95 text-slate-800 shadow-[0_4px_24px_rgba(25,38,31,0.05)] backdrop-blur-xl print:hidden">
+      <header
+        className={`sticky top-0 z-40 border-b border-[#ded5c4]/90 text-slate-800 print:hidden ${
+          appMode
+            ? "bg-gradient-to-b from-white/95 to-[#f4f7f5]/95 shadow-[0_4px_24px_rgba(25,38,31,0.05)] backdrop-blur-xl"
+            : "bg-[#faf7f2]/90 shadow-[0_1px_3px_rgba(0,0,0,0.02)] backdrop-blur-md"
+        }`}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           {/* Logo / Mosque Title */}
           <Link href="/" className="group flex items-center gap-3">
@@ -84,49 +94,68 @@ export function PublicShell({
             </div>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden items-center gap-1 xl:flex xl:gap-1.5">
+          {appMode ? (
+            /* Status WIB — aplikasi Android memakai bottom navigation saja. */
+            <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-[#d2dfd6] bg-white/80 px-3 py-1.5 text-[11px] font-bold text-[#466553] shadow-sm sm:flex">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2d946e] opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#2d946e]" />
+              </span>
+              WIB · UTC+7
+            </div>
+          ) : (
+            <>
+              {/* Desktop Navigation Links — tampilan web seperti semula. */}
+              <nav className="hidden items-center gap-1 xl:flex xl:gap-1.5">
+                {LINKS.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="group flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-all hover:bg-[#f4f7f5] hover:text-[#395243]"
+                    >
+                      <Icon className="h-3.5 w-3.5 text-[#557a64] transition-colors" />
+                      <span>{link.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/tv"
+                  target="_blank"
+                  aria-label="Buka TV Display"
+                  className="flex items-center gap-1.5 rounded-lg bg-[#557a64] hover:bg-[#466553] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm active:scale-95 transition-all"
+                >
+                  <Tv className="h-3.5 w-3.5 text-white" />
+                  <span className="hidden sm:inline">TV Display</span>
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Mobile Horizontal Scrollable Nav — hanya di web. */}
+        {!appMode && (
+          <nav className="flex gap-1.5 overflow-x-auto border-t border-slate-100 bg-[#fcfdfc] px-3 py-2 xl:hidden no-scrollbar">
             {LINKS.map((link) => {
               const Icon = link.icon;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="group flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition-all hover:bg-[#f4f7f5] hover:text-[#395243]"
+                  className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/70 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-[#f4f7f5] hover:text-[#395243] hover:border-[#b0c7b7]"
                 >
-                  <Icon className="h-3.5 w-3.5 text-[#557a64] transition-colors" />
+                  <Icon className="h-3 w-3 text-[#557a64]" />
                   <span>{link.label}</span>
                 </Link>
               );
             })}
           </nav>
-
-          {/* Status WIB */}
-          <div className="hidden shrink-0 items-center gap-2 rounded-xl border border-[#d2dfd6] bg-white/80 px-3 py-1.5 text-[11px] font-bold text-[#466553] shadow-sm sm:flex">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2d946e] opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#2d946e]" />
-            </span>
-            WIB · UTC+7
-          </div>
-        </div>
-
-        {/* Mobile Horizontal Scrollable Nav */}
-        <nav className="flex gap-1.5 overflow-x-auto border-t border-slate-100 bg-[#fcfdfc] px-3 py-2 xl:hidden no-scrollbar">
-          {LINKS.map((link) => {
-            const Icon = link.icon;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200/70 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-[#f4f7f5] hover:text-[#395243] hover:border-[#b0c7b7]"
-              >
-                <Icon className="h-3 w-3 text-[#557a64]" />
-                <span>{link.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        )}
       </header>
 
       {/* Main Content Area */}
@@ -186,6 +215,13 @@ export function PublicShell({
                     • Agenda Kajian Rutin &amp; Tabligh Akbar
                   </Link>
                 </li>
+                {!appMode && (
+                  <li>
+                    <Link href="/tv" className="hover:text-[#557a64] transition-colors">
+                      • TV Display Digital Masjid
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
 
@@ -230,9 +266,9 @@ export function PublicShell({
         </div>
       </footer>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Navigasi bawah: aplikasi Android; taskbar lama: web. */}
       <div className="print:hidden">
-        <MobileBottomNav />
+        {appMode ? <MobileBottomNav /> : <MobilePrayerTaskbar />}
       </div>
     </div>
   );

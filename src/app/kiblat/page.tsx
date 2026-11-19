@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { PublicShell } from "@/components/public-shell";
+import { isAppWebView } from "@/lib/app-mode";
 import { QiblaCompass } from "@/components/qibla-compass";
 import { getMosqueSettings } from "@/lib/settings";
 import { formatQiblaBearing } from "@/lib/qibla";
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function KiblatPage() {
+  const appMode = await isAppWebView();
   const mosque = await getMosqueSettings();
 
   return (
@@ -24,6 +26,7 @@ export default async function KiblatPage() {
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}
+      appMode={appMode}
     >
       {/* Page Header */}
       <div className="mb-8 rounded-3xl border border-slate-200/80 bg-white p-6 text-slate-800 shadow-sm sm:p-8">

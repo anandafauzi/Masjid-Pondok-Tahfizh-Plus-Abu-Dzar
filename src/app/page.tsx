@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { PublicShell } from "@/components/public-shell";
 import { HomeHero } from "@/components/home-hero";
+import { HomeHero as HomeHeroApp } from "@/components/home-hero-app";
+import { isAppWebView } from "@/lib/app-mode";
 import { calculatePrayerTimes, getNextPrayer } from "@/lib/prayer-times";
 import { formatDateOnlyLong, todayDateOnly } from "@/lib/datetime";
 import { nextFriday } from "@/lib/schedule-data";
@@ -12,6 +14,7 @@ import {
   Users,
   BookOpen,
   BookMarked,
+  MonitorPlay,
   ArrowRight,
   Sparkles,
   Quote,
@@ -70,6 +73,15 @@ const CARDS = [
     badge: "Presisi",
     accent: "bg-[#7c6630]",
   },
+  {
+    href: "/tv",
+    title: "TV Display Digital",
+    arabic: "شاشة المسجد الذكية",
+    desc: "Tampilan layar TV masjid beresolusi tinggi dengan slide otomatis dan mode khutbah.",
+    icon: MonitorPlay,
+    badge: "Full Screen",
+    accent: "bg-[#19261f]",
+  },
 ];
 
 const FIVE_PRAYERS = [
@@ -81,6 +93,7 @@ const FIVE_PRAYERS = [
 ] as const;
 
 export default async function Home() {
+  const appMode = await isAppWebView();
   const today = todayDateOnly();
   const now = new Date();
   const friday = nextFriday(today);
@@ -141,9 +154,26 @@ export default async function Home() {
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}
+      appMode={appMode}
     >
       {/* Hero Section with Live Clock, Next Prayer, & Mosque Logo */}
-      <HomeHero
+      {appMode ? (
+        <HomeHeroApp
+          prayerTimes={prayerTimes}
+          nextPrayer={{
+            key: nextPrayer.key,
+            label: nextPrayer.label,
+            time: nextPrayer.time,
+            target: nextPrayer.target.toISOString(),
+            tomorrow: nextPrayer.tomorrow,
+          }}
+          mosqueName={mosque.mosqueName}
+          mosqueAddress={mosque.address}
+          logoUrl={mosque.logoUrl}
+          serverTime={now.toISOString()}
+        />
+      ) : (
+        <HomeHero
         prayerTimes={prayerTimes}
         nextPrayer={{
           key: nextPrayer.key,
@@ -156,11 +186,11 @@ export default async function Home() {
         mosqueAddress={mosque.address}
         logoUrl={mosque.logoUrl}
         serverTime={now.toISOString()}
-      />
+        />
+      )}
 
-      {/* ========================================================
-          BAGIAN 1: JADWAL HARIAN (Jadwal Sholat & Jadwal Imam Hari Ini)
-          ======================================================== */}
+      {/* BAGIAN 1 hanya untuk web; di aplikasi Android cukup hero baru. */}
+      {!appMode && (
       <section className="mt-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#ded5c4] pb-4">
           <div>
@@ -351,6 +381,7 @@ export default async function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ========================================================
           BAGIAN 2: JADWAL PEKANAN (Khatib Jumat & Kajian Pekan Ini)
@@ -527,7 +558,7 @@ export default async function Home() {
         </div>
 
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {CARDS.map((card) => {
+          {(appMode ? CARDS.filter((card) => card.href !== "/tv") : CARDS).map((card) => {
             const Icon = card.icon;
             return (
               <Link

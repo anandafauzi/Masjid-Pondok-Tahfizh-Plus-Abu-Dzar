@@ -80,6 +80,7 @@ class MainActivity : AppCompatActivity() {
                 domStorageEnabled = true
                 databaseEnabled = true
                 cacheMode = WebSettings.LOAD_DEFAULT
+                userAgentString = "$userAgentString $WEB_VIEW_UA_MARKER"
                 useWideViewPort = true
                 loadWithOverviewMode = true
                 mediaPlaybackRequiresUserGesture = false
@@ -291,6 +292,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private companion object {
+        /** Penanda UA agar web bisa membedakan WebView aplikasi dari browser biasa. */
+        const val WEB_VIEW_UA_MARKER = "MasjidAppAndroid"
+
         const val BRIDGE_NAME = "MasjidNative"
         val BRIDGE_SCRIPT = """
             (function () {

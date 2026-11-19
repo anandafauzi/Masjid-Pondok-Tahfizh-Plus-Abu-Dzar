@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { TvDisplay } from "@/app/tv/TvDisplay";
-import { TvViewport } from "@/components/tv/tv-viewport";
 import type { TvData } from "@/lib/public-data";
 import {
   DEFAULT_TV_PREVIEW_CONFIG,
@@ -71,24 +70,22 @@ export default function TvPreviewPage() {
 
   return (
     <main className="relative h-dvh overflow-hidden bg-[#08130e]">
-      <TvViewport>
-        {previewData ? (
-          <TvDisplay initialData={previewData} previewMode />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center px-6 text-center text-white">
-            <div>
-              <p className="text-2xl font-bold">
-                {loadError ? "Gagal memuat data TV" : "Memuat pratinjau layar..."}
-              </p>
-              <p className="mt-2 text-sm text-white/60">
-                {loadError
-                  ? "Periksa koneksi lalu muat ulang halaman ini."
-                  : "Menyiapkan tampilan sesuai pengaturan admin."}
-              </p>
-            </div>
+      {previewData ? (
+        <TvDisplay initialData={previewData} previewMode />
+      ) : (
+        <div className="flex h-dvh items-center justify-center overflow-hidden px-6 text-center text-white">
+          <div>
+            <p className="text-2xl font-bold">
+              {loadError ? "Gagal memuat data TV" : "Memuat pratinjau layar..."}
+            </p>
+            <p className="mt-2 text-sm text-white/60">
+              {loadError
+                ? "Periksa koneksi lalu muat ulang halaman ini."
+                : "Menyiapkan tampilan sesuai pengaturan admin."}
+            </p>
           </div>
-        )}
-      </TvViewport>
+        </div>
+      )}
 
       <aside className="no-scrollbar fixed left-1/2 top-3 z-[100] flex max-w-[95vw] -translate-x-1/2 items-center gap-2 overflow-x-auto rounded-2xl border border-white/15 bg-[#0c1f16]/95 px-3 py-2 text-white shadow-2xl backdrop-blur-md">
         <span className="shrink-0 rounded-lg bg-amber-400/15 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-amber-300">

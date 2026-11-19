@@ -723,7 +723,7 @@ export function TvDisplay({
 
   if (!data) {
     return (
-      <div suppressHydrationWarning className="flex h-full w-full items-center justify-center bg-[#faf7f2] text-[#19261f] bg-islamic-pattern">
+      <div suppressHydrationWarning className="flex h-dvh max-h-screen w-screen max-w-full items-center justify-center overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern">
         <div className="relative text-center">
           <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-[#2d946e]/10 text-6xl ring-2 ring-[#2d946e]/30 animate-pulse">
             🕌
@@ -744,8 +744,8 @@ export function TvDisplay({
     tickerText ||
     "Selamat Datang di Masjid Pondok Tahfizh Plus Abu Dzar - Rumpin, Kabupaten Bogor";
   const tickerSpeed = Math.max(10, data.display.tickerSpeed || 50);
-  // Satu siklus marquee = satu lebar teks (teks sengaja diduplikasi).
-  const totalDistancePx = Math.max(800, tickerContent.length * 12);
+  // Total jarak gerak dari luar kanan (100vw ~1920px) hingga keluar penuh di kiri.
+  const totalDistancePx = 1920 + Math.max(600, tickerContent.length * 10);
   const pxPerSecond = (tickerSpeed / 50) * 85;
   const tickerDuration = Math.max(16, Math.round(totalDistancePx / pxPerSecond));
 
@@ -759,7 +759,7 @@ export function TvDisplay({
   // KHUTBAH JUMAT FULLSCREEN MODE (Tampil hening dan khusyuk tanpa countdown / hitung mundur)
   if (khutbahVisible && activeKhutbah) {
     return (
-      <div suppressHydrationWarning className="relative flex h-full w-full flex-col overflow-hidden bg-gradient-to-br from-[#faf7f2] via-[#eaf6f0] to-[#faf7f2] text-[#19261f] bg-islamic-pattern">
+      <div suppressHydrationWarning className="relative flex h-dvh max-h-screen w-screen max-w-full flex-col overflow-hidden bg-gradient-to-br from-[#faf7f2] via-[#eaf6f0] to-[#faf7f2] text-[#19261f] bg-islamic-pattern">
         <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#3eb489]/15 via-transparent to-transparent" />
 
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-6 text-center sm:px-10">
@@ -833,7 +833,7 @@ export function TvDisplay({
     return (
       <div
         suppressHydrationWarning
-        className={`relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-[#08130e] p-6 text-center text-white select-none animate-fade-in sm:p-12 ${isMouseIdle ? "cursor-none" : ""
+        className={`relative flex h-dvh max-h-screen w-screen max-w-full flex-col items-center justify-center overflow-hidden bg-[#08130e] p-6 text-center text-white select-none animate-fade-in sm:p-12 ${isMouseIdle ? "cursor-none" : ""
           }`}
       >
         <div
@@ -915,7 +915,7 @@ export function TvDisplay({
   return (
     <div
       suppressHydrationWarning
-      className={`relative flex h-full w-full flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none ${isMouseIdle ? "cursor-none" : ""
+      className={`relative flex h-dvh max-h-screen w-screen max-w-full flex-col overflow-hidden bg-[#faf7f2] text-[#19261f] bg-islamic-pattern select-none ${isMouseIdle ? "cursor-none" : ""
         }`}
     >
       {/* Background ambient lighting */}
@@ -1739,18 +1739,13 @@ export function TvDisplay({
               <span>INFO MASJID</span>
             </div>
             <div className="flex-1 overflow-hidden min-w-0 relative flex items-center">
-              <div
+              <span
                 key={tickerContent}
-                className="flex animate-marquee-tv"
+                className="inline-block whitespace-nowrap animate-marquee-tv pl-4"
                 style={{ animationDuration: `${tickerDuration}s` }}
               >
-                <span className="block whitespace-nowrap py-0.5 pl-4 pr-10">
-                  {tickerContent}
-                </span>
-                <span aria-hidden="true" className="block whitespace-nowrap py-0.5 pl-4 pr-10">
-                  {tickerContent}
-                </span>
-              </div>
+                {tickerContent}
+              </span>
             </div>
           </div>
         </footer>

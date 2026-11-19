@@ -1,4 +1,5 @@
 import { PublicShell } from "@/components/public-shell";
+import { isAppWebView } from "@/lib/app-mode";
 import { EmptyState } from "@/components/ui";
 import { ScheduleExportActions } from "@/components/schedule-export-actions";
 import { PrintLetterhead, PrintSignatureBlock } from "@/components/print-letterhead";
@@ -28,8 +29,9 @@ export const revalidate = 0;
 const PRAYERS_LIST = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"];
 
 export default async function JadwalImamPage() {
+  const appMode = await isAppWebView();
   const today = todayDateOnly();
-  const until = addDaysUTC(today, 13);
+  const until = addDaysUTC(today, appMode ? 6 : 13);
 
   const [schedules, rolling, mosque, tarawihRows] = await Promise.all([
     getImamSchedulesBetween(today, until),
@@ -85,7 +87,9 @@ export default async function JadwalImamPage() {
 
   const periodText = dates.length > 0
     ? `${formatDateOnlyLong(new Date(dates[0] + "T00:00:00Z"))} s.d. ${formatDateOnlyLong(new Date(dates[dates.length - 1] + "T00:00:00Z"))}`
-    : "14 Hari Ke Depan";
+    : appMode
+      ? "7 Hari Ke Depan"
+      : "14 Hari Ke Depan";
 
   return (
     <PublicShell
@@ -95,6 +99,7 @@ export default async function JadwalImamPage() {
         address: mosque.address,
         mapUrl: mosque.mapUrl,
       }}
+      appMode={appMode}
     >
       {/* ========================================================
           PRINT ONLY VIEW (Formatted for Standard A4 Poster Print)
