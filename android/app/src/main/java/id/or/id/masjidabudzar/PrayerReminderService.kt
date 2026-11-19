@@ -20,6 +20,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -48,6 +49,8 @@ class PrayerReminderService : Service() {
 
     @Volatile
     private var currentAdhan: PrayerEvent? = null
+
+    private var foregroundStarted = false
 
     @Volatile
     private var adhanSkippedReason: String? = null
@@ -150,6 +153,7 @@ class PrayerReminderService : Service() {
 
     override fun onDestroy() {
         destroyed.set(true)
+        foregroundStarted = false
         mainHandler.removeCallbacksAndMessages(null)
         releaseAudio()
         if (::tickHandler.isInitialized) tickHandler.removeCallbacksAndMessages(null)
@@ -436,14 +440,19 @@ class PrayerReminderService : Service() {
         }
 
         val ongoing = buildOngoingNotification(now)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                ONGOING_NOTIFICATION_ID,
-                ongoing,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
-            )
+        if (!foregroundStarted) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    ONGOING_NOTIFICATION_ID,
+                    ongoing,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+                )
+            } else {
+                startForeground(ONGOING_NOTIFICATION_ID, ongoing)
+            }
+            foregroundStarted = true
         } else {
-            startForeground(ONGOING_NOTIFICATION_ID, ongoing)
+            notificationManager.notify(ONGOING_NOTIFICATION_ID, ongoing)
         }
 
         currentAdhan?.let { event ->
@@ -463,16 +472,20 @@ class PrayerReminderService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        // RemoteViews dipakai untuk memaksa tiga baris tampil tanpa perlu
+        // menarik panel notifikasi. Tiap baris dibatasi satu baris teks.
+        val views = RemoteViews(packageName, R.layout.notification_taskbar).apply {
+            setTextViewText(R.id.taskbar_line1, line1)
+            setTextViewText(R.id.taskbar_line2, line2)
+            setTextViewText(R.id.taskbar_line3, line3)
+        }
+
         return NotificationCompat.Builder(this, ONGOING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_prayer_notification)
             .setContentTitle(line1)
             .setContentText("$line2 · $line3")
-            .setStyle(
-                NotificationCompat.InboxStyle()
-                    .setBigContentTitle(line1)
-                    .addLine(line2)
-                    .addLine(line3),
-            )
+            .setCustomContentView(views)
+            .setCustomBigContentView(views)
             .setContentIntent(openAppPendingIntent("/"))
             .addAction(android.R.drawable.ic_popup_sync, "Perbarui", refreshPendingIntent)
             .setOngoing(true)
@@ -487,8 +500,8 @@ class PrayerReminderService : Service() {
     /**
      * Tiga baris notifikasi ongoing, mengikuti format taskbar web:
      * 1. Lokasi | Tanggal Hijriyah
-     * 2. Shalat : Waktu Shalat/Iqamah | Mundur
-     * 3. Imam | Muadzin
+     * 2. Shalat : Waktu Shalat/Iqamah | -Mundur
+     * 3. Imam: Nama | Muadzin: Nama
      */
     private fun taskbarLines(now: Long): List<String> {
         val current = snapshot
@@ -504,12 +517,12 @@ class PrayerReminderService : Service() {
             active.isAdhanWindow -> {
                 val remain = max(0L, active.event.iqamahTarget - now)
                 "${displayLabel(active.event)} : ${active.event.iqamahTime} | " +
-                    formatCountdown(remain)
+                    formatCountdown(remain, withMinus = true)
             }
             else -> {
                 val remain = max(0L, active.event.adhanTarget - now)
                 "${displayLabel(active.event)} : ${active.event.adhanTime} | " +
-                    formatCountdown(remain)
+                    formatCountdown(remain, withMinus = true)
             }
         }
         val line3 = active?.event?.let(::petugasInline) ?: "- | -"
@@ -541,7 +554,7 @@ class PrayerReminderService : Service() {
         val remain = max(0L, event.iqamahTarget - now)
         val body = buildString {
             append("Iqamah ").append(event.iqamahTime).append(" · ")
-            append(formatCountdown(remain)).append(" lagi")
+            append(formatCountdown(remain, withMinus = true))
             adhanSkippedReason?.let { reason ->
                 append('\n').append(reason)
             }
@@ -586,26 +599,27 @@ class PrayerReminderService : Service() {
     private fun petugasInline(event: PrayerEvent): String {
         val imam = event.imamName?.takeIf { it.isNotBlank() } ?: "-"
         val muadzin = event.muadzinName?.takeIf { it.isNotBlank() } ?: "-"
-        return "$imam | $muadzin"
+        return "Imam: $imam | Muadzin: $muadzin"
     }
 
-    private fun formatCountdown(millis: Long): String {
+    private fun formatCountdown(millis: Long, withMinus: Boolean = false): String {
         val totalSeconds = max(0L, millis / 1000L)
         val hours = totalSeconds / 3600L
         val minutes = (totalSeconds % 3600L) / 60L
         val seconds = totalSeconds % 60L
-        return if (hours > 0) {
+        val body = if (hours > 0) {
             String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
         } else {
             String.format(Locale.US, "%02d:%02d", minutes, seconds)
         }
+        return if (withMinus) "-$body" else body
     }
 
     private fun scheduleTicker() {
         if (!::tickHandler.isInitialized) return
         tickHandler.removeCallbacks(ticker)
-        val delay = if (currentAdhan != null) 10_000L else 30_000L
-        tickHandler.postDelayed(ticker, delay)
+        // Detik pada notifikasi harus benar-benar live, jadi diperbarui tiap detik.
+        tickHandler.postDelayed(ticker, 1_000L)
     }
 
     private companion object {
