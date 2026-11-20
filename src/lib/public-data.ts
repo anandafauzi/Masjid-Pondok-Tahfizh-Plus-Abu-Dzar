@@ -82,6 +82,13 @@ export interface TvData {
     imamName: string;
     muadzinName: string;
   }>;
+  imamWeek: Array<{
+    date: string;
+    id: string;
+    prayerName: string;
+    imamName: string;
+    muadzinName: string;
+  }>;
   imamTomorrowSubuh: {
     id: string;
     prayerName: string;
@@ -147,6 +154,7 @@ export type PublicBundle = {
   imamRolling: Awaited<ReturnType<typeof getImamRollingActive>>;
   weeklyImam: Awaited<ReturnType<typeof getWeeklyImamSettings>>;
   imamToday: Awaited<ReturnType<typeof getImamSchedulesBetween>>;
+  imamWeek: Awaited<ReturnType<typeof getImamSchedulesBetween>>;
   imamTomorrow: Awaited<ReturnType<typeof getImamSchedulesBetween>>;
   tarawihToday: Awaited<ReturnType<typeof getTarawihSchedulesBetween>>[number] | null;
   isRamadan: boolean;
@@ -252,9 +260,13 @@ async function loadPublicBundle(
     getWeeklyImamSettings().catch(() => []),
   ]);
 
-  const [imamTodayRaw, imamTomorrowRaw, fridaySchedule, tarawihRows] =
+  const [imamTodayRaw, imamWeekRaw, imamTomorrowRaw, fridaySchedule, tarawihRows] =
     await Promise.all([
       getImamSchedulesBetween(today, today, {
+        weeklyRules: weeklyImam,
+        rollingImams: imamRolling,
+      }),
+      getImamSchedulesBetween(today, addDaysUTC(today, 6), {
         weeklyRules: weeklyImam,
         rollingImams: imamRolling,
       }),
@@ -305,6 +317,7 @@ async function loadPublicBundle(
     imamRolling,
     weeklyImam,
     imamToday,
+    imamWeek: imamWeekRaw,
     imamTomorrow,
     fridaySchedule,
     tarawihToday: ramadanToday ? (tarawihRows[0] ?? null) : null,
@@ -342,6 +355,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
     khatibRolling,
     imamRolling,
     imamToday,
+    imamWeek,
     imamTomorrow,
     fridaySchedule,
     tarawihToday,
@@ -481,6 +495,13 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
         }
       : null,
     imamToday: imamToday.map((s) => ({
+      id: s.id,
+      prayerName: s.prayerName,
+      imamName: s.imamName,
+      muadzinName: s.muadzinName,
+    })),
+    imamWeek: imamWeek.map((s) => ({
+      date: dateOnlyToString(s.scheduleDate),
       id: s.id,
       prayerName: s.prayerName,
       imamName: s.imamName,
