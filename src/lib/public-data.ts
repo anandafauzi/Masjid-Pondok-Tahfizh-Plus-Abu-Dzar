@@ -49,6 +49,7 @@ export interface TvData {
     notes: string | null;
   } | null;
   prayerTimes: PrayerTimesStrings;
+  prayerTimesWeek: Array<PrayerTimesStrings & { date: string }>;
   nextPrayer: {
     key: string;
     label: string;
@@ -245,7 +246,7 @@ async function loadPublicBundle(
     getAdviceSafe(),
     getKajianSafe(now, 5),
     getActiveKhutbah(now).catch(() => null),
-    getUpcomingKhatibSchedules(today, 4),
+    getUpcomingKhatibSchedules(addDaysUTC(friday, 1), 4),
     getKhatibRollingActive(),
     getImamRollingActive(),
     getWeeklyImamSettings().catch(() => []),
@@ -350,21 +351,25 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
   const imamTomorrowSubuh =
     imamTomorrow.find((s) => s.prayerName.toLowerCase() === "subuh") ?? null;
 
-  const prayerTimes = calculatePrayerTimes(today, {
+  const prayerOptions = {
     method: mosque.prayerCalculationMethod,
     asrMethod: mosque.asrMethod,
     adjustments: mosque.prayerAdjustments,
     latitude: mosque.latitude,
     longitude: mosque.longitude,
+  };
+
+  const prayerTimes = calculatePrayerTimes(today, prayerOptions);
+
+  const prayerTimesWeek = Array.from({ length: 7 }, (_, index) => {
+    const day = addDaysUTC(today, index);
+    return {
+      date: dateOnlyToString(day),
+      ...calculatePrayerTimes(day, prayerOptions),
+    };
   });
 
-  const nextPrayer = getNextPrayer(prayerTimes, today, now, {
-    method: mosque.prayerCalculationMethod,
-    asrMethod: mosque.asrMethod,
-    adjustments: mosque.prayerAdjustments,
-    latitude: mosque.latitude,
-    longitude: mosque.longitude,
-  });
+  const nextPrayer = getNextPrayer(prayerTimes, today, now, prayerOptions);
 
   const iqamahEvents = computeIqamahEvents(today, prayerTimes, iqamahSettings);
   const nextIqamah = getNextIqamah(iqamahEvents, now);
@@ -446,6 +451,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
         }
       : null,
     prayerTimes,
+    prayerTimesWeek,
     nextPrayer: {
       key: nextPrayer.key,
       label: nextPrayer.label,
@@ -494,12 +500,20 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
       sermonTopic: fridaySchedule?.sermonTopic ?? null,
       imamSubuh: rollingImam?.name ?? null,
     },
-    khatibUpcoming: khatibUpcoming.map((k) => ({
-      id: k.id,
-      fridayDate: dateOnlyToString(k.fridayDate),
-      khatibName: k.khatibName,
-      sermonTopic: k.sermonTopic,
-    })),
+    khatibUpcoming: khatibUpcoming
+      .filter(
+        (k, index, all) =>
+          all.findIndex(
+            (other) =>
+              dateOnlyToString(other.fridayDate) === dateOnlyToString(k.fridayDate)
+          ) === index
+      )
+      .map((k) => ({
+        id: k.id,
+        fridayDate: dateOnlyToString(k.fridayDate),
+        khatibName: k.khatibName,
+        sermonTopic: k.sermonTopic,
+      })),
     kajian: kajian.map((k) => ({
       id: k.id,
       title: k.title,
