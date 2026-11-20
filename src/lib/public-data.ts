@@ -388,18 +388,35 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
   const iqamahEvents = computeIqamahEvents(today, prayerTimes, iqamahSettings);
   const nextIqamah = getNextIqamah(iqamahEvents, now);
 
-  const rollingKhatib = resolveRolling(
-    khatibRolling.map((r) => ({
-      id: r.id,
-      khatibName: r.khatibName,
-      sequenceNumber: r.sequenceNumber,
-      effectiveFrom: r.effectiveFrom,
-      effectiveUntil: r.effectiveUntil,
-      isActive: r.isActive,
-      createdAt: r.createdAt,
-    })),
-    friday
+  const rollingKhatibSettings = khatibRolling.map((r) => ({
+    id: r.id,
+    khatibName: r.khatibName,
+    sequenceNumber: r.sequenceNumber,
+    effectiveFrom: r.effectiveFrom,
+    effectiveUntil: r.effectiveUntil,
+    isActive: r.isActive,
+    createdAt: r.createdAt,
+  }));
+  const rollingKhatib = resolveRolling(rollingKhatibSettings, friday);
+
+  // Jadwal khatib eksplisit sering hanya terisi sampai Jumat berjalan.
+  // Untuk 4 Jumat ke depan, lengkapi dari pola rolling agar nama tetap tampil.
+  const explicitKhatibByDate = new Map(
+    khatibUpcoming.map((k) => [dateOnlyToString(k.fridayDate), k] as const)
   );
+  const resolvedKhatibUpcoming = Array.from({ length: 4 }, (_, index) => {
+    const date = addDaysUTC(friday, (index + 1) * 7);
+    const ymd = dateOnlyToString(date);
+    const explicit = explicitKhatibByDate.get(ymd);
+    if (explicit && explicit.khatibName?.trim()) return explicit;
+    const rolling = resolveRolling(rollingKhatibSettings, date);
+    return {
+      id: `rolling-${ymd}`,
+      fridayDate: date,
+      khatibName: rolling?.name?.trim() || "Belum dijadwalkan",
+      sermonTopic: null,
+    };
+  });
 
   const rollingImam = resolveRolling(
     imamRolling.map((r) => ({
@@ -521,7 +538,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
       sermonTopic: fridaySchedule?.sermonTopic ?? null,
       imamSubuh: rollingImam?.name ?? null,
     },
-    khatibUpcoming: khatibUpcoming
+    khatibUpcoming: resolvedKhatibUpcoming
       .filter(
         (k, index, all) =>
           all.findIndex(
