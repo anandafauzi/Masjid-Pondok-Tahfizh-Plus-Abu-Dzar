@@ -60,3 +60,8 @@ scratch/
 /android/.idea/
 /android/*.iml
 
+# android release signing (rahasia; jangan pernah di-commit)
+/android/app/*.keystore
+/android/app/*.jks
+/android/app/signing-info.txt
+
