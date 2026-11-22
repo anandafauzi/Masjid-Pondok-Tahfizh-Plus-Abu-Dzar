@@ -14,7 +14,11 @@ import {
   formatDateOnlyShort,
   todayDateOnly,
 } from "@/lib/datetime";
-import { PRAYER_NAMES, PRAYER_NAMES_ARABIC } from "@/utils/constants";
+import {
+  normalizePrayerName,
+  PRAYER_NAMES,
+  PRAYER_NAMES_ARABIC,
+} from "@/utils/constants";
 import { Calendar, Timer, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +48,7 @@ export default async function JadwalShalatPage() {
   const todayTimes = days[0].times;
   const todayIqamah = computeIqamahEvents(today, todayTimes, iqamahSettings);
   const isFridayToday = today.getUTCDay() === 5;
-  // Hari Jumat tidak ada iqamah Zuhur karena diganti Shalat Jumat.
+  // Hari Jumat tidak ada iqamah Dzuhur karena diganti Shalat Jumat.
   const todayIqamahCards = isFridayToday
     ? todayIqamah.filter((e) => e.key !== "dhuhr")
     : todayIqamah;
@@ -135,7 +139,7 @@ export default async function JadwalShalatPage() {
           <div className="grid grid-cols-5 gap-2 text-center text-[8pt] border-t border-slate-300 pt-2">
             {PRAYER_COLS.map((key) => {
               const setting = iqamahSettings.find(
-                (s) => s.prayerName === PRAYER_NAMES[key]
+                (s) => normalizePrayerName(s.prayerName) === PRAYER_NAMES[key]
               );
               return (
                 <div key={key} className="border border-slate-300 rounded p-1 bg-white">
@@ -201,8 +205,8 @@ export default async function JadwalShalatPage() {
               </div>
               {isFridayToday && (
                 <p className="mt-1 text-xs text-slate-500">
-                  Hari Jumat: shalat Zuhur diganti Shalat Jumat, sehingga tidak
-                  ada iqamah Zuhur.
+                  Hari Jumat: shalat Dzuhur diganti Shalat Jumat, sehingga tidak
+                  ada iqamah Dzuhur.
                 </p>
               )}
             </div>
@@ -322,7 +326,7 @@ export default async function JadwalShalatPage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {PRAYER_COLS.map((key) => {
               const setting = iqamahSettings.find(
-                (s) => s.prayerName === PRAYER_NAMES[key]
+                (s) => normalizePrayerName(s.prayerName) === PRAYER_NAMES[key]
               );
               return (
                 <div

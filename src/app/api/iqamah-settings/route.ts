@@ -7,15 +7,16 @@ import { getMosqueSettings } from "@/lib/settings";
 import { calculatePrayerTimes } from "@/lib/prayer-times";
 import { todayDateOnly } from "@/lib/datetime";
 import { isIqamahAfterAdhan } from "@/lib/iqamah";
+import { normalizePrayerName } from "@/utils/constants";
 
 export const dynamic = "force-dynamic";
 
-const PRAYER_NAMES = new Set(["Subuh", "Zuhur", "Asar", "Magrib", "Isya"]);
+const PRAYER_NAMES = new Set(["Shubuh", "Dzuhur", "Ashar", "Maghrib", "Isya"]);
 const ADHAN_KEY: Record<string, "fajr" | "dhuhr" | "asr" | "maghrib" | "isha"> = {
-  Subuh: "fajr",
-  Zuhur: "dhuhr",
-  Asar: "asr",
-  Magrib: "maghrib",
+  Shubuh: "fajr",
+  Dzuhur: "dhuhr",
+  Ashar: "asr",
+  Maghrib: "maghrib",
   Isya: "isha",
 };
 
@@ -30,7 +31,16 @@ export async function GET() {
     const settings = await prisma.iqamahSetting.findMany({
       orderBy: { prayerName: "asc" },
     });
-    return ok(settings);
+    // Tampilkan label kanonik walau database masih berisi ejaan lama.
+    const seen = new Set<string>();
+    const normalized = [];
+    for (const setting of settings) {
+      const prayerName = normalizePrayerName(setting.prayerName);
+      if (!PRAYER_NAMES.has(prayerName) || seen.has(prayerName)) continue;
+      seen.add(prayerName);
+      normalized.push({ ...setting, prayerName });
+    }
+    return ok(normalized);
   } catch (error) {
     console.error(error);
     return serverError();
@@ -70,7 +80,10 @@ export async function PUT(request: NextRequest) {
       fixedIqamahTime: string | null;
     }> = [];
     for (const item of items) {
-      const prayerName = item?.prayerName ? String(item.prayerName).trim() : "";
+      // Terima ejaan lama dari klien/DB, tapi simpan label kanonik baru.
+      const prayerName = normalizePrayerName(
+        item?.prayerName ? String(item.prayerName) : ""
+      );
       if (!PRAYER_NAMES.has(prayerName)) {
         return badRequest(`Nama shalat tidak valid: ${prayerName || "(kosong)"}`);
       }

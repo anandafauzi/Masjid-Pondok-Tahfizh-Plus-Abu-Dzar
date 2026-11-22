@@ -69,7 +69,7 @@ export default async function KajianPage() {
             📚
           </div>
           <h3 className="text-lg font-bold text-slate-900">
-            Kajian Rutin Ba&apos;da Magrib
+            Kajian Rutin Ba&apos;da Maghrib
           </h3>
           <p className="mt-2 text-xs text-slate-500 max-w-md mx-auto">
             Kajian rutin pembahasan kitab tafsir dan tahsin diselenggarakan setiap malam di Masjid Abu Dzar. Hubungi takmir masjid untuk konfirmasi tema pekanan.

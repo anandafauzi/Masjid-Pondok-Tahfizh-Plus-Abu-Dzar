@@ -57,10 +57,10 @@ async function main() {
   });
 
   const iqamahSettings = [
-    { prayerName: "Subuh", mode: "DELAY_MINUTES", delayMinutes: 20 },
-    { prayerName: "Zuhur", mode: "DELAY_MINUTES", delayMinutes: 15 },
-    { prayerName: "Asar", mode: "DELAY_MINUTES", delayMinutes: 15 },
-    { prayerName: "Magrib", mode: "DELAY_MINUTES", delayMinutes: 5 },
+    { prayerName: "Shubuh", mode: "DELAY_MINUTES", delayMinutes: 20 },
+    { prayerName: "Dzuhur", mode: "DELAY_MINUTES", delayMinutes: 15 },
+    { prayerName: "Ashar", mode: "DELAY_MINUTES", delayMinutes: 15 },
+    { prayerName: "Maghrib", mode: "DELAY_MINUTES", delayMinutes: 5 },
     { prayerName: "Isya", mode: "DELAY_MINUTES", delayMinutes: 15 },
   ];
 

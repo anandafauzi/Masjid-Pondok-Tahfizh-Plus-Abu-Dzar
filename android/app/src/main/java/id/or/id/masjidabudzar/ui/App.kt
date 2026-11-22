@@ -99,6 +99,7 @@ import id.or.id.masjidabudzar.CountdownState
 import id.or.id.masjidabudzar.HijriUtil
 import id.or.id.masjidabudzar.Kajian
 import id.or.id.masjidabudzar.PrayerDay
+import id.or.id.masjidabudzar.PrayerEngine
 import id.or.id.masjidabudzar.ReminderConfig
 import id.or.id.masjidabudzar.TvData
 import kotlinx.coroutines.launch
@@ -1039,7 +1040,7 @@ private fun PrayerStrip(data: TvData?, activeLabel: String?) {
     } else {
         val times = data?.prayerTimes
         listOf(
-            "Subuh" to (times?.fajr ?: "--:--"),
+            "Shubuh" to (times?.fajr ?: "--:--"),
             "Dzuhur" to (times?.dhuhr ?: "--:--"),
             "Ashar" to (times?.asr ?: "--:--"),
             "Maghrib" to (times?.maghrib ?: "--:--"),
@@ -1049,7 +1050,8 @@ private fun PrayerStrip(data: TvData?, activeLabel: String?) {
 
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         items.forEach { (label, time) ->
-            val active = activeLabel?.contains(label, ignoreCase = true) == true
+            // Data TvData lama masih memakai "Subuh/Zuhur"; cocokkan slotnya.
+            val active = activeLabel?.let { PrayerEngine.samePrayer(it, label) } == true
             val scale by animateFloatAsState(
                 targetValue = if (active) 1.035f else 1f,
                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -1234,7 +1236,7 @@ private fun ScheduleScreen(
                                     }
                                     FlatSectionCard(title = dayTitle) {
                                         val prayers = listOf(
-                                            "Subuh" to day.fajr,
+                                            "Shubuh" to day.fajr,
                                             "Dzuhur" to day.dhuhr,
                                             "Ashar" to day.asr,
                                             "Maghrib" to day.maghrib,
@@ -1612,12 +1614,13 @@ private fun OfficersScreen(bundle: AppBundle) {
 
     val prayerOrder = mapOf(
         "subuh" to 0,
-        "dzuhur" to 1,
+        "shubuh" to 0,
         "zuhur" to 1,
-        "ashar" to 2,
+        "dzuhur" to 1,
         "asar" to 2,
-        "maghrib" to 3,
+        "ashar" to 2,
         "magrib" to 3,
+        "maghrib" to 3,
         "isya" to 4,
     )
 

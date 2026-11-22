@@ -65,7 +65,7 @@ describe("sendReminderEmail", () => {
       to: " ustadz@abudzar.sch.id ",
       name: "Ust. Ahmad Fauzi",
       mosqueName: "Masjid Abu Dzar",
-      duties: "Imam Subuh, Muadzin Zuhur",
+      duties: "Imam Shubuh, Muadzin Dzuhur",
       dateLabel: "Jumat, 20 November 2026",
       text: "Pengingat tugas besok",
     });
@@ -89,8 +89,8 @@ describe("sendReminderEmail", () => {
     expect(body.subject).toContain("Masjid Abu Dzar");
     expect(body.text).toBe("Pengingat tugas besok");
     expect(body.html).toContain("Ust. Ahmad Fauzi");
-    expect(body.html).toContain("Imam Subuh");
-    expect(body.html).toContain("Muadzin Zuhur");
+    expect(body.html).toContain("Imam Shubuh");
+    expect(body.html).toContain("Muadzin Dzuhur");
   });
 
   it("mengembalikan pesan error Resend dengan jelas", async () => {
@@ -112,7 +112,7 @@ describe("sendReminderEmail", () => {
       to: "ustadz@abudzar.sch.id",
       name: "Ust. Ahmad",
       mosqueName: "Masjid Abu Dzar",
-      duties: "Imam Subuh",
+      duties: "Imam Shubuh",
       dateLabel: "Jumat, 20 November 2026",
       text: "Pengingat tugas besok",
     });
@@ -130,7 +130,7 @@ describe("sendReminderEmail", () => {
       to: "ustadz@abudzar.sch.id",
       name: "Ust. Ahmad",
       mosqueName: "Masjid Abu Dzar",
-      duties: "Imam Subuh",
+      duties: "Imam Shubuh",
       dateLabel: "Jumat, 20 November 2026",
       text: "Pengingat tugas besok",
     });

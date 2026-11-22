@@ -29,6 +29,9 @@ class ReminderWatchdogReceiver : BroadcastReceiver() {
                     PrayerReminderService.start(appContext)
                 }
 
+                // Pulihkan dulu alarm yang terlewat saat Doze/proses mati.
+                // Karena scheduleNext menulis ulang daftar ID, urutannya penting.
+                PrayerReminderScheduler.recoverMissed(appContext, repository)
                 // scheduleNext juga menjadwalkan watchdog berikutnya.
                 PrayerReminderScheduler.scheduleNext(appContext, repository)
                 SyncWorker.enqueueNow(appContext)

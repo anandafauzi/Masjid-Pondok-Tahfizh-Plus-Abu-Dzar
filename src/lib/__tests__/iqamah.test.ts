@@ -17,22 +17,22 @@ describe("iqamah calculations", () => {
 
   it("uses delay minutes by default", () => {
     const settings = [
-      { prayerName: "Subuh", mode: "DELAY_MINUTES" as const, delayMinutes: 15, fixedIqamahTime: null },
-      { prayerName: "Zuhur", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
-      { prayerName: "Asar", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
-      { prayerName: "Magrib", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
+      { prayerName: "Shubuh", mode: "DELAY_MINUTES" as const, delayMinutes: 15, fixedIqamahTime: null },
+      { prayerName: "Dzuhur", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
+      { prayerName: "Ashar", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
+      { prayerName: "Maghrib", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
       { prayerName: "Isya", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
     ];
     const events = computeIqamahEvents(dateOnly, prayerTimes, settings);
-    const subuh = events.find((e) => e.key === "fajr")!;
-    expect(subuh.mode).toBe("DELAY_MINUTES");
-    expect(subuh.delayMinutes).toBe(15);
-    expect(subuh.iqamahTime).toBe("04:45");
+    const shubuh = events.find((e) => e.key === "fajr")!;
+    expect(shubuh.mode).toBe("DELAY_MINUTES");
+    expect(shubuh.delayMinutes).toBe(15);
+    expect(shubuh.iqamahTime).toBe("04:45");
   });
 
   it("uses fixed time when mode is FIXED_TIME", () => {
     const settings = [
-      { prayerName: "Magrib", mode: "FIXED_TIME" as const, delayMinutes: 5, fixedIqamahTime: "18:00" },
+      { prayerName: "Maghrib", mode: "FIXED_TIME" as const, delayMinutes: 5, fixedIqamahTime: "18:00" },
     ];
     const events = computeIqamahEvents(dateOnly, prayerTimes, settings);
     const maghrib = events.find((e) => e.key === "maghrib")!;
@@ -42,10 +42,10 @@ describe("iqamah calculations", () => {
 
   it("getNextIqamah returns upcoming iqamah", () => {
     const settings = [
-      { prayerName: "Subuh", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
-      { prayerName: "Zuhur", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
-      { prayerName: "Asar", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
-      { prayerName: "Magrib", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
+      { prayerName: "Shubuh", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
+      { prayerName: "Dzuhur", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
+      { prayerName: "Ashar", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
+      { prayerName: "Maghrib", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
       { prayerName: "Isya", mode: "DELAY_MINUTES" as const, delayMinutes: 10, fixedIqamahTime: null },
     ];
     const events = computeIqamahEvents(dateOnly, prayerTimes, settings);
@@ -57,14 +57,30 @@ describe("iqamah calculations", () => {
 
   it("getNextIqamah returns null if all passed", () => {
     const settings = [
-      { prayerName: "Subuh", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
-      { prayerName: "Zuhur", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
-      { prayerName: "Asar", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
-      { prayerName: "Magrib", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
+      { prayerName: "Shubuh", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
+      { prayerName: "Dzuhur", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
+      { prayerName: "Ashar", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
+      { prayerName: "Maghrib", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
       { prayerName: "Isya", mode: "DELAY_MINUTES" as const, delayMinutes: 5, fixedIqamahTime: null },
     ];
     const events = computeIqamahEvents(dateOnly, prayerTimes, settings);
     const now = new Date("2026-11-02T00:00:00+07:00");
     expect(getNextIqamah(events, now)).toBeNull();
+  });
+
+  it("masih membaca label lama dari database", () => {
+    const settings = [
+      { prayerName: "Subuh", mode: "DELAY_MINUTES" as const, delayMinutes: 15, fixedIqamahTime: null },
+      { prayerName: "Zuhur", mode: "DELAY_MINUTES" as const, delayMinutes: 12, fixedIqamahTime: null },
+      { prayerName: "Asar", mode: "DELAY_MINUTES" as const, delayMinutes: 11, fixedIqamahTime: null },
+      { prayerName: "Magrib", mode: "DELAY_MINUTES" as const, delayMinutes: 7, fixedIqamahTime: null },
+    ];
+    const events = computeIqamahEvents(dateOnly, prayerTimes, settings);
+
+    expect(events.find((e) => e.key === "fajr")?.label).toBe("Shubuh");
+    expect(events.find((e) => e.key === "fajr")?.delayMinutes).toBe(15);
+    expect(events.find((e) => e.key === "dhuhr")?.label).toBe("Dzuhur");
+    expect(events.find((e) => e.key === "asr")?.label).toBe("Ashar");
+    expect(events.find((e) => e.key === "maghrib")?.label).toBe("Maghrib");
   });
 });

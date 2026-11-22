@@ -14,6 +14,7 @@ import {
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { normalizePrayerName } from "@/utils/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,9 @@ export async function PUT(
     }
 
     const prayerName =
-      body.prayerName !== undefined ? String(body.prayerName).trim() : undefined;
+      body.prayerName !== undefined
+        ? normalizePrayerName(body.prayerName)
+        : undefined;
     const imamName =
       body.imamName !== undefined ? String(body.imamName).trim() : undefined;
     const muadzinName =

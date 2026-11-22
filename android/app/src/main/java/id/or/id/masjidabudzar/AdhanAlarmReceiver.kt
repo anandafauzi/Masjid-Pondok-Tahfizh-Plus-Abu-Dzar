@@ -26,9 +26,12 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
 
         if (action == ReminderConfig.ACTION_DISMISS_ALERT) {
             stopAdhan()
+            val alertId = intent.getIntExtra(
+                ReminderConfig.EXTRA_ALERT_NOTIFICATION_ID,
+                ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID,
+            )
             runCatching {
-                NotificationManagerCompat.from(appContext)
-                    .cancel(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID)
+                NotificationManagerCompat.from(appContext).cancel(alertId)
             }
             return
         }
@@ -39,39 +42,46 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
             try {
                 val repository = PrayerRepository(appContext)
                 val prefs = repository.settings.prefsAfterMigration()
+                val scheduledId = intent.getStringExtra(ReminderConfig.EXTRA_SCHEDULED_ID)
 
                 if (!prefs.notificationsEnabled) {
                     NotificationManagerCompat.from(appContext)
                         .cancel(ReminderConfig.notificationId(appContext))
                     appContext.stopService(Intent(appContext, PrayerReminderService::class.java))
+                    if (scheduledId != null) {
+                        ReminderSettings.removeScheduledEventIds(appContext, setOf(scheduledId))
+                    }
                     PrayerReminderScheduler.scheduleNext(appContext, repository)
                     return@launch
                 }
 
-                OngoingNotification.createChannels(appContext)
-                PrayerReminderService.start(appContext)
-
-                val iqamahTarget = intent.getLongExtra(ReminderConfig.EXTRA_IQAMAH_TARGET, 0L)
                 when (action) {
-                    ReminderConfig.ACTION_ADHAN_ALARM -> {
-                        val label = intent.getStringExtra(ReminderConfig.EXTRA_EVENT_LABEL) ?: "Shalat"
-                        val timeout = if (iqamahTarget > 0L) {
-                            max(1_000L, iqamahTarget - System.currentTimeMillis() + 60_000L)
-                        } else {
-                            10 * 60 * 1000L
-                        }
-                        showAlert(appContext, "Adzan $label", "Waktu shalat telah tiba", timeout)
-                        playAdhan(appContext, prefs, intent.getStringExtra(ReminderConfig.EXTRA_EVENT_KEY))
-                        PrayerReminderScheduler.scheduleNext(appContext, repository)
-                    }
-                    ReminderConfig.ACTION_IQAMAH_ALARM -> {
-                        val label = intent.getStringExtra(ReminderConfig.EXTRA_EVENT_LABEL) ?: "Shalat"
-                        showAlert(
-                            appContext,
-                            "Iqamah $label",
-                            "Segera berdiri untuk shalat berjamaah",
-                            10 * 60 * 1000L,
+                    ReminderConfig.ACTION_ADHAN_ALARM,
+                    ReminderConfig.ACTION_IQAMAH_ALARM,
+                    -> {
+                        val moment = PrayerMoment(
+                            key = intent.getStringExtra(ReminderConfig.EXTRA_EVENT_KEY).orEmpty(),
+                            label = intent.getStringExtra(ReminderConfig.EXTRA_EVENT_LABEL)
+                                ?.takeIf { it.isNotBlank() } ?: "Shalat",
+                            adhanTime = "",
+                            iqamahTime = "",
+                            adhanTarget = intent.getLongExtra(ReminderConfig.EXTRA_ADHAN_TARGET, 0L),
+                            iqamahTarget = intent.getLongExtra(ReminderConfig.EXTRA_IQAMAH_TARGET, 0L),
+                            imamName = intent.getStringExtra(ReminderConfig.EXTRA_IMAM_NAME).orEmpty(),
+                            muadzinName = intent.getStringExtra(ReminderConfig.EXTRA_MUADZIN_NAME).orEmpty(),
                         )
+                        runCatching {
+                            deliver(
+                                context = appContext,
+                                action = action,
+                                moment = moment,
+                                prefs = prefs,
+                                scheduledTriggerDevice = null,
+                            )
+                        }
+                        if (scheduledId != null) {
+                            ReminderSettings.removeScheduledEventIds(appContext, setOf(scheduledId))
+                        }
                         PrayerReminderScheduler.scheduleNext(appContext, repository)
                     }
                     ReminderConfig.ACTION_REFRESH_REMINDERS ->
@@ -79,6 +89,51 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                 }
             } finally {
                 pending.finish()
+            }
+        }
+    }
+
+    private fun deliver(
+        context: Context,
+        action: String,
+        moment: PrayerMoment,
+        prefs: AppPrefs,
+        scheduledTriggerDevice: Long?,
+    ) {
+        OngoingNotification.createChannels(context)
+        PrayerReminderService.start(context)
+
+        val isAdhan = action == ReminderConfig.ACTION_ADHAN_ALARM
+        val label = moment.label.takeIf { it.isNotBlank() } ?: "Shalat"
+        val alertId = if (isAdhan) {
+            ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID
+        } else {
+            ReminderConfig.IQAMAH_FALLBACK_NOTIFICATION_ID
+        }
+
+        // EXTRA_* target memakai waktu server. Tanpa konversi ini timeout adzan
+        // ikut bergeser ketika clockOffset != 0 dan bisa menimpa alert iqamah.
+        val iqamahDevice = moment.iqamahTarget - prefs.clockOffset
+        val timeout = if (isAdhan) {
+            max(1_000L, iqamahDevice - System.currentTimeMillis())
+        } else {
+            10 * 60 * 1000L
+        }
+
+        val title = if (isAdhan) "Adzan $label" else "Iqamah $label"
+        val text = if (isAdhan) {
+            "Waktu shalat telah tiba"
+        } else {
+            "Segera berdiri untuk shalat berjamaah"
+        }
+        showAlert(context, title, text, timeout, alertId)
+
+        if (isAdhan) {
+            val lateness = scheduledTriggerDevice?.let { System.currentTimeMillis() - it } ?: 0L
+            // Notifikasi tetap tampil bila alarm dipulihkan terlambat, tetapi
+            // suara adzan tidak diputar agar tidak terdengar di luar jadwal.
+            if (lateness <= MAX_AUDIO_LATENESS_MS) {
+                playAdhan(context, prefs, moment.key)
             }
         }
     }
@@ -97,11 +152,16 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
 
     private fun playAdhan(context: Context, prefs: AppPrefs, eventKey: String?) {
         if (!prefs.adhanSoundEnabled || !canPlay(context)) return
+        val token = audioDismissGuard.beginPlayback()
         val player = MediaPlayer()
 
         // MediaPlayer tidak thread-safe: seluruh siklus hidupnya dijalankan
         // pada satu HandlerThread yang memiliki Looper.
         audioHandler.post {
+            if (!audioDismissGuard.isCurrent(token)) {
+                runCatching { player.release() }
+                return@post
+            }
             releasePlayer()
             mediaPlayer = player
             runCatching {
@@ -115,22 +175,36 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                 player.setDataSource(
                     "${ReminderConfig.AUDIO_BASE_URL}${audioFileFor(prefs.muadzinId, eventKey)}",
                 )
-                player.setOnPreparedListener { it.start() }
+                player.setOnPreparedListener {
+                    // Tutup bisa datang saat prepareAsync masih berjalan.
+                    // Jangan mulai ulang suara yang sudah dibatalkan.
+                    if (!audioDismissGuard.isCurrent(token)) {
+                        releaseIfCurrent(player)
+                        return@setOnPreparedListener
+                    }
+                    it.start()
+                }
                 player.setOnErrorListener { _, _, _ ->
-                    releasePlayer()
+                    releaseIfCurrent(player)
                     true
                 }
-                player.setOnCompletionListener { releasePlayer() }
+                player.setOnCompletionListener { releaseIfCurrent(player) }
                 player.prepareAsync()
-            }.onFailure { releasePlayer() }
+            }.onFailure { releaseIfCurrent(player) }
         }
 
         audioHandler.postDelayed({
-            if (mediaPlayer === player) releasePlayer()
+            if (audioDismissGuard.isCurrent(token)) releaseIfCurrent(player)
         }, 5 * 60 * 1000L)
     }
 
-    private fun showAlert(context: Context, title: String, text: String, timeoutAfterMs: Long) {
+    private fun showAlert(
+        context: Context,
+        title: String,
+        text: String,
+        timeoutAfterMs: Long,
+        notificationId: Int,
+    ) {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ContextCompat.checkSelfPermission(
@@ -141,12 +215,13 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
         }
         val dismissIntent = Intent(context, AdhanAlarmReceiver::class.java).apply {
             action = ReminderConfig.ACTION_DISMISS_ALERT
+            putExtra(ReminderConfig.EXTRA_ALERT_NOTIFICATION_ID, notificationId)
         }
         val dismissFlags = PendingIntent.FLAG_UPDATE_CURRENT or
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
         val dismissPendingIntent = PendingIntent.getBroadcast(
             context,
-            23,
+            if (notificationId == ReminderConfig.IQAMAH_FALLBACK_NOTIFICATION_ID) 25 else 23,
             dismissIntent,
             dismissFlags,
         )
@@ -161,20 +236,42 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
             .setSound(null)
             .setVibrate(longArrayOf(0))
             .setTimeoutAfter(max(1_000L, timeoutAfterMs))
-            .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .addAction(R.drawable.ic_close, "Tutup", dismissPendingIntent)
+            // Geser notifikasi juga mematikan suara, bukan sekadar menyembunyikan UI.
+            .setDeleteIntent(dismissPendingIntent)
             .build()
         runCatching {
             NotificationManagerCompat.from(context)
-                .notify(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID, notification)
+                .notify(notificationId, notification)
         }
     }
 
     companion object {
+        private const val MAX_AUDIO_LATENESS_MS = 60_000L
+
+        /** Dipanggil watchdog untuk alarm yang terlewat saat Doze / proses mati. */
+        fun deliverMissed(
+            context: Context,
+            action: String,
+            moment: PrayerMoment,
+            prefs: AppPrefs,
+            scheduledTriggerDevice: Long,
+        ) {
+            val receiver = AdhanAlarmReceiver()
+            receiver.deliver(
+                context = context.applicationContext,
+                action = action,
+                moment = moment,
+                prefs = prefs,
+                scheduledTriggerDevice = scheduledTriggerDevice,
+            )
+        }
+
         private var mediaPlayer: MediaPlayer? = null
+        private val audioDismissGuard = AudioGenerationGuard()
         private val audioThread: HandlerThread by lazy {
             HandlerThread("AdhanAudio").apply { start() }
         }
@@ -187,7 +284,7 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
                 "egypt", "indonesia", "fajr-makkah",
             )
             val selected = muadzinId.takeIf { it in allowed } ?: "makkah"
-            // Varian khusus Subuh hanya dipakai untuk adzan Subuh; untuk shalat
+            // Varian khusus Shubuh hanya dipakai untuk adzan Shubuh; untuk shalat
             // lain turun ke versi Makkah biasa seperti di web.
             if (selected == "fajr-makkah" && eventKey != "fajr") return "makkah.mp3"
             return "$selected.mp3"
@@ -199,7 +296,18 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
             mediaPlayer = null
         }
 
+        private fun releaseIfCurrent(player: MediaPlayer) {
+            if (mediaPlayer === player) {
+                releasePlayer()
+            } else {
+                runCatching { player.release() }
+            }
+        }
+
         private fun stopAdhan() {
+            // Batalkan lebih dulu supaya prepared callback yang sedang antre
+            // tidak menyalakan lagi player yang baru saja dilepas.
+            audioDismissGuard.dismiss()
             audioHandler.post { releasePlayer() }
         }
     }

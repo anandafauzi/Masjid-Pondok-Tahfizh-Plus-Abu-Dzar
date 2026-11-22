@@ -15,6 +15,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { formatDateOnlyLong, formatDateOnlyShort } from "@/lib/datetime";
+import { normalizePrayerName } from "@/utils/constants";
 
 export interface ImamScheduleItem {
   id: string;
@@ -72,7 +73,7 @@ export function ScheduleExportActions({
   // Generate WhatsApp message text based on selection
   function generateWhatsAppText(): string {
     const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://masjid-pondok-tahfizh-plus-abu-dzar.vercel.app";
-    // Jumat tidak punya iqamah Zuhur (diganti Shalat Jumat), termasuk saat
+    // Jumat tidak punya iqamah Dzuhur (diganti Shalat Jumat), termasuk saat
     // komponen dipakai dari halaman yang mengirim daftar iqamah mentah.
     const isFriday =
       new Intl.DateTimeFormat("en-US", {
@@ -103,10 +104,14 @@ export function ScheduleExportActions({
         text += `Berikut jadwal penugasan Imam & Muadzin shalat fardhu hari ini:\n\n`;
 
         if (todayItems.length > 0) {
-          const order = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"];
-          todayItems.sort((a, b) => order.indexOf(a.prayerName) - order.indexOf(b.prayerName));
+          const order = ["Shubuh", "Dzuhur", "Ashar", "Maghrib", "Isya"];
+          todayItems.sort(
+            (a, b) =>
+              order.indexOf(normalizePrayerName(a.prayerName)) -
+              order.indexOf(normalizePrayerName(b.prayerName))
+          );
           for (const item of todayItems) {
-            text += `• *${item.prayerName}*\n`;
+            text += `• *${normalizePrayerName(item.prayerName)}*\n`;
             text += `   - Imam: ${item.imamName || "-"}\n`;
             text += `   - Muadzin: ${item.muadzinName || "-"}\n`;
           }
@@ -145,18 +150,22 @@ export function ScheduleExportActions({
           const dayTitle = formatDateOnlyShort(dateObj).toUpperCase();
 
           text += `📅 *${dayTitle}*\n`;
-          const order = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"];
-          list.sort((a, b) => order.indexOf(a.prayerName) - order.indexOf(b.prayerName));
+          const order = ["Shubuh", "Dzuhur", "Ashar", "Maghrib", "Isya"];
+          list.sort(
+            (a, b) =>
+              order.indexOf(normalizePrayerName(a.prayerName)) -
+              order.indexOf(normalizePrayerName(b.prayerName))
+          );
 
           for (const item of list) {
-            text += `• *${item.prayerName}*: Imam: ${item.imamName || "-"} | Mzd: ${item.muadzinName || "-"}\n`;
+            text += `• *${normalizePrayerName(item.prayerName)}*: Imam: ${item.imamName || "-"} | Mzd: ${item.muadzinName || "-"}\n`;
           }
           text += `\n`;
         }
 
         if (rollingImamName) {
           text += `━━━━━━━━━━━━━━━━━━━━━\n`;
-          text += `✨ *Rotasi Subuh Jumat Pekan Ini*: ${rollingImamName}\n`;
+          text += `✨ *Rotasi Shubuh Jumat Pekan Ini*: ${rollingImamName}\n`;
         }
 
         text += `\n📌 *Catatan Takmir:*\n`;
@@ -204,9 +213,9 @@ export function ScheduleExportActions({
           const dateObj = day.date instanceof Date ? day.date : new Date(day.date);
           const dStr = formatDateOnlyShort(dateObj);
           text += `📅 *${dStr}*\n`;
-          text += `• Subuh: ${day.times.fajr ?? "-"} | Terbit: ${day.times.sunrise ?? "-"}\n`;
-          text += `• Zuhur: ${day.times.dhuhr ?? "-"} | Asar: ${day.times.asr ?? "-"}\n`;
-          text += `• Magrib: ${day.times.maghrib ?? "-"} | Isya: ${day.times.isha ?? "-"}\n\n`;
+          text += `• Shubuh: ${day.times.fajr ?? "-"} | Terbit: ${day.times.sunrise ?? "-"}\n`;
+          text += `• Dzuhur: ${day.times.dhuhr ?? "-"} | Ashar: ${day.times.asr ?? "-"}\n`;
+          text += `• Maghrib: ${day.times.maghrib ?? "-"} | Isya: ${day.times.isha ?? "-"}\n\n`;
         }
 
         text += `━━━━━━━━━━━━━━━━━━━━━\n`;

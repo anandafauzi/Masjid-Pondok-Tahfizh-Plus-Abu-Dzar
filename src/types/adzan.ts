@@ -73,7 +73,7 @@ export const MUADZIN_OPTIONS: MuadzinOption[] = [
   },
   {
     id: "fajr-makkah",
-    name: "Khusus Subuh (Masjidil Haram)",
+    name: "Khusus Shubuh (Masjidil Haram)",
     country: "Arab Saudi",
     flag: "🌙",
     location: "Makkah Al-Mukarramah",

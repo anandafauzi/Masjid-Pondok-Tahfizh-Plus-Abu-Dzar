@@ -1,6 +1,7 @@
 package id.or.id.masjidabudzar
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -94,6 +95,30 @@ class PrayerLogicTest {
     }
 
     @Test
+    fun scheduledAlarmIdRoundTripsAndRejectsMalformedIds() {
+        val raw = PrayerReminderScheduler.scheduledId("A", "maghrib", 1_795_171_320_000L)
+        val parsed = PrayerReminderScheduler.parseScheduledId(raw)
+
+        assertEquals("A", parsed?.kind)
+        assertEquals("maghrib", parsed?.key)
+        assertEquals(1_795_171_320_000L, parsed?.trigger)
+        assertEquals(raw, parsed?.raw)
+
+        assertEquals(null, PrayerReminderScheduler.parseScheduledId("X|maghrib|123"))
+        assertEquals(null, PrayerReminderScheduler.parseScheduledId("A|maghrib|not-a-number"))
+    }
+
+    @Test
+    fun adhanAndIqamahAlertsUseDistinctIdsOutsideOngoingRange() {
+        assertNotEquals(
+            ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID,
+            ReminderConfig.IQAMAH_FALLBACK_NOTIFICATION_ID,
+        )
+        assertTrue(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID !in 1100 until 1300)
+        assertTrue(ReminderConfig.IQAMAH_FALLBACK_NOTIFICATION_ID !in 1100 until 1300)
+    }
+
+    @Test
     fun countdownUsesHhMmSsWithMinusSign() {
         val state = CountdownState(
             phase = CountdownPhase.BEFORE_ADHAN,
@@ -114,5 +139,71 @@ class PrayerLogicTest {
         )
         assertEquals("-01:02:03", state.countdown)
         assertEquals("Maghrib : 17:42 | -01:02:03", state.infoLine)
+    }
+
+    @Test
+    fun dismissInvalidatesPreparingAdhanAudio() {
+        val guard = AudioGenerationGuard()
+        val preparing = guard.beginPlayback()
+
+        guard.dismiss()
+
+        assertFalse(guard.isCurrent(preparing))
+
+        val nextPlayback = guard.beginPlayback()
+        assertTrue(guard.isCurrent(nextPlayback))
+        assertFalse(guard.isCurrent(preparing))
+    }
+
+    @Test
+    fun legacyPrayerNamesStillMatchDutiesAndUseNewLabels() {
+        val json = """
+            {
+              "serverTime":"2026-11-20T10:42:00.000Z",
+              "today":"2026-11-20",
+              "iqamahEvents":[{
+                "key":"fajr","label":"Shubuh",
+                "adhanTime":"04:30","iqamahTime":"04:50",
+                "adhanTarget":"2026-11-19T21:30:00.000Z",
+                "iqamahTarget":"2026-11-19T21:50:00.000Z",
+                "mode":"DELAY_MINUTES"
+              }],
+              "imamToday":[{
+                "prayerName":"Subuh",
+                "imamName":"Ust. Ahmad Fauzi",
+                "muadzinName":"Ust. Dedi Saputra"
+              }]
+            }
+        """.trimIndent()
+
+        val moments = PrayerEngine.moments(ApiParser.parse(json))
+
+        assertEquals(1, moments.size)
+        assertEquals("Shubuh", moments[0].label)
+        assertEquals("Ust. Ahmad Fauzi", moments[0].imamName)
+        assertEquals("Ust. Dedi Saputra", moments[0].muadzinName)
+    }
+
+    @Test
+    fun weeklyMomentsMatchLegacyImamLabels() {
+        val json = """
+            {
+              "serverTime":"2026-11-20T10:42:00.000Z",
+              "today":"2026-11-20",
+              "prayerTimesWeek":[{"date":"2026-11-20","dhuhr":"11:52"}],
+              "imamWeek":[{
+                "date":"2026-11-20",
+                "prayerName":"Zuhur",
+                "imamName":"Ust. Umar",
+                "muadzinName":"-"
+              }]
+            }
+        """.trimIndent()
+
+        val moments = PrayerEngine.weeklyMoments(ApiParser.parse(json))
+        val dzuhur = moments.first { it.key == "dhuhr" }
+
+        assertEquals("Dzuhur", dzuhur.label)
+        assertEquals("Ust. Umar", dzuhur.imamName)
     }
 }

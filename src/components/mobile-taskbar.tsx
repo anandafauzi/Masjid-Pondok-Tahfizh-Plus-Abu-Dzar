@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import type { TvData } from "@/lib/public-data";
+import { prayerSlotOf } from "@/utils/constants";
 import { useDialogA11y } from "@/lib/use-dialog-a11y";
 import {
   MUADZIN_OPTIONS,
@@ -154,7 +155,7 @@ export function MobilePrayerTaskbar() {
 
   const serverNow = now + offset;
 
-  // Pada hari Jumat, Zuhur diganti Shalat Jumat sehingga tidak punya iqamah.
+  // Pada hari Jumat, Dzuhur diganti Shalat Jumat sehingga tidak punya iqamah.
   const visibleIqamahEvents = useMemo(() => {
     if (!data) return [];
     return data.isFriday
@@ -162,7 +163,7 @@ export function MobilePrayerTaskbar() {
       : data.iqamahEvents;
   }, [data]);
 
-  // Adzan tetap dikumandangkan untuk SEMUA shalat, termasuk Zuhur/Jumat.
+  // Adzan tetap dikumandangkan untuk SEMUA shalat, termasuk Dzuhur/Jumat.
   const adzanEvents = useMemo(() => data?.iqamahEvents ?? [], [data]);
 
   // 2. Compute dynamic countdown state (Adzan vs Iqamah)
@@ -196,7 +197,7 @@ export function MobilePrayerTaskbar() {
     }
 
     // Otherwise, find the next upcoming prayer today. Pakai daftar adzan
-    // lengkap agar Jumat (Zuhur) tetap muncul walau tidak punya iqamah.
+    // lengkap agar Jumat (Dzuhur) tetap muncul walau tidak punya iqamah.
     const upcomingEvent = adzanEvents.find((e) => {
       const adhanMs = new Date(e.adhanTarget).getTime();
       return adhanMs > serverNow;
@@ -225,7 +226,7 @@ export function MobilePrayerTaskbar() {
       };
     }
 
-    // If all prayers today have finished, target tomorrow's Subuh
+    // If all prayers today have finished, target tomorrow's Shubuh
     const tomorrowMs = data.nextPrayer?.target
       ? new Date(data.nextPrayer.target).getTime()
       : serverNow + 3600000 * 8;
@@ -235,7 +236,7 @@ export function MobilePrayerTaskbar() {
       prayerKey: "fajr",
       prayerLabel: data.nextPrayer?.label
         ? `${data.nextPrayer.label} (Besok)`
-        : "Subuh Esok",
+        : "Shubuh Esok",
       adhanTime: data.nextPrayer?.time || data.prayerTimes.fajr,
       iqamahTime: "--:--",
       targetMs: tomorrowMs,
@@ -249,8 +250,8 @@ export function MobilePrayerTaskbar() {
   const nextImamSchedule = useMemo(() => {
     if (!data || !prayerState) return null;
 
-    // Setelah Isya lewat, shalat berikutnya adalah Subuh esok hari.
-    // Petugasnya harus diambil dari jadwal besok, bukan petugas Subuh hari ini.
+    // Setelah Isya lewat, shalat berikutnya adalah Shubuh esok hari.
+    // Petugasnya harus diambil dari jadwal besok, bukan petugas Shubuh hari ini.
     if (prayerState.phase === "TOMORROW" || data.nextPrayer?.tomorrow) {
       const found = data.imamTomorrowSubuh;
       return {
@@ -265,18 +266,12 @@ export function MobilePrayerTaskbar() {
       };
     }
 
-    const targetLabel = prayerState.prayerLabel.toLowerCase();
-
-    // Map possible labels to standard names
-    const match = data.imamToday.find((s) => {
-      const p = s.prayerName.toLowerCase();
-      if (targetLabel.includes("subuh") && p.includes("subuh")) return true;
-      if (targetLabel.includes("zuhur") && p.includes("zuhur")) return true;
-      if (targetLabel.includes("asar") && p.includes("asar")) return true;
-      if (targetLabel.includes("magrib") && p.includes("magrib")) return true;
-      if (targetLabel.includes("isya") && p.includes("isya")) return true;
-      return false;
-    });
+    // Pakai prayerKey, bukan label tampilan: pada Jumat labelnya "Jumat"
+    // sehingga prayerSlotOf("Jumat") null dan bisa mencocokkan petugas salah.
+    const targetSlot = prayerSlotOf(prayerState.prayerKey);
+    const match = targetSlot
+      ? data.imamToday.find((s) => prayerSlotOf(s.prayerName) === targetSlot)
+      : undefined;
 
     if (match) {
       return {
@@ -664,8 +659,10 @@ export function MobilePrayerTaskbar() {
                     const isCurrent = prayerState.prayerKey === item.key;
 
                     // Match Imam for this prayer
-                    const imamInfo = data.imamToday.find((s) =>
-                      s.prayerName.toLowerCase().includes(item.label.toLowerCase())
+                    const itemSlot = prayerSlotOf(item.label);
+                    const imamInfo = data.imamToday.find(
+                      (s) =>
+                        itemSlot !== null && prayerSlotOf(s.prayerName) === itemSlot
                     );
 
                     return (

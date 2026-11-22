@@ -25,7 +25,7 @@ function baseData(): TvData {
     prayerTimes: {},
     nextPrayer: {
       key: "maghrib",
-      label: "Magrib",
+      label: "Maghrib",
       time: "18:05",
       target: new Date(NOW - 5 * 60_000).toISOString(),
       tomorrow: false,
@@ -33,7 +33,7 @@ function baseData(): TvData {
     iqamahEvents: [
       {
         key: "maghrib",
-        label: "Magrib",
+        label: "Maghrib",
         adhanTime: "18:05",
         iqamahTime: "18:10",
         adhanTarget: new Date(NOW - 5 * 60_000).toISOString(),

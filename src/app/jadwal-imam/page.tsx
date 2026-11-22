@@ -21,12 +21,12 @@ import {
   todayDateOnly,
 } from "@/lib/datetime";
 import { Users, Sparkles, UserCheck, Mic } from "lucide-react";
-import { getPrayerArabicName } from "@/utils/constants";
+import { getPrayerArabicName, normalizePrayerName } from "@/utils/constants";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const PRAYERS_LIST = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"];
+const PRAYERS_LIST = ["Shubuh", "Dzuhur", "Ashar", "Maghrib", "Isya"];
 
 export default async function JadwalImamPage() {
   const appMode = await isAppWebView();
@@ -119,7 +119,7 @@ export default async function JadwalImamPage() {
         {rollingImam && (
           <div className="mb-3 p-2 bg-amber-50 border border-black rounded text-[9pt] flex items-center justify-between">
             <span>
-              ⭐ <b>Imam Subuh Jumat Pekan Ini:</b> {rollingImam.name} ({formatDateOnlyLong(friday)})
+              ⭐ <b>Imam Shubuh Jumat Pekan Ini:</b> {rollingImam.name} ({formatDateOnlyLong(friday)})
             </span>
             <span className="font-mono text-[8pt]">
               Rotasi {rollingImam.index + 1} dari {rollingImam.total}
@@ -132,10 +132,10 @@ export default async function JadwalImamPage() {
           <thead>
             <tr className="bg-slate-200">
               <th className="border border-black p-1.5 text-center text-[9pt] w-28">Hari &amp; Tanggal</th>
-              <th className="border border-black p-1.5 text-center text-[9pt]">Subuh</th>
-              <th className="border border-black p-1.5 text-center text-[9pt]">Zuhur</th>
-              <th className="border border-black p-1.5 text-center text-[9pt]">Asar</th>
-              <th className="border border-black p-1.5 text-center text-[9pt]">Magrib</th>
+              <th className="border border-black p-1.5 text-center text-[9pt]">Shubuh</th>
+              <th className="border border-black p-1.5 text-center text-[9pt]">Dzuhur</th>
+              <th className="border border-black p-1.5 text-center text-[9pt]">Ashar</th>
+              <th className="border border-black p-1.5 text-center text-[9pt]">Maghrib</th>
               <th className="border border-black p-1.5 text-center text-[9pt]">Isya</th>
               {hasRamadanDates && (
                 <th className="border border-black p-1.5 text-center text-[9pt]">Tarawih</th>
@@ -159,7 +159,7 @@ export default async function JadwalImamPage() {
                     )}
                   </td>
                   {PRAYERS_LIST.map((pName) => {
-                    const item = list.find((s) => s.prayerName.toLowerCase() === pName.toLowerCase());
+                    const item = list.find((s) => normalizePrayerName(s.prayerName) === pName);
                     return (
                       <td key={pName} className="border border-black p-1 text-[8pt] align-top">
                         <div className="font-bold text-black">{item?.imamName || "-"}</div>
@@ -233,13 +233,13 @@ export default async function JadwalImamPage() {
           </div>
         </div>
 
-        {/* Imam Subuh Jumat Spotlight */}
+        {/* Imam Shubuh Jumat Spotlight */}
         {rollingImam && (
           <section className="mb-8 rounded-2xl border border-[#d2dfd6] bg-[#fbfdfc] p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#f4f7f5] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#395243] border border-[#d2dfd6]">
                 <Sparkles className="h-3 w-3 text-[#557a64]" />
-                Imam Subuh Jumat Pekan Ini
+                Imam Shubuh Jumat Pekan Ini
               </span>
               <span className="text-xs font-semibold text-slate-500">
                 Rotasi {rollingImam.index + 1} dari {rollingImam.total}
@@ -251,7 +251,7 @@ export default async function JadwalImamPage() {
                 {rollingImam.name}
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Bertugas memimpin shalat Subuh berjamaah pada {formatDateOnlyLong(friday)}
+                Bertugas memimpin shalat Shubuh berjamaah pada {formatDateOnlyLong(friday)}
               </p>
             </div>
           </section>
@@ -343,7 +343,7 @@ export default async function JadwalImamPage() {
                               <span className="font-arabic text-xs text-[#557a64]">
                                 {getPrayerArabicName(s.prayerName)}
                               </span>
-                              <span>{s.prayerName}</span>
+                              <span>{normalizePrayerName(s.prayerName)}</span>
                             </td>
                             <td className="px-6 py-3.5 text-slate-800 font-medium">
                               <div className="flex items-center gap-1.5">

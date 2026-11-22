@@ -7,15 +7,19 @@
     android:background="@null"
     android:paddingStart="14dp"
     android:paddingEnd="14dp"
-    android:paddingTop="10dp"
-    android:paddingBottom="6dp">
+    android:paddingTop="11dp"
+    android:paddingBottom="8dp">
 
     <TextView
         android:id="@+id/notif_line1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:singleLine="true"
+        android:fontFamily="sans"
+        android:includeFontPadding="true"
+        android:lineSpacingExtra="1dp"
+        android:maxLines="2"
         android:ellipsize="end"
+        android:textAlignment="viewStart"
         android:textColor="@color/notification_text_secondary"
         android:textSize="12sp" />
 
@@ -30,6 +34,11 @@
             android:id="@+id/notif_prayer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="sans"
+            android:includeFontPadding="true"
+            android:lineSpacingExtra="1dp"
+            android:maxLines="1"
+            android:textAlignment="viewStart"
             android:textColor="@color/notification_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -39,6 +48,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
+            android:fontFamily="sans"
+            android:includeFontPadding="true"
+            android:lineSpacingExtra="1dp"
+            android:maxLines="1"
+            android:textAlignment="viewStart"
             android:textColor="@color/notification_text_primary"
             android:textSize="16sp" />
 
@@ -54,6 +68,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@null"
+            android:fontFamily="sans"
+            android:includeFontPadding="true"
+            android:lineSpacingExtra="1dp"
+            android:maxLines="1"
+            android:textAlignment="viewEnd"
             android:textColor="@color/notification_text_primary"
             android:textSize="17sp"
             android:textStyle="bold" />
@@ -64,8 +83,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:singleLine="true"
+        android:fontFamily="sans"
+        android:includeFontPadding="true"
+        android:lineSpacingExtra="1dp"
+        android:maxLines="2"
         android:ellipsize="end"
+        android:textAlignment="viewStart"
         android:textColor="@color/notification_text_secondary"
         android:textSize="12sp" />
 
@@ -78,8 +101,12 @@
         android:clickable="true"
         android:focusable="true"
         android:gravity="center"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp"
+        android:fontFamily="sans"
+        android:includeFontPadding="true"
+        android:lineSpacingExtra="1dp"
+        android:maxLines="1"
+        android:paddingTop="7dp"
+        android:paddingBottom="7dp"
         android:text="@string/notif_action_open"
         android:textColor="@color/notification_text_primary"
         android:textSize="13sp"

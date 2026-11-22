@@ -39,11 +39,11 @@ const petugas: PetugasItem[] = [
 
 function assignments(): DutyAssignment[] {
   return [
-    { role: "IMAM", prayerName: "Subuh", personName: "Ahmad Fauzi" },
-    { role: "MUADZIN", prayerName: "Subuh", personName: "Umar" },
-    { role: "IMAM", prayerName: "Zuhur", personName: "Ust. Ahmad Fauzi" },
+    { role: "IMAM", prayerName: "Shubuh", personName: "Ahmad Fauzi" },
+    { role: "MUADZIN", prayerName: "Shubuh", personName: "Umar" },
+    { role: "IMAM", prayerName: "Dzuhur", personName: "Ust. Ahmad Fauzi" },
     { role: "KHATIB", prayerName: null, personName: "Umar" },
-    { role: "IMAM", prayerName: "Asar", personName: "Utsman" },
+    { role: "IMAM", prayerName: "Ashar", personName: "Utsman" },
   ];
 }
 
@@ -89,7 +89,7 @@ describe("buildReminderRecipients", () => {
   it("menggabungkan seluruh tugas satu orang menjadi satu email", () => {
     const ahmad = recipients.find((item) => item.name === "Ust. Ahmad Fauzi");
     expect(ahmad).toBeDefined();
-    expect(ahmad?.duties.map((duty) => duty.label)).toEqual(["Imam Subuh", "Imam Zuhur"]);
+    expect(ahmad?.duties.map((duty) => duty.label)).toEqual(["Imam Shubuh", "Imam Dzuhur"]);
     expect(ahmad?.email).toBe("ahmad@abudzar.sch.id");
     expect(ahmad?.dedupeKey).toBe("2026-11-20:email:ahmad@abudzar.sch.id");
   });
@@ -106,7 +106,7 @@ describe("buildReminderRecipients", () => {
       dateYmd: "2026-11-20",
       dateLabel: "Jumat, 20 November 2026",
       mosqueName: "Masjid Abu Dzar",
-      assignments: [{ role: "MUADZIN", prayerName: "Subuh", personName: "Umar" }],
+      assignments: [{ role: "MUADZIN", prayerName: "Shubuh", personName: "Umar" }],
       petugas,
       settings,
     });
@@ -124,19 +124,19 @@ describe("buildReminderRecipients", () => {
       dateLabel: "Jumat, 20 November 2026",
       mosqueName: "Masjid Abu Dzar",
       assignments: [
-        { role: "IMAM", prayerName: "Subuh", personName: "Ahmad Fauzi" },
-        { role: "IMAM", prayerName: "Zuhur", personName: "Umar" },
+        { role: "IMAM", prayerName: "Shubuh", personName: "Ahmad Fauzi" },
+        { role: "IMAM", prayerName: "Dzuhur", personName: "Umar" },
         { role: "KHATIB", prayerName: null, personName: "Umar" },
       ],
       petugas,
       settings: custom,
     });
     expect(result.find((item) => item.name.includes("Ahmad"))?.message).toBe(
-      "IMAM Ust. Ahmad Fauzi - Imam Subuh"
+      "IMAM Ust. Ahmad Fauzi - Imam Shubuh"
     );
     // Umar merangkap imam + khatib: template khatib yang menang.
     expect(result.find((item) => item.name === "Umar")?.message).toBe(
-      "KHATIB Umar - Imam Zuhur\n- Khatib Jumat"
+      "KHATIB Umar - Imam Dzuhur\n- Khatib Jumat"
     );
   });
 
@@ -152,8 +152,8 @@ describe("buildReminderRecipients", () => {
       dateLabel: "Jumat, 20 November 2026",
       mosqueName: "Masjid Abu Dzar",
       assignments: [
-        { role: "IMAM", prayerName: "Subuh", personName: "Asatidzah Pondok" },
-        { role: "MUADZIN", prayerName: "Subuh", personName: "Santri Bertugas" },
+        { role: "IMAM", prayerName: "Shubuh", personName: "Asatidzah Pondok" },
+        { role: "MUADZIN", prayerName: "Shubuh", personName: "Santri Bertugas" },
       ],
       petugas,
       settings,
@@ -167,8 +167,8 @@ describe("buildReminderRecipients", () => {
       dateLabel: "Jumat, 20 November 2026",
       mosqueName: "Masjid Abu Dzar",
       assignments: [
-        { role: "IMAM", prayerName: "Subuh", personName: "Ahmad Fauzi" },
-        { role: "IMAM", prayerName: "Zuhur", personName: "Umar" },
+        { role: "IMAM", prayerName: "Shubuh", personName: "Ahmad Fauzi" },
+        { role: "IMAM", prayerName: "Dzuhur", personName: "Umar" },
       ],
       petugas: petugas.map((item) =>
         item.id === "p2" ? { ...item, email: "AHMAD@abudzar.sch.id" } : item
@@ -185,7 +185,7 @@ describe("buildReminderRecipients", () => {
       dateYmd: "2026-11-20",
       dateLabel: "Jumat, 20 November 2026",
       mosqueName: "Masjid Abu Dzar",
-      assignments: [{ role: "IMAM", prayerName: "Subuh", personName: "Umar" }],
+      assignments: [{ role: "IMAM", prayerName: "Shubuh", personName: "Umar" }],
       petugas: petugas.map((item) =>
         item.id === "p2" ? { ...item, email: "bukan-email" } : item
       ),
@@ -194,6 +194,20 @@ describe("buildReminderRecipients", () => {
     expect(invalid[0].email).toBeNull();
     expect(invalid[0].rawEmail).toBe("bukan-email");
     expect(invalid[0].dedupeKey).toBe("2026-11-20:noemail:p2");
+  });
+
+  it("menampilkan label baru untuk prayerName lama", () => {
+    const recipients = buildReminderRecipients({
+      dateYmd: "2026-11-20",
+      dateLabel: "Jumat, 20 November 2026",
+      mosqueName: "Masjid Abu Dzar",
+      assignments: [{ role: "IMAM", prayerName: "Subuh", personName: "Ahmad Fauzi" }],
+      petugas,
+      settings: DEFAULT_REMINDER_SETTINGS,
+    });
+
+    expect(recipients[0].duties[0].label).toBe("Imam Shubuh");
+    expect(recipients[0].message).toContain("Imam Shubuh");
   });
 });
 
@@ -206,13 +220,13 @@ describe("renderReminderMessage", () => {
       dateLabel: "Jumat, 20 November 2026",
       mosqueName: "Masjid Abu Dzar",
       duties: [
-        { role: "IMAM", prayerName: "Subuh", label: "Imam Subuh", personName: "Ahmad", matched: true },
+        { role: "IMAM", prayerName: "Shubuh", label: "Imam Shubuh", personName: "Ahmad", matched: true },
         { role: "KHATIB", prayerName: null, label: "Khatib Jumat", personName: "Ahmad", matched: true },
       ],
     });
 
     expect(message).toBe(
-      "Halo Ust. Ahmad Fauzi dari Masjid Abu Dzar, Jumat, 20 November 2026. Tugas: Imam Subuh, Khatib Jumat\n- Imam Subuh\n- Khatib Jumat"
+      "Halo Ust. Ahmad Fauzi dari Masjid Abu Dzar, Jumat, 20 November 2026. Tugas: Imam Shubuh, Khatib Jumat\n- Imam Shubuh\n- Khatib Jumat"
     );
     expect(message).not.toContain("{");
   });

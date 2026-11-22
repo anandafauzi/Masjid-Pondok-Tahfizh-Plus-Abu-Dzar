@@ -131,7 +131,7 @@ export function buildPreviewTvData(
 
   let isFriday = false;
   let eventKey = baseEvent?.key ?? "maghrib";
-  let eventLabel = baseEvent?.label ?? "Magrib";
+  let eventLabel = baseEvent?.label ?? "Maghrib";
   let adhanTarget = now - 5 * 60_000;
   let iqamahTarget = now + 2 * 60_000;
 
@@ -157,7 +157,7 @@ export function buildPreviewTvData(
     case "khutbah":
       isFriday = true;
       eventKey = "dhuhr";
-      eventLabel = "Zuhur";
+      eventLabel = "Dzuhur";
       adhanTarget = now - 10 * 60_000;
       iqamahTarget = now + 30 * 60_000;
       break;
@@ -176,7 +176,7 @@ export function buildPreviewTvData(
   };
 
   const futureIqamah = {
-    label: "Subuh",
+    label: "Shubuh",
     adhanTime: toWibTime(now + 60 * 60_000),
     iqamahTime: toWibTime(now + 61 * 60_000),
     adhanTarget: toIso(now + 60 * 60_000),

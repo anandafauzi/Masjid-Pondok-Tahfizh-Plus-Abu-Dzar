@@ -133,7 +133,7 @@ export async function PUT(request: NextRequest) {
     const asrMethod =
       body.asrMethod !== undefined ? String(body.asrMethod).trim() : undefined;
     if (asrMethod !== undefined && !ALLOWED_ASR_METHODS.has(asrMethod)) {
-      return badRequest("Metode Asar harus STANDARD atau HANAFI");
+      return badRequest("Metode Ashar harus STANDARD atau HANAFI");
     }
 
     let prayerAdjustments:

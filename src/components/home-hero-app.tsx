@@ -33,11 +33,11 @@ interface HomeHeroProps {
 
 const PRAYERS_LIST = [
   { key: "imsak", label: "Imsak" },
-  { key: "fajr", label: "Subuh" },
+  { key: "fajr", label: "Shubuh" },
   { key: "sunrise", label: "Terbit" },
-  { key: "dhuhr", label: "Zuhur" },
-  { key: "asr", label: "Asar" },
-  { key: "maghrib", label: "Magrib" },
+  { key: "dhuhr", label: "Dzuhur" },
+  { key: "asr", label: "Ashar" },
+  { key: "maghrib", label: "Maghrib" },
   { key: "isha", label: "Isya" },
 ] as const;
 

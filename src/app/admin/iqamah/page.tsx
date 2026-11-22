@@ -13,7 +13,10 @@ import {
   Select,
 } from "@/components/ui";
 import { Save, Timer } from "lucide-react";
-import { getPrayerArabicName } from "@/utils/constants";
+import {
+  getPrayerArabicName,
+  normalizePrayerName,
+} from "@/utils/constants";
 
 interface IqamahSetting {
   id?: string;
@@ -23,12 +26,12 @@ interface IqamahSetting {
   fixedIqamahTime: string | null;
 }
 
-const ORDER = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"];
+const ORDER = ["Shubuh", "Dzuhur", "Ashar", "Maghrib", "Isya"];
 const DEFAULT_DELAYS: Record<string, number> = {
-  Subuh: 20,
-  Zuhur: 15,
-  Asar: 15,
-  Magrib: 5,
+  Shubuh: 20,
+  Dzuhur: 15,
+  Ashar: 15,
+  Maghrib: 5,
   Isya: 15,
 };
 
@@ -113,7 +116,7 @@ export default function AdminIqamahPage() {
           <div className="space-y-3">
             {items.map((item, index) => (
               <div
-                key={item.prayerName}
+                key={normalizePrayerName(item.prayerName)}
                 className="grid items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 sm:grid-cols-[140px_1fr_1fr]"
               >
                 <div className="flex items-center gap-3">
@@ -121,7 +124,7 @@ export default function AdminIqamahPage() {
                     {getPrayerArabicName(item.prayerName)}
                   </span>
                   <span className="text-sm font-bold text-slate-900">
-                    {item.prayerName}
+                    {normalizePrayerName(item.prayerName)}
                   </span>
                 </div>
 

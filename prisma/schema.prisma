@@ -99,7 +99,7 @@ enum RecurrenceType {
 model ImamMuadzinSchedule {
   id               String    @id @default(cuid())
   scheduleDate     DateTime  @db.Date
-  prayerName       String    // Subuh, Zuhur, Asar, Magrib, Isya
+  prayerName       String    // Shubuh, Dzuhur, Ashar, Maghrib, Isya
   imamName         String
   muadzinName      String
   recurrenceRuleId String?
@@ -129,7 +129,7 @@ model TarawihSchedule {
   @@map("tarawih_schedules")
 }
 
-// Imam rolling settings for Subuh Jumat
+// Imam rolling settings for Shubuh Jumat
 model ImamRollingSetting {
   id             String    @id @default(cuid())
   imamName       String
@@ -233,7 +233,7 @@ enum KajianType {
 // Iqamah settings
 model IqamahSetting {
   id                String   @id @default(cuid())
-  prayerName        String   @unique // Subuh, Zuhur, Asar, Magrib, Isya
+  prayerName        String   @unique // Shubuh, Dzuhur, Ashar, Maghrib, Isya
   mode              IqamahMode @default(DELAY_MINUTES)
   delayMinutes      Int      @default(15)
   fixedIqamahTime   String?  // HH:mm format

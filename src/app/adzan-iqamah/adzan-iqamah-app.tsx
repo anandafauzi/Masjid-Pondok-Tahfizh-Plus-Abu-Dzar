@@ -230,7 +230,7 @@ export function AdzanIqamahAppPage() {
               Semua jadwal shalat fardhu hari ini telah selesai.
             </p>
             <p className="text-sm text-[#5a685e] sm:text-lg">
-              Jadwal shalat hari esok akan aktif kembali menjelang waktu Subuh.
+              Jadwal shalat hari esok akan aktif kembali menjelang waktu Shubuh.
             </p>
           </div>
         )}

@@ -1,6 +1,7 @@
 import type { PetugasItem } from "@/types/petugas";
 import type { ReminderSettings } from "@/lib/reminder-settings";
 import { normalizeEmail } from "@/lib/email";
+import { normalizePrayerName } from "@/utils/constants";
 
 export type ReminderDutyRole = "IMAM" | "MUADZIN" | "KHATIB";
 
@@ -75,7 +76,7 @@ export function isPlaceholderName(value: string | null | undefined): boolean {
 export function dutyLabel(role: ReminderDutyRole, prayerName: string | null): string {
   if (role === "KHATIB") return "Khatib Jumat";
   const prefix = role === "IMAM" ? "Imam" : "Muadzin";
-  return prayerName ? `${prefix} ${prayerName}` : prefix;
+  return prayerName ? `${prefix} ${normalizePrayerName(prayerName)}` : prefix;
 }
 
 /**
@@ -263,7 +264,7 @@ export function buildReminderRecipients({
   return [...withEmail, ...withoutEmail].sort((a, b) => a.name.localeCompare(b.name, "id"));
 }
 
-/** Ringkasan tugas untuk disimpan di kolom log (mis. "Imam Subuh, Imam Zuhur"). */
+/** Ringkasan tugas untuk disimpan di kolom log (mis. "Imam Shubuh, Imam Dzuhur"). */
 export function summarizeDuties(duties: ReminderDuty[]): string {
   return duties.map((duty) => duty.label).join(", ");
 }

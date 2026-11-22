@@ -10,6 +10,7 @@ import {
   unauthorized,
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { isPrayerName, normalizePrayerName } from "@/utils/constants";
 import {
   getWeeklyImamSettings,
   saveWeeklyImamSettings,
@@ -31,8 +32,9 @@ function parseWeeklyItems(raw: unknown[]): WeeklyImamItem[] | null {
       return null;
     }
 
-    const prayerName =
-      typeof item.prayerName === "string" ? item.prayerName.trim() : "";
+    const prayerName = normalizePrayerName(
+      typeof item.prayerName === "string" ? item.prayerName : ""
+    );
     if (!PRAYERS.includes(prayerName as (typeof PRAYERS)[number])) {
       return null;
     }
@@ -40,8 +42,8 @@ function parseWeeklyItems(raw: unknown[]): WeeklyImamItem[] | null {
     const imamName =
       typeof item.imamName === "string" ? item.imamName.trim() : "";
     const isActive = item.isActive !== undefined ? Boolean(item.isActive) : true;
-    // Jumat Subuh sengaja dikosongkan karena imamnya berasal dari rotasi.
-    const isFridaySubuhRotation = dayOfWeek === 5 && prayerName === "Subuh";
+    // Jumat Shubuh sengaja dikosongkan karena imamnya berasal dari rotasi.
+    const isFridaySubuhRotation = dayOfWeek === 5 && isPrayerName(prayerName, "fajr");
     if (isActive && !imamName && !isFridaySubuhRotation) return null;
 
     const effectiveFrom =

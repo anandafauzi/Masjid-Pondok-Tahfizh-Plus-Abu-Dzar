@@ -32,6 +32,8 @@ object ReminderConfig {
     const val EXTRA_IMAM_NAME = "imam_name"
     const val EXTRA_MUADZIN_NAME = "muadzin_name"
     const val EXTRA_IS_IQAMAH = "is_iqamah"
+    const val EXTRA_SCHEDULED_ID = "scheduled_event_id"
+    const val EXTRA_ALERT_NOTIFICATION_ID = "alert_notification_id"
 
     const val DEFAULT_LOCATION = "Masjid Abu Dzar, Rumpin"
     const val DEFAULT_LATITUDE = -6.442126
@@ -39,10 +41,13 @@ object ReminderConfig {
 
     private const val BASE_NOTIFICATION_ID = 1100
     private const val NOTIFICATION_ID_SLOTS = 200
-    // ID notifikasi adzan sengaja di luar rentang ID ongoing. Jika berada di
+    // ID notifikasi alert sengaja di luar rentang ID ongoing. Jika berada di
     // rentang yang sama, versi APK tertentu membuat ID keduanya identik dan
     // notifikasi adzan ikut hilang saat service membersihkan ID lama.
+    // Adzan dan iqamah memakai ID berbeda supaya alert iqamah tidak ditimpa
+    // (atau dibungkam) oleh alert adzan yang masih aktif.
     const val ADHAN_FALLBACK_NOTIFICATION_ID = BASE_NOTIFICATION_ID + 500
+    const val IQAMAH_FALLBACK_NOTIFICATION_ID = BASE_NOTIFICATION_ID + 501
     const val CHANNEL_ID = "masjid_abu_dzar_ongoing"
     const val ADHAN_CHANNEL_ID = "masjid_abu_dzar_adhan"
 
@@ -341,11 +346,33 @@ data class CountdownState(
 
 object PrayerEngine {
     private val LABEL_BY_KEY = mapOf(
-        "fajr" to "Subuh", "dhuhr" to "Dzuhur", "asr" to "Ashar",
+        "fajr" to "Shubuh", "dhuhr" to "Dzuhur", "asr" to "Ashar",
         "maghrib" to "Maghrib", "isha" to "Isya",
     )
 
+    // Ejaan lama masih mungkin tersimpan di database/web. Kunci internal sengaja
+    // tidak diubah supaya jadwal dan file audio yang lama tetap terbaca.
+    private val KEY_BY_LABEL = mapOf(
+        "fajr" to "fajr", "subuh" to "fajr", "shubuh" to "fajr",
+        "dhuhr" to "dhuhr", "zuhur" to "dhuhr", "dzuhur" to "dhuhr",
+        "asr" to "asr", "asar" to "asr", "ashar" to "asr",
+        "maghrib" to "maghrib", "magrib" to "maghrib",
+        "isha" to "isha", "isya" to "isha",
+    )
+
     private fun normalize(value: String): String = value.trim().lowercase(Locale.ROOT)
+
+    private fun keyFor(value: String): String? = KEY_BY_LABEL[normalize(value)]
+
+    fun samePrayer(left: String, right: String): Boolean {
+        val leftKey = keyFor(left)
+        val rightKey = keyFor(right)
+        return if (leftKey != null && rightKey != null) {
+            leftKey == rightKey
+        } else {
+            normalize(left) == normalize(right)
+        }
+    }
 
     private fun maskFor(key: String): String = LABEL_BY_KEY[key] ?: key
 
@@ -359,8 +386,8 @@ object PrayerEngine {
             if (a <= 0L || i <= a) continue
             val label = event.label.ifBlank { maskFor(event.key) }
             val duty = data.imamToday.firstOrNull {
-                normalize(it.prayerName) == normalize(label) ||
-                    normalize(it.prayerName) == normalize(maskFor(event.key))
+                samePrayer(it.prayerName, label) ||
+                    samePrayer(it.prayerName, maskFor(event.key))
             }
             result += PrayerMoment(
                 key = event.key,
@@ -379,7 +406,7 @@ object PrayerEngine {
             val i = iq?.let { ApiParser.instant(it.iqamahTarget) }
             if (a != null && i != null && i > a) {
                 val label = data.nextPrayer.label.ifBlank { maskFor(data.nextPrayer.key) }
-                val duty = data.imamToday.firstOrNull { normalize(it.prayerName) == normalize(label) }
+                val duty = data.imamToday.firstOrNull { samePrayer(it.prayerName, label) }
                 result += PrayerMoment(
                     key = data.nextPrayer.key,
                     label = label,
@@ -449,8 +476,7 @@ object PrayerEngine {
                 val label = maskFor(key)
                 val duty = data.imamWeek.firstOrNull { s ->
                     s.date == day.date &&
-                        (normalize(s.prayerName) == normalize(label) ||
-                            normalize(s.prayerName) == normalize(key))
+                        (samePrayer(s.prayerName, label) || keyFor(s.prayerName) == key)
                 }
                 week += PrayerMoment(
                     key = key,

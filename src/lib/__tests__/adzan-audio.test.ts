@@ -75,7 +75,7 @@ describe("jembatan native Android untuk adzan", () => {
     expect(granted).toBe(true);
   });
 
-  it("memakai reciter pilihan pengguna untuk Subuh", async () => {
+  it("memakai reciter pilihan pengguna untuk Shubuh", async () => {
     const srcs: string[] = [];
     vi.stubGlobal(
       "Audio",
@@ -99,7 +99,7 @@ describe("jembatan native Android untuk adzan", () => {
     await playAdzanSound("madinah", true);
     expect(srcs.at(-1)).toBe("/audio/adzan/madinah.mp3");
 
-    // Khusus Subuh tidak boleh dipakai untuk shalat selain Subuh.
+    // Khusus Shubuh tidak boleh dipakai untuk shalat selain Shubuh.
     await playAdzanSound("fajr-makkah", false);
     expect(srcs.at(-1)).toBe("/audio/adzan/makkah.mp3");
   });

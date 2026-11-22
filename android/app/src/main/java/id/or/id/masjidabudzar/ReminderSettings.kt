@@ -134,6 +134,18 @@ object ReminderSettings {
         prefs(context).edit().putStringSet(KEY_SCHEDULED_IDS, ids).commit()
     }
 
+    /**
+     * Tandai alarm yang sudah fire / sudah dipulihkan. Dipakai watchdog supaya
+     * pemulihan alarm yang terlewat tidak mengirim notifikasi dua kali.
+     */
+    fun removeScheduledEventIds(context: Context, ids: Set<String>) {
+        if (ids.isEmpty()) return
+        val current = getScheduledEventIds(context)
+        val remaining = current - ids
+        if (remaining == current) return
+        prefs(context).edit().putStringSet(KEY_SCHEDULED_IDS, remaining).commit()
+    }
+
     fun wasExactAlarmPrompted(context: Context): Boolean =
         prefs(context).getBoolean(KEY_EXACT_ALARM_PROMPTED, false)
 

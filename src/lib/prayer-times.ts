@@ -73,7 +73,7 @@ function getCalculationMethod(method: string) {
     case "Indonesia":
     case "SIHAT": {
       // Standar Resmi Kementerian Agama Republik Indonesia (Kemenag RI):
-      // Sudut Subuh 20°, Sudut Isya 18°, dengan standar pengaman waktu (ihtiyat) +2 menit.
+      // Sudut Shubuh 20°, Sudut Isya 18°, dengan standar pengaman waktu (ihtiyat) +2 menit.
       const params = CalculationMethod.Singapore();
       params.methodAdjustments = {
         dhuhr: 2,

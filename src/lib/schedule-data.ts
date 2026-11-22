@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isPrayerName, normalizePrayerName } from "@/utils/constants";
 import { dateOnlyToString, addDaysUTC, nextFriday } from "@/lib/datetime";
 import { getWeeklyImamSettings, PRAYERS } from "@/lib/weekly-imam";
 import type { WeeklyImamItem } from "@/types/weekly-imam";
@@ -31,10 +32,10 @@ export async function getAdviceSafe() {
 }
 
 const PRAYER_ORDER: Record<string, number> = {
-  Subuh: 1,
-  Zuhur: 2,
-  Asar: 3,
-  Magrib: 4,
+  Shubuh: 1,
+  Dzuhur: 2,
+  Ashar: 3,
+  Maghrib: 4,
   Isya: 5,
 };
 
@@ -70,7 +71,7 @@ export async function getImamSchedulesBetween(
     // Map existing records by `YYYY-MM-DD_prayerName` (case-insensitive)
     const existingMap = new Map<string, (typeof dbSchedules)[number]>();
     for (const item of dbSchedules) {
-      const key = `${dateOnlyToString(item.scheduleDate)}_${item.prayerName.toLowerCase().trim()}`;
+      const key = `${dateOnlyToString(item.scheduleDate)}_${normalizePrayerName(item.prayerName).toLowerCase()}`;
       existingMap.set(key, item);
     }
 
@@ -85,7 +86,7 @@ export async function getImamSchedulesBetween(
       const dayOfWeek = currentDate.getUTCDay(); // 0 = Ahad, 5 = Jumat
       const ymd = dateOnlyToString(currentDate);
 
-      // Automatic Friday Subuh Rolling Check
+      // Automatic Friday Shubuh Rolling Check
       let fridaySubuhRollingName: string | null = null;
       if (dayOfWeek === 5 && rollingImams.length > 0) {
         const resolved = resolveRolling(
@@ -106,11 +107,12 @@ export async function getImamSchedulesBetween(
       }
 
       for (const prayer of PRAYERS) {
-        const key = `${ymd}_${prayer.toLowerCase().trim()}`;
-        const isFridaySubuh = dayOfWeek === 5 && prayer.toLowerCase() === "subuh";
+        const prayerKey = normalizePrayerName(prayer).toLowerCase();
+        const key = `${ymd}_${prayerKey}`;
+        const isFridaySubuh = dayOfWeek === 5 && isPrayerName(prayer, "fajr");
 
         if (existingMap.has(key)) {
-          // If Friday Subuh exists in DB from recurring synchronization, but there is an active rolling sequence,
+          // If Friday Shubuh exists in DB from recurring synchronization, but there is an active rolling sequence,
           // ensure it reflects the rolling sequence unless it is an explicit manual override with custom notes.
           if (isFridaySubuh && fridaySubuhRollingName) {
             const existing = existingMap.get(key);
@@ -120,7 +122,7 @@ export async function getImamSchedulesBetween(
                 merged[idx] = {
                   ...merged[idx],
                   imamName: fridaySubuhRollingName,
-                  notes: "Rotasi Subuh Jumat",
+                  notes: "Rotasi Shubuh Jumat",
                 };
               }
             }
@@ -132,7 +134,7 @@ export async function getImamSchedulesBetween(
         const rawRule = weeklyRules.find(
           (r) =>
             r.dayOfWeek === dayOfWeek &&
-            r.prayerName.toLowerCase() === prayer.toLowerCase() &&
+            normalizePrayerName(r.prayerName).toLowerCase() === prayerKey &&
             r.isActive &&
             r.imamName &&
             r.imamName.trim() !== ""
@@ -145,7 +147,7 @@ export async function getImamSchedulesBetween(
 
         const rule = isRuleValid ? rawRule : undefined;
 
-        // For Friday Subuh, if rolling imam exists, it takes precedence over static weekly rule
+        // For Friday Shubuh, if rolling imam exists, it takes precedence over static weekly rule
         const imamName = isFridaySubuh && fridaySubuhRollingName
           ? fridaySubuhRollingName
           : rule?.imamName?.trim() || "";
@@ -160,7 +162,7 @@ export async function getImamSchedulesBetween(
             imamName,
             muadzinName,
             recurrenceRuleId: isFridaySubuh && fridaySubuhRollingName ? "friday-rolling" : "weekly-rule",
-            notes: isFridaySubuh && fridaySubuhRollingName ? "Rotasi Subuh Jumat" : rule?.notes ?? null,
+            notes: isFridaySubuh && fridaySubuhRollingName ? "Rotasi Shubuh Jumat" : rule?.notes ?? null,
             createdBy: "weekly-recurring",
             updatedAt: new Date(),
           });
@@ -173,8 +175,8 @@ export async function getImamSchedulesBetween(
       const dateA = a.scheduleDate.getTime();
       const dateB = b.scheduleDate.getTime();
       if (dateA !== dateB) return dateA - dateB;
-      const pA = PRAYER_ORDER[a.prayerName] ?? 99;
-      const pB = PRAYER_ORDER[b.prayerName] ?? 99;
+      const pA = PRAYER_ORDER[normalizePrayerName(a.prayerName)] ?? 99;
+      const pB = PRAYER_ORDER[normalizePrayerName(b.prayerName)] ?? 99;
       return pA - pB;
     });
   } catch (error) {

@@ -29,6 +29,7 @@ import {
 import { getWeeklyImamSettings } from "@/lib/weekly-imam";
 import { getPublicDataVersion } from "@/lib/public-cache";
 import { isRamadan } from "@/lib/ramadan";
+import { isPrayerName, normalizePrayerName } from "@/utils/constants";
 
 export interface TvData {
   serverTime: string;
@@ -184,6 +185,13 @@ function cacheKey(version: number, ymd: string) {
   return `${version}:${ymd}`;
 }
 
+function normalizeImamRows<T extends { prayerName: string }>(rows: T[]): T[] {
+  return rows.map((row) => ({
+    ...row,
+    prayerName: normalizePrayerName(row.prayerName),
+  }));
+}
+
 function pruneCache<T extends { at: number }>(
   cache: Map<string, T>,
   ttlMs: number,
@@ -319,9 +327,9 @@ async function loadPublicBundle(
     khatibRolling,
     imamRolling,
     weeklyImam,
-    imamToday,
-    imamWeek: imamWeekRaw,
-    imamTomorrow,
+    imamToday: normalizeImamRows(imamToday),
+    imamWeek: normalizeImamRows(imamWeekRaw),
+    imamTomorrow: normalizeImamRows(imamTomorrow),
     fridaySchedule,
     tarawihToday: ramadanToday ? (tarawihRows[0] ?? null) : null,
     isRamadan: ramadanToday,
@@ -373,7 +381,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
   } = bundle;
 
   const imamTomorrowSubuh =
-    imamTomorrow.find((s) => s.prayerName.toLowerCase() === "subuh") ?? null;
+    imamTomorrow.find((s) => isPrayerName(s.prayerName, "fajr")) ?? null;
 
   const prayerOptions = {
     method: mosque.prayerCalculationMethod,
@@ -445,7 +453,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
   const dhuhrStart = combineDateTime(today, prayerTimes.dhuhr);
 
   // Jika ada sesi khutbah dari database, gunakan endsAt sesi tersebut.
-  // Jika tidak ada, gunakan durasi default 40 menit dari adzan Zuhur.
+  // Jika tidak ada, gunakan durasi default 40 menit dari adzan Dzuhur.
   const dhuhrEnd = khutbah
     ? new Date(khutbah.endsAt)
     : new Date(dhuhrStart.getTime() + 40 * 60 * 1000);
@@ -467,13 +475,13 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
     } as typeof khutbah;
   }
 
-  // Pada hari Jumat, sembunyikan countdown iqamah Zuhur HANYA saat window Khutbah Jumat aktif
+  // Pada hari Jumat, sembunyikan countdown iqamah Dzuhur HANYA saat window Khutbah Jumat aktif
   let resolvedNextIqamah = nextIqamah;
   const isKhutbahActiveNow = Boolean(
     isFridayToday &&
     (resolvedKhutbah || (referenceNow >= dhuhrStart && referenceNow < dhuhrEnd))
   );
-  if (isKhutbahActiveNow && resolvedNextIqamah?.label?.toLowerCase().includes("zuhur")) {
+  if (isKhutbahActiveNow && isPrayerName(resolvedNextIqamah?.label, "dhuhr")) {
     resolvedNextIqamah = null;
   }
 
@@ -531,21 +539,21 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
       : null,
     imamToday: imamToday.map((s) => ({
       id: s.id,
-      prayerName: s.prayerName,
+      prayerName: normalizePrayerName(s.prayerName),
       imamName: s.imamName,
       muadzinName: s.muadzinName,
     })),
     imamWeek: imamWeek.map((s) => ({
       date: dateOnlyToString(s.scheduleDate),
       id: s.id,
-      prayerName: s.prayerName,
+      prayerName: normalizePrayerName(s.prayerName),
       imamName: s.imamName,
       muadzinName: s.muadzinName,
     })),
     imamTomorrowSubuh: imamTomorrowSubuh
       ? {
           id: imamTomorrowSubuh.id,
-          prayerName: imamTomorrowSubuh.prayerName,
+          prayerName: normalizePrayerName(imamTomorrowSubuh.prayerName),
           imamName: imamTomorrowSubuh.imamName,
           muadzinName: imamTomorrowSubuh.muadzinName,
         }

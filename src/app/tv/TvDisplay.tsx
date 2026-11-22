@@ -7,7 +7,12 @@ import { tarawihImamLabel } from "@/lib/tarawih";
 import { getPrayerMethodLabel } from "@/lib/prayer-times";
 import { dateOnlyToString, todayDateOnly } from "@/lib/datetime";
 import type { WeatherInfo } from "@/lib/weather";
-import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
+import {
+  isPrayerName,
+  normalizePrayerName,
+  prayerSlotOf,
+  PRAYER_NAMES_ARABIC,
+} from "@/utils/constants";
 import {
   playCountdownBeep,
   playIqamahChime,
@@ -72,11 +77,11 @@ function countdown(targetMs: number, nowMs: number) {
 
 const PRAYER_LIST = [
   { key: "imsak", label: "Imsak", ar: "الإمساك" },
-  { key: "fajr", label: "Subuh", ar: "الفجر" },
+  { key: "fajr", label: "Shubuh", ar: "الفجر" },
   { key: "sunrise", label: "Terbit", ar: "الشروق" },
-  { key: "dhuhr", label: "Zuhur", ar: "الظهر" },
-  { key: "asr", label: "Asar", ar: "العصر" },
-  { key: "maghrib", label: "Magrib", ar: "المغرب" },
+  { key: "dhuhr", label: "Dzuhur", ar: "الظهر" },
+  { key: "asr", label: "Ashar", ar: "العصر" },
+  { key: "maghrib", label: "Maghrib", ar: "المغرب" },
   { key: "isha", label: "Isya", ar: "العشاء" },
 ] as const;
 
@@ -361,7 +366,7 @@ export function TvDisplay({
     return data.today === data.jumat?.fridayDate;
   }, [data]);
 
-  // Otomatis aktifkan mode Khutbah Jumat 40 menit di TV sesuai jadwal waktu sholat Zuhur Jumat
+  // Otomatis aktifkan mode Khutbah Jumat 40 menit di TV sesuai jadwal waktu sholat Dzuhur Jumat
   const autoFridayKhutbah = useMemo(() => {
     if (!data || !isFriday) return null;
 
@@ -371,7 +376,7 @@ export function TvDisplay({
       dhuhrStartMs = new Date(dhuhrEvent.adhanTarget).getTime();
     } else if (data.prayerTimes?.dhuhr) {
       const [h, m] = data.prayerTimes.dhuhr.split(":").map((v) => parseInt(v, 10));
-      // Tentukan waktu Zuhur WIB (+07:00) secara deterministik tanpa bergantung timezone lokal browser
+      // Tentukan waktu Dzuhur WIB (+07:00) secara deterministik tanpa bergantung timezone lokal browser
       const nowWib = new Date(serverNow + 7 * 3600 * 1000);
       const ymd = nowWib.toISOString().slice(0, 10);
       const pad = (n: number) => String(n).padStart(2, "0");
@@ -426,11 +431,11 @@ export function TvDisplay({
       const prayer = PRAYER_LIST.find((item) => item.key === key)!;
       const pName = prayer.label;
       const isTomorrowSubuh =
-        Boolean(data?.nextPrayer?.tomorrow) && pName === "Subuh";
+        Boolean(data?.nextPrayer?.tomorrow) && isPrayerName(pName, "fajr");
       const found = isTomorrowSubuh
         ? data?.imamTomorrowSubuh ?? undefined
         : list.find(
-            (item) => item.prayerName.toLowerCase() === pName.toLowerCase()
+            (item) => normalizePrayerName(item.prayerName) === pName
           );
       const base = {
         id: key,
@@ -459,31 +464,29 @@ export function TvDisplay({
     });
   }, [data]);
 
-  // Menentukan shalat fardhu berikutnya antara Subuh s/d Isya
+  // Menentukan shalat fardhu berikutnya antara Shubuh s/d Isya
   const upcomingPrayerName = useMemo(() => {
-    if (!data?.nextPrayer?.key) return "Subuh";
-    const k = data.nextPrayer.key.toLowerCase();
-    if (k === "fajr" || k === "subuh") return "Subuh";
-    if (k === "sunrise" || k === "syuruq" || k === "dhuha") return "Zuhur";
-    if (k === "dhuhr" || k === "zuhur") return "Zuhur";
-    if (k === "asr" || k === "asar") return "Asar";
-    if (k === "maghrib" || k === "magrib") return "Magrib";
-    if (k === "isha" || k === "isya") return "Isya";
-    return "Subuh";
+    const slot = prayerSlotOf(data?.nextPrayer?.key);
+    const k = data?.nextPrayer?.key?.toLowerCase() ?? "";
+    if (slot === "fajr") return "Shubuh";
+    if (k === "syuruq" || k === "dhuha" || slot === "sunrise") return "Dzuhur";
+    if (slot === "dhuhr") return "Dzuhur";
+    if (slot === "asr") return "Ashar";
+    if (slot === "maghrib") return "Maghrib";
+    if (slot === "isha") return "Isya";
+    return "Shubuh";
   }, [data?.nextPrayer?.key]);
 
   // Petugas (Imam & Muadzin) yang bertugas pada shalat yang akan datang
   const upcomingPetugas = useMemo(() => {
     const list = data?.imamToday ?? [];
-    const target = upcomingPrayerName.toLowerCase();
     const isTomorrowSubuh =
-      Boolean(data?.nextPrayer?.tomorrow) && target === "subuh";
+      Boolean(data?.nextPrayer?.tomorrow) && isPrayerName(upcomingPrayerName, "fajr");
     const found = isTomorrowSubuh
       ? data?.imamTomorrowSubuh ?? null
-      : list.find((item) => {
-          const p = item.prayerName.toLowerCase();
-          return p === target || p.includes(target);
-        });
+      : list.find((item) =>
+          prayerSlotOf(item.prayerName) === prayerSlotOf(upcomingPrayerName)
+        );
     return {
       imam:
         found?.imamName?.trim() && found.imamName !== "Belum Ditentukan"
@@ -586,7 +589,7 @@ export function TvDisplay({
     if (khutbahVisible) return null;
     const next = data?.nextIqamah;
     if (!next) return null;
-    if (isFriday && autoFridayKhutbah?.isActive && next.label.toLowerCase().includes("zuhur")) return null;
+    if (isFriday && autoFridayKhutbah?.isActive && isPrayerName(next.label, "dhuhr")) return null;
     const adhan = new Date(next.adhanTarget).getTime();
     const iqamah = new Date(next.iqamahTarget).getTime();
     if (adhan <= serverNow && iqamah > serverNow) return next;
@@ -616,7 +619,7 @@ export function TvDisplay({
       return;
     }
     const activeEv = iqamahActive ?? prayerTimeReached?.event;
-    if (!activeEv || (isFriday && activeEv.label.toLowerCase().includes("zuhur"))) {
+    if (!activeEv || (isFriday && isPrayerName(activeEv.label, "dhuhr"))) {
       lastBeepSecRef.current = null;
       return;
     }
@@ -652,14 +655,14 @@ export function TvDisplay({
     const durationMs = durationMinutes * 60_000;
 
     for (const ev of data.iqamahEvents) {
-      if (isFriday && ev.key === "dhuhr") continue; // Di hari Jumat, Zuhur digantikan Khutbah Jumat 40 menit
+      if (isFriday && ev.key === "dhuhr") continue; // Di hari Jumat, Dzuhur digantikan Khutbah Jumat 40 menit
       const iqTarget = new Date(ev.iqamahTarget).getTime();
       const endShalatMs = iqTarget + durationMs;
 
       if (serverNow >= iqTarget && serverNow < endShalatMs) {
         const elapsedMs = serverNow - iqTarget;
-        const imamInfo = data.imamToday.find((s) =>
-          s.prayerName.toLowerCase().includes(ev.label.toLowerCase())
+        const imamInfo = data.imamToday.find(
+          (s) => prayerSlotOf(s.prayerName) === prayerSlotOf(ev.label)
         );
 
         return {
@@ -796,7 +799,7 @@ export function TvDisplay({
   const activeIqamahEvent = iqamahActive ?? prayerTimeReached?.event;
   const isPrayerOverlayVisible = (() => {
     if (khutbahVisible || !activeIqamahEvent) return false;
-    if (isFriday && activeIqamahEvent.label.toLowerCase().includes("zuhur")) return false;
+    if (isFriday && isPrayerName(activeIqamahEvent.label, "dhuhr")) return false;
     return new Date(activeIqamahEvent.iqamahTarget).getTime() > serverNow;
   })();
 
@@ -1030,7 +1033,7 @@ export function TvDisplay({
           if (khutbahVisible) return null;
           const activeEv = activeIqamahEvent;
           if (!activeEv) return null;
-          if (isFriday && activeEv.label.toLowerCase().includes("zuhur")) return null;
+          if (isFriday && isPrayerName(activeEv.label, "dhuhr")) return null;
           const iqTarget = new Date(activeEv.iqamahTarget).getTime();
           if (iqTarget <= serverNow) return null;
 
@@ -1071,8 +1074,10 @@ export function TvDisplay({
 
           const secLeft = Math.max(0, Math.floor((iqTarget - serverNow) / 1000));
           const isFinalCountdown = secLeft <= 10;
-          const imamInfo = data.imamToday.find((s) =>
-            s.prayerName.toLowerCase().includes(activeEv.label.toLowerCase())
+          const activeSlot = prayerSlotOf(activeEv.label);
+          const imamInfo = data.imamToday.find(
+            (s) =>
+              activeSlot !== null && prayerSlotOf(s.prayerName) === activeSlot
           );
           const imamName = imamInfo?.imamName ?? "Asatidzah Pondok";
 
@@ -1232,7 +1237,7 @@ export function TvDisplay({
                   </div>
                 </div>
 
-                {/* Petugas Shalat Yang Akan Datang (Subuh-Isya) */}
+                {/* Petugas Shalat Yang Akan Datang (Shubuh-Isya) */}
                 <div className="rounded-2xl sm:rounded-3xl border border-[#ded5c4] bg-white/95 p-3.5 sm:p-5 shadow-xl flex flex-col justify-between text-[#19261f] shrink-0 overflow-hidden">
                   <div className="flex items-center justify-between gap-2 border-b border-[#ded5c4] pb-2">
                     <div className="flex items-center gap-2 text-xs font-bold text-[#19261f] sm:text-sm">
@@ -1339,7 +1344,7 @@ export function TvDisplay({
 
               {data.nextPrayer.tomorrow && (
                 <div className="shrink-0 mb-2 rounded-xl border border-[#bde5d2] bg-[#eef8f3] px-3 py-1.5 text-center text-xs font-semibold text-[#1e6149]">
-                  Petugas Subuh Besok: {upcomingPetugas.imam} • Muadzin:{" "}
+                  Petugas Shubuh Besok: {upcomingPetugas.imam} • Muadzin:{" "}
                   {upcomingPetugas.muadzin}
                 </div>
               )}
@@ -1393,7 +1398,7 @@ export function TvDisplay({
                       </div>
                       <div className="min-w-0">
                         <div className="text-sm sm:text-lg lg:text-xl font-black text-[#19261f] leading-tight">
-                          {s.prayerName}
+                          {normalizePrayerName(s.prayerName)}
                         </div>
                         <div className="text-[10px] sm:text-xs text-[#748479]">
                           Shalat Fardhu
@@ -1470,7 +1475,7 @@ export function TvDisplay({
                 <div className="mt-3 rounded-2xl border border-[#c5a059] bg-[#faf4e6] px-4 py-3 shadow-sm">
                   <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#8a6820]">
                     <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#c5a059]" />
-                    Imam Subuh Jumat
+                    Imam Shubuh Jumat
                   </div>
                   <p className="mt-1 text-base sm:text-xl lg:text-2xl font-black text-[#19261f] leading-tight break-words">
                     {data.jumat.imamSubuh || "Belum Ditentukan"}

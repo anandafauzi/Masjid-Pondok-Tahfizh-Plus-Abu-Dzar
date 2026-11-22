@@ -13,6 +13,7 @@ import {
 import { writeAudit } from "@/lib/audit";
 import { addDaysUTC, todayDateOnly } from "@/lib/datetime";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { normalizePrayerName } from "@/utils/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     if (!body) return badRequest("Format data tidak valid");
     const scheduleDate = parseDateOnly(body.scheduleDate);
     if (!scheduleDate) return badRequest("Tanggal tidak valid");
-    const prayerName = String(body.prayerName ?? "").trim();
+    const prayerName = normalizePrayerName(body.prayerName);
     const imamName = String(body.imamName ?? "").trim();
     const muadzinName = String(body.muadzinName ?? "").trim();
     if (!prayerName) return badRequest("Nama shalat wajib diisi");
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
       action: "CREATE_IMAM_SCHEDULE",
       entityType: "ImamMuadzinSchedule",
       entityId: item.id,
-      changeSummary: `Menambah jadwal imam ${item.imamName} untuk ${item.prayerName}`,
+      changeSummary: `Menambah jadwal imam ${item.imamName} untuk ${prayerName}`,
     });
 
     revalidateAllAppPaths();

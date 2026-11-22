@@ -30,6 +30,7 @@ import {
   Users,
 } from "lucide-react";
 import { DAYS_OF_WEEK, PRAYERS, WeeklyImamItem } from "@/types/weekly-imam";
+import { isPrayerName, normalizePrayerName } from "@/utils/constants";
 
 import { PetugasItem } from "@/types/petugas";
 import { ScheduleExportActions } from "@/components/schedule-export-actions";
@@ -104,7 +105,7 @@ export default function AdminImamPage() {
 
   // Daily Schedule form state
   const [date, setDate] = useState(todayYmd());
-  const [prayer, setPrayer] = useState("Subuh");
+  const [prayer, setPrayer] = useState("Shubuh");
   const [imam, setImam] = useState("");
   const [muadzin, setMuadzin] = useState("");
   const [notes, setNotes] = useState("");
@@ -152,7 +153,9 @@ export default function AdminImamPage() {
   // --- WEEKLY SCHEDULE LOGIC ---
   function getWeeklyPrayer(day: number, prayerName: string): WeeklyImamItem {
     const found = weeklyItems.find(
-      (item) => item.dayOfWeek === day && item.prayerName === prayerName
+      (item) =>
+        item.dayOfWeek === day &&
+        normalizePrayerName(item.prayerName) === prayerName
     );
     if (found) return found;
 
@@ -178,7 +181,9 @@ export default function AdminImamPage() {
   ) {
     setWeeklyItems((prev) => {
       const existingIdx = prev.findIndex(
-        (i) => i.dayOfWeek === day && i.prayerName === prayerName
+        (i) =>
+          i.dayOfWeek === day &&
+          normalizePrayerName(i.prayerName) === prayerName
       );
       if (existingIdx !== -1) {
         const copy = [...prev];
@@ -237,7 +242,9 @@ export default function AdminImamPage() {
         if (d.value === selectedDay) continue;
         for (const p of currentDayItems) {
           const idx = newItems.findIndex(
-            (i) => i.dayOfWeek === d.value && i.prayerName === p.prayerName
+            (i) =>
+              i.dayOfWeek === d.value &&
+              normalizePrayerName(i.prayerName) === p.prayerName
           );
           const cloned: WeeklyImamItem = {
             ...p,
@@ -348,7 +355,7 @@ export default function AdminImamPage() {
   // --- DAILY OVERRIDE LOGIC ---
   function resetScheduleForm() {
     setDate(todayYmd());
-    setPrayer("Subuh");
+    setPrayer("Shubuh");
     setImam("");
     setMuadzin("");
     setNotes("");
@@ -388,7 +395,7 @@ export default function AdminImamPage() {
 
   function beginEdit(s: Schedule) {
     setDate(toYmd(s.scheduleDate));
-    setPrayer(s.prayerName);
+    setPrayer(normalizePrayerName(s.prayerName));
     setImam(s.imamName);
     setMuadzin(s.muadzinName);
     setNotes(s.notes ?? "");
@@ -493,7 +500,7 @@ export default function AdminImamPage() {
       <PageHeader
         icon={Users}
         title="Imam &amp; Muadzin"
-        description="Atur jadwal imam pekanan rutin (dengan opsi Tetap Selamanya), rotasi Subuh Jumat, serta jadwal pengganti harian."
+        description="Atur jadwal imam pekanan rutin (dengan opsi Tetap Selamanya), rotasi Shubuh Jumat, serta jadwal pengganti harian."
         action={
           <ScheduleExportActions
             type="imam"
@@ -540,7 +547,7 @@ export default function AdminImamPage() {
           }`}
         >
           <UserCheck className="h-4 w-4" />
-          <span>Rotasi Subuh Jumat</span>
+          <span>Rotasi Shubuh Jumat</span>
           <span className="rounded-full bg-slate-200/60 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
             {rolling.length} Imam
           </span>
@@ -696,7 +703,7 @@ export default function AdminImamPage() {
                             <Label className="text-[11px] text-[#5c6e63]">
                               Nama Imam
                             </Label>
-                            {selectedDay === 5 && prayerName === "Subuh" && (
+                            {selectedDay === 5 && isPrayerName(prayerName, "fajr") && (
                               <span className="min-w-0 truncate text-[10px] font-bold text-[#8a6820] bg-[#eddcb2]/40 px-2 py-0.5 rounded-full border border-[#c5a059]/30">
                                 ⭐ Rotasi Otomatis (Tab 2)
                               </span>
@@ -714,16 +721,16 @@ export default function AdminImamPage() {
                             }
                             roleFilter="IMAM"
                             placeholder={
-                              selectedDay === 5 && prayerName === "Subuh"
-                                ? "Otomatis bergilir (Rotasi Subuh)"
+                              selectedDay === 5 && isPrayerName(prayerName, "fajr")
+                                ? "Otomatis bergilir (Rotasi Shubuh)"
                                 : "Pilih Nama Imam"
                             }
                             className="bg-white"
                             petugasList={petugas}
                           />
-                          {selectedDay === 5 && prayerName === "Subuh" && (
+                          {selectedDay === 5 && isPrayerName(prayerName, "fajr") && (
                             <p className="mt-1 text-[11px] text-[#5c6e63]">
-                              💡 Jadwal shalat Subuh hari Jumat <b>otomatis mengikuti urutan siklus asatidzah</b> di Tab <i>&quot;Rotasi Subuh Jumat&quot;</i> ({rolling.length} imam terdaftar). Anda cukup menentukan petugas Muadzin di sini.
+                              💡 Jadwal shalat Shubuh hari Jumat <b>otomatis mengikuti urutan siklus asatidzah</b> di Tab <i>&quot;Rotasi Shubuh Jumat&quot;</i> ({rolling.length} imam terdaftar). Anda cukup menentukan petugas Muadzin di sini.
                             </p>
                           )}
                         </div>
@@ -843,17 +850,17 @@ export default function AdminImamPage() {
           </Card>
         </div>
       ) : activeTab === "rolling" ? (
-        /* --- TAB 2: ROTASI SUBUH JUMAT --- */
+        /* --- TAB 2: ROTASI Shubuh JUMAT --- */
         <Card className="min-w-0 border-[#ded5c4] bg-[#fdfbf7]">
           <SectionHeading
             icon={UserCheck}
-            title="Rotasi Imam Subuh Jumat"
-            description="Urutan rotasi mingguan imam Subuh Jumat. Bergulir otomatis setiap hari Jumat Subuh."
+            title="Rotasi Imam Shubuh Jumat"
+            description="Urutan rotasi mingguan imam Shubuh Jumat. Bergulir otomatis setiap hari Jumat Shubuh."
           />
 
           <div className="mb-6 rounded-2xl border border-[#ded5c4] bg-white p-4 shadow-sm">
             <h4 className="text-xs font-bold text-[#19261f] uppercase tracking-wider mb-3">
-              {editingRollingId ? "Edit Imam Rotasi Subuh Jumat" : "Tambah Imam Rotasi Subuh Jumat"}
+              {editingRollingId ? "Edit Imam Rotasi Shubuh Jumat" : "Tambah Imam Rotasi Shubuh Jumat"}
             </h4>
             <div className="grid min-w-0 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
               <div className="min-w-0">
@@ -863,7 +870,7 @@ export default function AdminImamPage() {
                   value={rollName}
                   onChange={setRollName}
                   roleFilter="IMAM"
-                  placeholder="Pilih Imam Subuh..."
+                  placeholder="Pilih Imam Shubuh..."
                   className="bg-[#fcfaf6]"
                   petugasList={petugas}
                 />
@@ -934,7 +941,7 @@ export default function AdminImamPage() {
 
           {rolling.length === 0 ? (
             <p className="rounded-xl border border-dashed border-[#ded5c4] bg-white px-4 py-8 text-center text-xs text-[#5c6e63]">
-              Belum ada data rotasi imam Subuh Jumat.
+              Belum ada data rotasi imam Shubuh Jumat.
             </p>
           ) : (
             <ul className="space-y-2">
@@ -1294,7 +1301,7 @@ export default function AdminImamPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="rounded-md bg-amber-50 px-2 py-0.5 font-bold text-amber-800 border border-amber-200">
-                          {s.prayerName}
+                          {normalizePrayerName(s.prayerName)}
                         </span>
                       </td>
                       <td className="px-4 py-3 font-bold text-[#19261f]">

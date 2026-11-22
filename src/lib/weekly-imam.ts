@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { addDaysUTC, todayDateOnly } from "@/lib/datetime";
 import { saveDisplayThemePatch } from "@/lib/settings";
+import { normalizePrayerName } from "@/utils/constants";
 import {
   DAYS_OF_WEEK,
   PRAYERS,
@@ -21,7 +22,19 @@ export async function getWeeklyImamSettings(): Promise<WeeklyImamItem[]> {
 
     const theme = (display?.themeSettings as Record<string, unknown>) ?? null;
     if (theme && Array.isArray(theme.weeklyImam) && theme.weeklyImam.length > 0) {
-      return theme.weeklyImam as WeeklyImamItem[];
+      // Ejaan lama di themeSettings tetap terbaca, tetapi satu shalat cukup
+      // sekali tampil walaupun data lama dan baru sama-sama tersimpan.
+      const byKey = new Map<string, WeeklyImamItem>();
+      for (const raw of theme.weeklyImam as WeeklyImamItem[]) {
+        const item: WeeklyImamItem = {
+          ...raw,
+          prayerName: normalizePrayerName(raw.prayerName),
+        };
+        const key = `${item.dayOfWeek}_${item.prayerName}`;
+        const existing = byKey.get(key);
+        if (!existing || raw.prayerName === item.prayerName) byKey.set(key, item);
+      }
+      return Array.from(byKey.values());
     }
 
     return [];
@@ -86,7 +99,7 @@ export async function syncWeeklyToCalendar(
 
   const dateKey = (date: Date) => date.toISOString().slice(0, 10);
   const lookupKeyOf = (date: Date, prayerName: string) =>
-    `${dateKey(date)}_${prayerName}`;
+    `${dateKey(date)}_${normalizePrayerName(prayerName).toLowerCase()}`;
 
   const existingMap = new Map<
     string,
@@ -131,7 +144,7 @@ export async function syncWeeklyToCalendar(
         continue;
       }
 
-      const lookupKey = `${dateStr}_${rule.prayerName}`;
+      const lookupKey = lookupKeyOf(targetDate, rule.prayerName);
       expectedKeys.add(lookupKey);
 
       const nextImamName = rule.imamName.trim();
@@ -142,7 +155,7 @@ export async function syncWeeklyToCalendar(
       if (!existing) {
         entriesToCreate.push({
           scheduleDate: targetDate,
-          prayerName: rule.prayerName,
+          prayerName: normalizePrayerName(rule.prayerName),
           imamName: nextImamName,
           muadzinName: nextMuadzinName,
           notes: nextNotes,

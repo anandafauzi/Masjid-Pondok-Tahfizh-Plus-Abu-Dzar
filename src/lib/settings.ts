@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { MASJID_INFO } from "@/utils/constants";
+import { MASJID_INFO, normalizePrayerName } from "@/utils/constants";
 import type { IqamahSettingLike } from "@/lib/iqamah";
 import { getPublicDataVersion } from "@/lib/public-cache";
 import { DEFAULT_SHALAT_SCREEN_DURATION_MINUTES } from "@/lib/tv-display-settings";
@@ -108,10 +108,10 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettingsData = {
 };
 
 export const DEFAULT_IQAMAH_SETTINGS: IqamahSettingLike[] = [
-  { prayerName: "Subuh", mode: "DELAY_MINUTES", delayMinutes: 20, fixedIqamahTime: null },
-  { prayerName: "Zuhur", mode: "DELAY_MINUTES", delayMinutes: 15, fixedIqamahTime: null },
-  { prayerName: "Asar", mode: "DELAY_MINUTES", delayMinutes: 15, fixedIqamahTime: null },
-  { prayerName: "Magrib", mode: "DELAY_MINUTES", delayMinutes: 5, fixedIqamahTime: null },
+  { prayerName: "Shubuh", mode: "DELAY_MINUTES", delayMinutes: 20, fixedIqamahTime: null },
+  { prayerName: "Dzuhur", mode: "DELAY_MINUTES", delayMinutes: 15, fixedIqamahTime: null },
+  { prayerName: "Ashar", mode: "DELAY_MINUTES", delayMinutes: 15, fixedIqamahTime: null },
+  { prayerName: "Maghrib", mode: "DELAY_MINUTES", delayMinutes: 5, fixedIqamahTime: null },
   { prayerName: "Isya", mode: "DELAY_MINUTES", delayMinutes: 15, fixedIqamahTime: null },
 ];
 
@@ -254,7 +254,17 @@ export async function getIqamahSettings(): Promise<IqamahSettingLike[]> {
     const settings = await prisma.iqamahSetting.findMany();
     if (settings.length === 0) return DEFAULT_IQAMAH_SETTINGS;
 
-    const byName = new Map(settings.map((s) => [s.prayerName, s]));
+    // Data lama memakai "Subuh/Zuhur/Asar/Magrib". Normalisasi di sini supaya
+    // satu shalat tidak terbaca dua kali bila row lama dan baru sama-sama ada.
+    const byName = new Map<string, (typeof settings)[number]>();
+    for (const stored of settings) {
+      const name = normalizePrayerName(stored.prayerName);
+      if (!DEFAULT_IQAMAH_SETTINGS.some((fallback) => fallback.prayerName === name)) {
+        continue;
+      }
+      const existing = byName.get(name);
+      if (!existing || stored.prayerName === name) byName.set(name, stored);
+    }
 
     // Keep a deterministic order and fall back to sensible defaults when a
     // row is missing, instead of silently using a 0-minute delay.
@@ -262,7 +272,7 @@ export async function getIqamahSettings(): Promise<IqamahSettingLike[]> {
       const stored = byName.get(fallback.prayerName);
       if (!stored) return fallback;
       return {
-        prayerName: stored.prayerName,
+        prayerName: fallback.prayerName,
         mode: stored.mode,
         delayMinutes: stored.delayMinutes,
         fixedIqamahTime: stored.fixedIqamahTime,

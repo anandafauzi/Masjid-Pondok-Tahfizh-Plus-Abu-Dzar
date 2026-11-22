@@ -100,8 +100,8 @@ export function playAdzanSound(
 
     const selectedId = muadzinId || getStoredAdzanSettings().selectedMuadzinId;
     let targetMuadzin = getMuadzinOption(selectedId);
-    // "Khusus Subuh" hanya dipakai saat Subuh; untuk shalat lain pakai Makkah.
-    // Reciter pilihan pengguna tetap dihormati, termasuk untuk Subuh.
+    // "Khusus Shubuh" hanya dipakai saat Shubuh; untuk shalat lain pakai Makkah.
+    // Reciter pilihan pengguna tetap dihormati, termasuk untuk Shubuh.
     if (targetMuadzin.isFajrSpecial && !isFajr) {
       targetMuadzin = getMuadzinOption("makkah");
     }

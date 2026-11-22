@@ -7,6 +7,7 @@ import { calculatePrayerTimes, getNextPrayer } from "@/lib/prayer-times";
 import { formatDateOnlyLong, todayDateOnly } from "@/lib/datetime";
 import { nextFriday } from "@/lib/schedule-data";
 import { getPublicBundle } from "@/lib/public-data";
+import { isPrayerName, normalizePrayerName } from "@/utils/constants";
 import { kajianTypeLabel } from "@/lib/kajian-type";
 import { tarawihImamLabel } from "@/lib/tarawih";
 import {
@@ -85,10 +86,10 @@ const CARDS = [
 ];
 
 const FIVE_PRAYERS = [
-  { key: "fajr", name: "Subuh" },
-  { key: "dhuhr", name: "Zuhur" },
-  { key: "asr", name: "Asar" },
-  { key: "maghrib", name: "Magrib" },
+  { key: "fajr", name: "Shubuh" },
+  { key: "dhuhr", name: "Dzuhur" },
+  { key: "asr", name: "Ashar" },
+  { key: "maghrib", name: "Maghrib" },
   { key: "isha", name: "Isya" },
 ] as const;
 
@@ -124,11 +125,11 @@ export default async function Home() {
     longitude: mosque.longitude,
   });
 
-  // Sesudah Isya lewat, shalat berikutnya adalah Subuh esok hari. Petugasnya
-  // harus diambil dari jadwal besok, bukan dari petugas Subuh hari ini.
+  // Sesudah Isya lewat, shalat berikutnya adalah Shubuh esok hari. Petugasnya
+  // harus diambil dari jadwal besok, bukan dari petugas Shubuh hari ini.
   const tomorrowSubuh = nextPrayer.tomorrow
     ? bundle.imamTomorrow.find(
-        (item) => item.prayerName.toLowerCase() === "subuh"
+        (item) => isPrayerName(item.prayerName, "fajr")
       ) ?? null
     : null;
 
@@ -223,11 +224,11 @@ export default async function Home() {
             <div className="space-y-2">
               {[
                 { key: "imsak", label: "Imsak", time: prayerTimes.imsak },
-                { key: "fajr", label: "Subuh", time: prayerTimes.fajr },
+                { key: "fajr", label: "Shubuh", time: prayerTimes.fajr },
                 { key: "sunrise", label: "Terbit", time: prayerTimes.sunrise },
-                { key: "dhuhr", label: "Zuhur", time: prayerTimes.dhuhr },
-                { key: "asr", label: "Asar", time: prayerTimes.asr },
-                { key: "maghrib", label: "Magrib", time: prayerTimes.maghrib },
+                { key: "dhuhr", label: "Dzuhur", time: prayerTimes.dhuhr },
+                { key: "asr", label: "Ashar", time: prayerTimes.asr },
+                { key: "maghrib", label: "Maghrib", time: prayerTimes.maghrib },
                 { key: "isha", label: "Isya", time: prayerTimes.isha },
               ].map((p) => {
                 const isNext =
@@ -290,8 +291,7 @@ export default async function Home() {
                   const assignment = isTomorrowSubuh
                     ? tomorrowSubuh
                     : todayImams.find(
-                        (item) =>
-                          item.prayerName.toLowerCase() === pr.name.toLowerCase()
+                        (item) => normalizePrayerName(item.prayerName) === pr.name
                       );
                   const imamName = assignment?.imamName || "Asatidzah Pondok";
                   const muadzinName =

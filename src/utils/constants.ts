@@ -8,13 +8,22 @@ export const MASJID_INFO = {
   mapUrl: "https://maps.app.goo.gl/aLWZpi1UhasHeHEP7",
 }
 
+export type PrayerSlot =
+  | "imsak"
+  | "fajr"
+  | "sunrise"
+  | "dhuhr"
+  | "asr"
+  | "maghrib"
+  | "isha";
+
 export const PRAYER_NAMES = {
   imsak: "Imsak",
-  fajr: "Subuh",
+  fajr: "Shubuh",
   sunrise: "Terbit",
-  dhuhr: "Zuhur",
-  asr: "Asar",
-  maghrib: "Magrib",
+  dhuhr: "Dzuhur",
+  asr: "Ashar",
+  maghrib: "Maghrib",
   isha: "Isya",
 } as const;
 
@@ -28,19 +37,56 @@ export const PRAYER_NAMES_ARABIC = {
   isha: "العشاء",
 } as const;
 
-/** Map nama shalat berbahasa Indonesia ke key PRAYER_NAMES_ARABIC. */
-const PRAYER_KEY_BY_LABEL: Record<string, keyof typeof PRAYER_NAMES_ARABIC> = {
+/**
+ * Alias nama shalat, termasuk ejaan lama yang masih tersimpan di database.
+ * Key internal (fajr/dhuhr/...) sengaja tidak diubah agar API dan audio lama
+ * tetap kompatibel.
+ */
+const PRAYER_SLOT_BY_LABEL: Record<string, PrayerSlot> = {
   imsak: "imsak",
+  fajr: "fajr",
   subuh: "fajr",
+  shubuh: "fajr",
+  sunrise: "sunrise",
   terbit: "sunrise",
+  dhuhr: "dhuhr",
   zuhur: "dhuhr",
+  dzuhur: "dhuhr",
+  asr: "asr",
   asar: "asr",
+  ashar: "asr",
+  maghrib: "maghrib",
   magrib: "maghrib",
+  isha: "isha",
   isya: "isha",
 };
 
-/** Nama Arab untuk label shalat ("Subuh", "Zuhur", dst). */
+/** Kunci internal (fajr, dhuhr, ...) dari label baru maupun label lama. */
+export function prayerSlotOf(value?: string | null): PrayerSlot | null {
+  // JSON dari klien bisa saja mengirim angka/objek. Jangan sampai .trim()
+  // melempar TypeError dan mengubah 400 menjadi 500.
+  if (typeof value !== "string") return null;
+  return PRAYER_SLOT_BY_LABEL[value.trim().toLowerCase()] ?? null;
+}
+
+/** Label tampil kanonik. Data lama ("Subuh", "Zuhur", ...) ikut dinormalisasi. */
+export function normalizePrayerName(value?: string | null): string {
+  if (typeof value !== "string") return "";
+  const slot = prayerSlotOf(value);
+  if (slot) return PRAYER_NAMES[slot];
+  return value.trim();
+}
+
+/** Cocokkan label lama/baru dengan satu shalat tanpa tergantung ejaan. */
+export function isPrayerName(
+  value: string | null | undefined,
+  slot: Exclude<PrayerSlot, "imsak" | "sunrise">,
+): boolean {
+  return prayerSlotOf(value) === slot;
+}
+
+/** Nama Arab untuk label shalat ("Shubuh", "Dzuhur", dst), termasuk alias lama. */
 export function getPrayerArabicName(name: string): string {
-  const key = PRAYER_KEY_BY_LABEL[name.trim().toLowerCase()];
-  return key ? PRAYER_NAMES_ARABIC[key] : "";
+  const slot = prayerSlotOf(name);
+  return slot ? PRAYER_NAMES_ARABIC[slot] : "";
 }

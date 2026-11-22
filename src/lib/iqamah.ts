@@ -1,6 +1,6 @@
 import { PrayerKey, PrayerTimesStrings, PRAYER_ORDER } from "@/lib/prayer-times";
 import { addMinutes, combineDateTime } from "@/lib/datetime";
-import { PRAYER_NAMES } from "@/utils/constants";
+import { normalizePrayerName, PRAYER_NAMES } from "@/utils/constants";
 
 export interface IqamahSettingLike {
   prayerName: string;
@@ -44,7 +44,7 @@ export function computeIqamahEvents(
 
   for (const key of PRAYER_ORDER) {
     const label = PRAYER_NAMES[key];
-    const setting = settings.find((s) => s.prayerName === label);
+    const setting = settings.find((s) => normalizePrayerName(s.prayerName) === label);
     const adhanTime = prayerTimes[key];
     const adhanTarget = combineDateTime(dateOnly, adhanTime);
 

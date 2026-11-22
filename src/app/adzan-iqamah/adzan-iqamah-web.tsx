@@ -206,7 +206,7 @@ export function AdzanIqamahWebPage() {
                     Semua jadwal shalat fardhu hari ini telah selesai.
                   </p>
                   <p className="mt-2 text-sm text-slate-600">
-                    Jadwal shalat hari esok akan aktif kembali menjelang waktu Subuh.
+                    Jadwal shalat hari esok akan aktif kembali menjelang waktu Shubuh.
                   </p>
                 </div>
               )}
@@ -221,8 +221,8 @@ export function AdzanIqamahWebPage() {
               </h3>
               {isFriday && (
                 <p className="mt-1 text-xs text-slate-500">
-                  Hari Jumat: shalat Zuhur diganti Shalat Jumat, sehingga iqamah
-                  Zuhur tidak ditampilkan.
+                  Hari Jumat: shalat Dzuhur diganti Shalat Jumat, sehingga iqamah
+                  Dzuhur tidak ditampilkan.
                 </p>
               )}
             </div>

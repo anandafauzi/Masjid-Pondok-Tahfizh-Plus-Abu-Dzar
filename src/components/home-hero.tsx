@@ -25,11 +25,11 @@ interface HomeHeroProps {
 
 const PRAYERS_LIST = [
   { key: "imsak", label: "Imsak" },
-  { key: "fajr", label: "Subuh" },
+  { key: "fajr", label: "Shubuh" },
   { key: "sunrise", label: "Terbit" },
-  { key: "dhuhr", label: "Zuhur" },
-  { key: "asr", label: "Asar" },
-  { key: "maghrib", label: "Magrib" },
+  { key: "dhuhr", label: "Dzuhur" },
+  { key: "asr", label: "Ashar" },
+  { key: "maghrib", label: "Maghrib" },
   { key: "isha", label: "Isya" },
 ] as const;
 
@@ -224,7 +224,7 @@ export function HomeHero({
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-7">
             {PRAYERS_LIST.map(({ key, label }) => {
               // Jika shalat berikutnya jatuh besok (mis. setelah Isya), jangan
-              // tandai jadwal Subuh hari ini sebagai "Aktif".
+              // tandai jadwal Shubuh hari ini sebagai "Aktif".
               const isNext = !nextPrayer.tomorrow && key === nextPrayer.key;
               const time = prayerTimes[key as keyof PrayerTimesStrings] ?? "--:--";
               const arabic = PRAYER_NAMES_ARABIC[key as keyof typeof PRAYER_NAMES_ARABIC];

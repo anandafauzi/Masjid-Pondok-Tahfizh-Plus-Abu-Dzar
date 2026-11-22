@@ -50,11 +50,11 @@ const METHODS = [
 
 const ADJUST_KEYS = ["fajr", "sunrise", "dhuhr", "asr", "maghrib", "isha"];
 const ADJUST_LABELS: Record<string, string> = {
-  fajr: "Subuh",
+  fajr: "Shubuh",
   sunrise: "Terbit",
-  dhuhr: "Zuhur",
-  asr: "Asar",
-  maghrib: "Magrib",
+  dhuhr: "Dzuhur",
+  asr: "Ashar",
+  maghrib: "Maghrib",
   isha: "Isya",
 };
 
@@ -351,7 +351,7 @@ export default function AdminMasjidPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="asr">Metode Asar</Label>
+                  <Label htmlFor="asr">Metode Ashar</Label>
                   <Select
                     id="asr"
                     value={form.asrMethod}

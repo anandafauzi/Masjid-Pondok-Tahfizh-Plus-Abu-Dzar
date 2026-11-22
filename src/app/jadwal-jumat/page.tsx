@@ -108,7 +108,7 @@ export default async function JadwalJumatPage() {
               Jadwal Khatib Jumat
             </h1>
             <p className="mt-2 text-xs text-slate-500 sm:text-sm">
-              Daftar asatidzah penceramah khutbah dan imam Subuh Jumat berbasis rotasi berkala di {mosque.mosqueName}{appMode ? " untuk 1 bulan ke depan" : ""}.
+              Daftar asatidzah penceramah khutbah dan imam Shubuh Jumat berbasis rotasi berkala di {mosque.mosqueName}{appMode ? " untuk 1 bulan ke depan" : ""}.
             </p>
           </div>
 
@@ -171,7 +171,7 @@ export default async function JadwalJumatPage() {
               </div>
 
               <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-                <span className="text-slate-500">Imam Subuh Jumat:</span>
+                <span className="text-slate-500">Imam Shubuh Jumat:</span>
                 <div className="flex items-center gap-1.5 font-bold text-[#466553]">
                   <UserCheck className="h-4 w-4 text-[#557a64]" />
                   <span>{row.imamSubuh}</span>

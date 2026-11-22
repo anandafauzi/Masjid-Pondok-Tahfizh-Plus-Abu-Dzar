@@ -234,7 +234,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
 ## Catatan Teknis
 
 - Zona waktu aplikasi: **Asia/Jakarta (WIB)**. Perhitungan waktu shalat
-  menggunakan library `adhan` dengan metode default **MWL** dan Asar
+  menggunakan library `adhan` dengan metode default **MWL** dan Ashar
   **Standar**. Metode, koordinat, dan koreksi menit dapat diubah di
   **Admin → Pengaturan Masjid**. Nama, alamat, dan tautan peta masjid pada
   halaman publik juga dibaca langsung dari pengaturan tersebut.

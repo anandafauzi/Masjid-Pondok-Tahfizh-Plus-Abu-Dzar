@@ -1,7 +1,7 @@
 export interface WeeklyImamItem {
-  id: string; // e.g. "weekly-1-Subuh"
+  id: string; // e.g. "weekly-1-Shubuh"
   dayOfWeek: number; // 0 = Ahad, 1 = Senin, 2 = Selasa, 3 = Rabu, 4 = Kamis, 5 = Jumat, 6 = Sabtu
-  prayerName: string; // "Subuh" | "Zuhur" | "Asar" | "Magrib" | "Isya"
+  prayerName: string; // "Shubuh" | "Dzuhur" | "Ashar" | "Maghrib" | "Isya"
   imamName: string;
   muadzinName: string;
   isPermanent: boolean; // Tetap Selamanya (berlaku rutin tanpa tanggal berakhir)
@@ -11,7 +11,7 @@ export interface WeeklyImamItem {
   isActive: boolean;
 }
 
-export const PRAYERS = ["Subuh", "Zuhur", "Asar", "Magrib", "Isya"] as const;
+export const PRAYERS = ["Shubuh", "Dzuhur", "Ashar", "Maghrib", "Isya"] as const;
 
 export const DAYS_OF_WEEK = [
   { value: 1, name: "Senin", short: "Sen" },
