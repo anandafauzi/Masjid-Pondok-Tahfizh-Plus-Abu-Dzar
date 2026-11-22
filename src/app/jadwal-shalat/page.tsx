@@ -183,7 +183,7 @@ export default async function JadwalShalatPage() {
                 type="shalat"
                 mosqueName={mosque.mosqueName}
                 prayerTimesDays={days}
-                todayIqamah={todayIqamah}
+                todayIqamah={todayIqamahCards}
               />
             </div>
           </div>

@@ -9,6 +9,7 @@ import {
   getSessionUser,
   ok,
   parseDateOnly,
+  readJsonBody,
   serverError,
   unauthorized,
 } from "@/lib/api";
@@ -20,6 +21,7 @@ import {
 } from "@/lib/datetime";
 import { resolveRolling } from "@/lib/rolling";
 import { writeAudit } from "@/lib/audit";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +55,8 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const body = await request.json().catch(() => ({}));
+    const body = await readJsonBody(request);
+    if (!body) return badRequest("Format data tidak valid");
 
     const startMode = body.startMode === "AUTO" ? "AUTO" : "MANUAL";
 
@@ -67,13 +70,38 @@ export async function POST(request: NextRequest) {
       return badRequest("Tanggal khutbah harus hari Jumat");
     }
 
+    const parsedScheduled =
+      startMode === "AUTO" && body.scheduledStartAt
+        ? new Date(String(body.scheduledStartAt))
+        : null;
+    if (
+      startMode === "AUTO" &&
+      body.scheduledStartAt &&
+      (!parsedScheduled || Number.isNaN(parsedScheduled.getTime()))
+    ) {
+      return badRequest("Waktu mulai terjadwal tidak valid");
+    }
+
     const today = todayDateOnly();
+    // Untuk mode AUTO, tanggal Jumat diambil dari waktu mulai yang dipilih.
+    // Memakai nextFriday(today) membuat penjadwalan Jumat minggu depan dari
+    // hari biasa selalu gagal pada validasi tanggal di bawah.
+    const scheduledFriday = parsedScheduled
+      ? parseDateOnly(toDateOnlyString(parsedScheduled))
+      : null;
+    if (parsedScheduled && !scheduledFriday) {
+      return badRequest("Tanggal mulai terjadwal tidak valid");
+    }
+    const fridayDate = parsedFriday ?? scheduledFriday ?? nextFriday(today);
+
+    if (startMode === "AUTO" && fridayDate.getUTCDay() !== 5) {
+      return badRequest("Waktu mulai terjadwal harus pada hari Jumat");
+    }
     if (!parsedFriday && startMode === "MANUAL" && today.getUTCDay() !== 5) {
       return badRequest(
         "Khutbah Jumat hanya dapat dimulai pada hari Jumat"
       );
     }
-    const fridayDate = parsedFriday ?? nextFriday(today);
 
     if (startMode === "MANUAL" && fridayDate.getTime() !== today.getTime()) {
       return badRequest("Khutbah manual hanya dapat dimulai untuk hari ini");
@@ -90,22 +118,18 @@ export async function POST(request: NextRequest) {
 
     let scheduledStartAt: Date | null = null;
     if (startMode === "AUTO") {
-      if (!body.scheduledStartAt) {
+      if (!parsedScheduled) {
         return badRequest("Waktu mulai terjadwal wajib diisi");
       }
-      const parsed = new Date(body.scheduledStartAt);
-      if (Number.isNaN(parsed.getTime())) {
-        return badRequest("Waktu mulai terjadwal tidak valid");
-      }
-      if (parsed.getTime() < Date.now() - 60_000) {
+      if (parsedScheduled.getTime() < Date.now() - 60_000) {
         return badRequest("Waktu mulai terjadwal harus di masa depan");
       }
-      if (toDateOnlyString(parsed) !== dateOnlyToString(fridayDate)) {
+      if (toDateOnlyString(parsedScheduled) !== dateOnlyToString(fridayDate)) {
         return badRequest(
           "Waktu mulai terjadwal harus pada tanggal Jumat yang dipilih"
         );
       }
-      scheduledStartAt = parsed;
+      scheduledStartAt = parsedScheduled;
     }
 
     const sermonTopic =
@@ -131,6 +155,7 @@ export async function POST(request: NextRequest) {
       changeSummary: `Memulai khutbah Jumat oleh ${khatibName} selama ${durationMinutes} menit (${startMode})`,
     });
 
+    revalidateAllAppPaths();
     return ok({ session }, 201);
   } catch (error) {
     if (error instanceof KhutbahConflictError) {

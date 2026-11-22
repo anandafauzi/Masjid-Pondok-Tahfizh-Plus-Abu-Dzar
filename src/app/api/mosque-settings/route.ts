@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  readJsonBody,
   ok,
   serverError,
   unauthorized,
@@ -42,6 +43,23 @@ const ALLOWED_CALCULATION_METHODS = new Set([
 
 const ALLOWED_ASR_METHODS = new Set(["STANDARD", "HANAFI"]);
 
+const ALLOWED_LOGO_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+const MAX_LOGO_DATA_URL_LENGTH = 4_000_000;
+
+function isValidLogoUrl(value: unknown): boolean {
+  if (value === null || value === "") return true;
+  if (typeof value !== "string") return false;
+  if (/^https?:\/\//i.test(value)) return true;
+  if (value.length > MAX_LOGO_DATA_URL_LENGTH) return false;
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/i.exec(value);
+  return Boolean(match && ALLOWED_LOGO_MIME.has(match[1].toLowerCase()));
+}
+
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return unauthorized();
@@ -60,7 +78,12 @@ export async function PUT(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return unauthorized();
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
+    if (!body) return badRequest("Format data tidak valid");
+
+    if (body.logoUrl !== undefined && !isValidLogoUrl(body.logoUrl)) {
+      return badRequest("Format logo tidak didukung. Gunakan PNG, JPEG, WebP, atau GIF");
+    }
 
     const mosqueName =
       body.mosqueName !== undefined ? String(body.mosqueName).trim() : undefined;

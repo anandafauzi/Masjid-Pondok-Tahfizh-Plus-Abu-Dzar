@@ -4,6 +4,7 @@ import {
   getSessionUser,
   ok,
   parseDateOnly,
+  readJsonBody,
   serverError,
   unauthorized,
 } from "@/lib/api";
@@ -40,7 +41,9 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const body = (await request.json().catch(() => ({}))) as {
+    const parsed = await readJsonBody(request);
+    if (!parsed) return badRequest("Data tidak valid");
+    const body = parsed as {
       date?: string;
       dedupeKeys?: unknown;
       force?: unknown;

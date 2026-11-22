@@ -149,15 +149,18 @@ export default function AdminKhutbahPage() {
       return toast.error("Pilih waktu mulai untuk mode terjadwal");
     }
 
+    const scheduledDate =
+      mode === "AUTO" && scheduledStartAt
+        ? fromWibInput(scheduledStartAt)
+        : null;
+
     const ok = await action("start", {
       khatibName: khatib || undefined,
       sermonTopic: topic || null,
       durationMinutes: duration,
       startMode: mode,
-      scheduledStartAt:
-        mode === "AUTO" && scheduledStartAt
-          ? fromWibInput(scheduledStartAt).toISOString()
-          : undefined,
+      fridayDate: scheduledDate ? dateOnlyToString(scheduledDate) : undefined,
+      scheduledStartAt: scheduledDate ? scheduledDate.toISOString() : undefined,
     });
 
     if (ok) {

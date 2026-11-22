@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  readJsonBody,
   ok,
   parseDateOnly,
   serverError,
@@ -40,7 +41,8 @@ export async function POST(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return unauthorized();
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
+    if (!body) return badRequest("Format data tidak valid");
     const scheduleDate = parseDateOnly(body.scheduleDate);
     if (!scheduleDate) return badRequest("Tanggal tidak valid");
     const prayerName = String(body.prayerName ?? "").trim();

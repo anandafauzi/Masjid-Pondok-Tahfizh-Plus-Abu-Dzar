@@ -122,23 +122,6 @@ html.tv-viewport-active body {
   overflow: hidden !important;
 }
 
-.tv-viewport-root {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  background: #faf7f2;
-}
-
-.tv-viewport-stage {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  margin-top: -540px;
-  margin-left: -960px;
-  transform-origin: center center;
-  overflow: hidden;
-}
-
 .font-arabic {
   font-family: var(--font-arabic, "Amiri", "Traditional Arabic", serif);
 }
@@ -214,15 +197,16 @@ html.tv-viewport-active body {
 
 @keyframes marquee-tv {
   0% {
-    transform: translate3d(100vw, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translate3d(-100%, 0, 0);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
 .animate-marquee-tv {
-  display: inline-block;
+  display: flex;
+  min-width: max-content;
   white-space: nowrap;
   animation: marquee-tv linear infinite;
   will-change: transform;

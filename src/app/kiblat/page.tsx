@@ -45,9 +45,12 @@ export default async function KiblatPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200/80 bg-[#fbfdfc] p-4 shadow-sm text-right shrink-0">
-            <span className="text-xs text-slate-500 font-semibold block">Arah Kiblat Masjid</span>
+            <span className="text-xs text-slate-500 font-semibold block">Arah Kiblat dari Masjid</span>
             <span className="text-base font-bold text-[#466553]">
               {formatQiblaBearing(mosque.latitude, mosque.longitude)}
+            </span>
+            <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wider text-[#557a64]">
+              Dari masjid • kompas memakai GPS hanya setelah Anda mengaktifkannya
             </span>
           </div>
         </div>

@@ -79,11 +79,15 @@ export function normalizeReminderSettings(raw: unknown): ReminderSettings {
  * Cron harian bisa datang sedikit sebelum/sesudah jam yang diatur admin. Jika
  * belum melewati jam kirim, ambil target hari sebelumnya supaya pengingat yang
  * jatuh tempo sebelumnya tetap terkirim pada invoke terdekat. Dedupe key
- * mencegah pengiriman ganda untuk tanggal yang sama.
+ * mencegah pengiriman ganda untuk tanggal yang sama. Untuk offset 0 (hari H),
+ * mundur satu hari tidak boleh membuat target menjadi kemarin: tetap pakai 0.
  */
 export function resolveReminderTargetDate(now: Date, settings: ReminderSettings): Date {
   const base = dateOnlyToUTC(formatTZ(now, "yyyy-MM-dd"));
   const nowTime = formatTZ(now, "HH:mm");
-  const offset = nowTime >= settings.sendTime ? settings.offsetDays : settings.offsetDays - 1;
+  const offset = Math.max(
+    0,
+    nowTime >= settings.sendTime ? settings.offsetDays : settings.offsetDays - 1
+  );
   return addDaysUTC(base, offset);
 }

@@ -21,6 +21,22 @@ object ReminderSettings {
         val volume: Float = 0.8f,
     )
 
+    /**
+     * Pengaturan lama disimpan di SharedPreferences. Kembalikan null bila use
+     * belum pernah mengubahnya supaya nilai default baru tidak tertimpa.
+     */
+    fun getLegacySettingsForMigration(context: Context): Pair<AdzanSettings, Boolean>? {
+        val p = prefs(context)
+        val knownKeys = listOf(
+            KEY_SOUND_ENABLED,
+            KEY_NOTIFICATIONS_ENABLED,
+            KEY_MUADZIN_ID,
+            KEY_VOLUME,
+        )
+        if (knownKeys.none { p.contains(it) }) return null
+        return getAdzanSettings(context) to p.contains(KEY_NOTIFICATIONS_ENABLED)
+    }
+
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 

@@ -49,7 +49,8 @@ function wibNow(now: Date): { ymd: string; time: string } {
 /** Samakan dengan resolveReminderTargetDate() di server untuk pratinjau. */
 function targetYmd(now: Date, settings: ReminderSettings): string {
   const { ymd, time } = wibNow(now);
-  const offset = time >= settings.sendTime ? settings.offsetDays : settings.offsetDays - 1;
+  // Offset 0 (hari H) tidak boleh mundur ke kemarin saat cron lebih awal.
+  const offset = Math.max(0, time >= settings.sendTime ? settings.offsetDays : settings.offsetDays - 1);
   const date = new Date(`${ymd}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + offset);
   return date.toISOString().slice(0, 10);
@@ -98,7 +99,8 @@ function previewMessage(
 }
 
 const STATUS_LABEL: Record<ReminderStatus, string> = {
-  PENDING: "Sedang dikirim",
+  PENDING: "Menunggu",
+  SENDING: "Sedang dikirim",
   SENT: "Terkirim",
   FAILED: "Gagal",
   SKIPPED: "Dilewati",
@@ -108,7 +110,9 @@ function StatusBadge({ status }: { status: ReminderStatus | null }) {
   if (!status) return <Badge color="blue">Belum dikirim</Badge>;
   if (status === "SENT") return <Badge color="green">Terkirim</Badge>;
   if (status === "FAILED") return <Badge color="red">Gagal</Badge>;
-  if (status === "PENDING") return <Badge color="amber">Sedang dikirim</Badge>;
+  if (status === "SENDING" || status === "PENDING") {
+    return <Badge color="amber">Sedang dikirim</Badge>;
+  }
   return <Badge color="slate">Dilewati</Badge>;
 }
 

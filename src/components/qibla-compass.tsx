@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Coordinates, Qibla } from "adhan";
+import { calculateQiblaBearing } from "@/lib/qibla";
 import {
   Navigation,
   MapPin,
@@ -125,9 +125,16 @@ export function QiblaCompass({
   // Jenis event sensor yang sudah terpasang (untuk cleanup yang presisi).
   const attachedListenersRef = useRef<string[]>([]);
 
-  // Compute Qibla angle & distance
-  const qiblaAngle = Number(Qibla(new Coordinates(coords.lat, coords.lng)).toFixed(1));
-  const distanceKm = calculateDistanceKm(coords.lat, coords.lng);
+  // Compute Qibla angle & distance. Koordinat invalid jangan sampai menghasilkan NaN°.
+  const hasValidCoords =
+    Number.isFinite(coords.lat) &&
+    Number.isFinite(coords.lng) &&
+    Math.abs(coords.lat) <= 90 &&
+    Math.abs(coords.lng) <= 180;
+  const bearingLat = hasValidCoords ? coords.lat : DEFAULT_LAT;
+  const bearingLng = hasValidCoords ? coords.lng : DEFAULT_LNG;
+  const qiblaAngle = Number(calculateQiblaBearing(bearingLat, bearingLng).toFixed(1));
+  const distanceKm = calculateDistanceKm(bearingLat, bearingLng);
 
   // Difference between current heading and Qibla angle (-180 to +180)
   let diff = (qiblaAngle - heading + 360) % 360;
@@ -285,29 +292,8 @@ export function QiblaCompass({
     }
   }, [isAligned, hasVibrated]);
 
-  // Auto-request current GPS on mount seamlessly
-  useEffect(() => {
-    if (typeof window !== "undefined" && "geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setCoords({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-          setLocationName(
-            `GPS Saya (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`
-          );
-          setIsCustomGps(true);
-        },
-        () => {
-          // Keep default mosque coordinates
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    }
-  }, []);
-
-  // Request Geolocation GPS manually
+  // GPS hanya diminta setelah pengguna menekan tombol "Gunakan Lokasi GPS Saya".
+  // Tanpa konfirmasi, perhitungan tetap memakai koordinat masjid.
   function requestCurrentGps() {
     if (!navigator.geolocation) {
       return;
@@ -320,7 +306,7 @@ export function QiblaCompass({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
         });
-        setLocationName(`GPS Akurat (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`);
+        setLocationName(`Dari lokasi Anda (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)})`);
         setIsCustomGps(true);
         setGpsLoading(false);
       },
@@ -355,6 +341,9 @@ export function QiblaCompass({
           <p className="mt-1 text-xs text-slate-500">
             {cardinalLabel(qiblaAngle)} ({qiblaAngle}° dari Utara searah jarum jam)
           </p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#557a64]">
+            {isCustomGps ? "Dari lokasi Anda" : "Dari masjid"}
+          </p>
         </div>
 
         {/* Distance Card */}
@@ -378,6 +367,9 @@ export function QiblaCompass({
             </span>
             <p className="mt-1 text-sm font-bold text-slate-900 truncate" title={isCustomGps ? locationName : mosqueName}>
               {isCustomGps ? locationName : mosqueName}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#557a64]">
+              {isCustomGps ? "Dari lokasi Anda (GPS)" : "Dari masjid"}
             </p>
             <p className="text-[11px] text-slate-500">
               {isCustomGps ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : (mosqueAddress ?? "Rumpin, Bogor")}

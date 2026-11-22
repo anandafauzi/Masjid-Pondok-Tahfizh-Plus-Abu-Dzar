@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { badRequest, getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
+import {
+  badRequest,
+  getSessionUser,
+  ok,
+  readJsonBody,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +45,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
   }
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
+    if (!body) return badRequest("Data tidak valid");
     const name = String(body.name ?? "").trim();
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");

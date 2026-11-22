@@ -1,7 +1,15 @@
 import { NextRequest } from "next/server";
 import { endKhutbah, KhutbahStateError } from "@/lib/khutbah";
-import { badRequest, getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
+import {
+  badRequest,
+  getSessionUser,
+  ok,
+  readJsonBody,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +18,8 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const body = await request.json().catch(() => ({}));
+    const body = await readJsonBody(request);
+    if (!body) return badRequest("Format data tidak valid");
     if (!body.id) return badRequest("ID sesi khutbah wajib diisi");
 
     const session = await endKhutbah(String(body.id), user.id);
@@ -23,6 +32,7 @@ export async function POST(request: NextRequest) {
       changeSummary: "Mengakhiri sesi khutbah lebih awal",
     });
 
+    revalidateAllAppPaths();
     return ok({ session });
   } catch (error) {
     if (error instanceof KhutbahStateError) {

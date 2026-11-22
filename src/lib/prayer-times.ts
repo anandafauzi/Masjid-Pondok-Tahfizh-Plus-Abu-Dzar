@@ -34,6 +34,38 @@ export const PRAYER_ORDER: Exclude<PrayerKey, "imsak" | "sunrise">[] = [
   "isha",
 ];
 
+/** Label yang ditampilkan untuk metode hitung shalat yang sedang dipakai. */
+export function getPrayerMethodLabel(method: string): string {
+  switch (method) {
+    case "KEMENAG":
+    case "Kemenag":
+    case "Indonesia":
+    case "SIHAT":
+      return "Kemenag RI (+2 Menit Ihtiyat)";
+    case "Singapore":
+      return "Singapore";
+    case "ISNA":
+      return "ISNA";
+    case "Egypt":
+      return "Egyptian";
+    case "Makkah":
+      return "Umm Al-Qura";
+    case "Karachi":
+      return "Karachi";
+    case "Tehran":
+      return "Tehran";
+    case "Dubai":
+      return "Dubai";
+    case "Turkey":
+      return "Turki";
+    case "MWL":
+      return "Muslim World League";
+    default:
+      // Sama dengan fallback pada getCalculationMethod().
+      return "Kemenag RI (+2 Menit Ihtiyat)";
+  }
+}
+
 function getCalculationMethod(method: string) {
   switch (method) {
     case "KEMENAG":

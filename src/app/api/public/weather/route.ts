@@ -69,6 +69,7 @@ export async function GET() {
       condition: "Cerah Berawan",
       icon: "🌤️",
       locationName,
+      isFallback: true,
     };
     return NextResponse.json(fallback);
   }

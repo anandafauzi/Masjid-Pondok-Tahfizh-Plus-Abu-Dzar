@@ -87,4 +87,14 @@ describe("resolveReminderTargetDate", () => {
     });
     expect(dateOnlyToString(target)).toBe("2026-11-18");
   });
+
+  it("tidak mundur ke kemarin untuk offset 0 sebelum jam kirim", () => {
+    // 07:00 WIB = 00:00 UTC, sedangkan jadwal kirim 16:00 WIB.
+    const target = resolveReminderTargetDate(new Date("2026-11-18T00:00:00.000Z"), {
+      ...settings,
+      offsetDays: 0,
+      sendTime: "16:00",
+    });
+    expect(dateOnlyToString(target)).toBe("2026-11-18");
+  });
 });

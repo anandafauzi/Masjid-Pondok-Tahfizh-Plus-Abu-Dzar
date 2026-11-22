@@ -47,6 +47,7 @@ scratch/
 # backups
 /backups/
 *.sql
+!prisma/migrations/**/*.sql
 *.sql.gz
 
 # desktop build outputs

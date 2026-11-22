@@ -1,9 +1,16 @@
 import { NextRequest } from "next/server";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
+import {
+  badRequest,
+  getSessionUser,
+  ok,
+  readJsonBody,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { saveDisplayThemePatch } from "@/lib/settings";
 import { normalizeShalatScreenDurationMinutes } from "@/lib/tv-display-settings";
 
 export const dynamic = "force-dynamic";
@@ -26,32 +33,25 @@ export async function PUT(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return unauthorized();
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
+    if (!body) return badRequest("Format data tidak valid");
     const interval = Number(body.slideIntervalSeconds);
     const speed = Number(body.tickerSpeed);
     const existing = await prisma.displaySetting.findFirst({
       orderBy: { id: "asc" },
     });
 
-    const existingTheme =
-      existing?.themeSettings && typeof existing.themeSettings === "object"
-        ? (existing.themeSettings as Record<string, unknown>)
-        : {};
-
     const themePayload =
-      body.themeSettings && typeof body.themeSettings === "object"
+      body.themeSettings &&
+      typeof body.themeSettings === "object" &&
+      !Array.isArray(body.themeSettings)
         ? (body.themeSettings as Record<string, unknown>)
         : null;
 
-    const mergedTheme =
-      themePayload !== null
-        ? { ...existingTheme, ...themePayload }
-        : undefined;
-
-    if (mergedTheme && mergedTheme.shalatScreenDurationMinutes !== undefined) {
-      mergedTheme.shalatScreenDurationMinutes =
+    if (themePayload?.shalatScreenDurationMinutes !== undefined) {
+      themePayload.shalatScreenDurationMinutes =
         normalizeShalatScreenDurationMinutes(
-          mergedTheme.shalatScreenDurationMinutes,
+          themePayload.shalatScreenDurationMinutes,
         );
     }
 
@@ -76,7 +76,6 @@ export async function PUT(request: NextRequest) {
         body.showHijriDate !== undefined
           ? Boolean(body.showHijriDate)
           : undefined,
-      themeSettings: mergedTheme !== undefined ? (mergedTheme as Prisma.InputJsonValue) : undefined,
     };
 
     const settings = existing
@@ -87,6 +86,12 @@ export async function PUT(request: NextRequest) {
       : await prisma.displaySetting.create({
           data: { id: "default", ...data },
         });
+
+    // Merge atomik di DB supaya kunci themeSettings milik fitur lain tidak
+    // hilang saat halaman ini disimpan bersamaan dengan petugas/pengingat.
+    if (themePayload) {
+      await saveDisplayThemePatch(themePayload);
+    }
 
     await writeAudit({
       adminId: user.id,

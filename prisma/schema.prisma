@@ -360,6 +360,7 @@ model LoginAttempt {
 // terkirim dua kali ketika cron dan pengiriman manual berjalan bersamaan.
 enum ReminderStatus {
   PENDING
+  SENDING
   SENT
   FAILED
   SKIPPED
@@ -374,6 +375,7 @@ model ReminderLog {
   duties        String         @db.Text
   message       String         @db.Text
   status        ReminderStatus @default(PENDING)
+  claimedAt     DateTime?
   provider      String?
   providerRef   String?
   error         String?
@@ -385,4 +387,14 @@ model ReminderLog {
   @@index([status])
   @@index([createdAt])
   @@map("reminder_logs")
+}
+
+// Versi cache publik bersama. Revalidate admin menaikkan nilai ini di DB agar
+// seluruh instance/serverless ikut membuang cache in-memory mereka.
+model AppMeta {
+  key       String   @id
+  value     Int
+  updatedAt DateTime @updatedAt
+
+  @@map("app_meta")
 }

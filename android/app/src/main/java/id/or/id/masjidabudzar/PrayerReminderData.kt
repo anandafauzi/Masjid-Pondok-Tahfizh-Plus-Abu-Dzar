@@ -1,350 +1,524 @@
 package id.or.id.masjidabudzar
 
 import android.content.Context
-import android.content.Intent
-import android.os.Bundle
-import org.json.JSONArray
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.text.ParseException
-import java.text.SimpleDateFormat
-import java.util.Date
+import android.icu.util.IslamicCalendar
+import android.icu.util.TimeZone as IcuTimeZone
+import androidx.core.app.NotificationManagerCompat
+import com.google.gson.Gson
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 
 object ReminderConfig {
     const val APP_URL = "https://masjid-pondok-tahfizh-plus-abu-dzar.vercel.app"
-    const val TV_DATA_URL = "https://masjid-pondok-tahfizh-plus-abu-dzar.vercel.app/api/public/tv-data"
-    const val AUDIO_BASE_URL = "https://masjid-pondok-tahfizh-plus-abu-dzar.vercel.app/audio/adzan/"
+    const val TV_DATA_URL = "$APP_URL/api/public/tv-data"
+    const val AUDIO_BASE_URL = "$APP_URL/audio/adzan/"
 
     const val ACTION_ADHAN_ALARM = "id.or.id.masjidabudzar.ADHAN_ALARM"
+    const val ACTION_IQAMAH_ALARM = "id.or.id.masjidabudzar.IQAMAH_ALARM"
     const val ACTION_REFRESH_REMINDERS = "id.or.id.masjidabudzar.REFRESH_REMINDERS"
+    const val ACTION_WATCHDOG_ALARM = "id.or.id.masjidabudzar.WATCHDOG_ALARM"
     const val ACTION_PLAY_ADHAN = "id.or.id.masjidabudzar.PLAY_ADHAN"
-    const val ACTION_REFRESH_DATA = "id.or.id.masjidabudzar.REFRESH_DATA"
+    const val ACTION_DISMISS_ALERT = "id.or.id.masjidabudzar.DISMISS_ALERT"
 
-    const val EXTRA_EVENT_ID = "event_id"
     const val EXTRA_EVENT_KEY = "event_key"
     const val EXTRA_EVENT_LABEL = "event_label"
-    const val EXTRA_ADHAN_TIME = "adhan_time"
-    const val EXTRA_IQAMAH_TIME = "iqamah_time"
     const val EXTRA_ADHAN_TARGET = "adhan_target"
     const val EXTRA_IQAMAH_TARGET = "iqamah_target"
     const val EXTRA_IMAM_NAME = "imam_name"
     const val EXTRA_MUADZIN_NAME = "muadzin_name"
-    const val EXTRA_DATE = "event_date"
-    const val EXTRA_OPEN_PATH = "open_path"
+    const val EXTRA_IS_IQAMAH = "is_iqamah"
 
-    const val DEFAULT_LOCATION = "Rumpin, Kabupaten Bogor"
+    const val DEFAULT_LOCATION = "Masjid Abu Dzar, Rumpin"
+    const val DEFAULT_LATITUDE = -6.442126
+    const val DEFAULT_LONGITUDE = 106.640654
 
-    /** ID notifikasi fallback saat foreground service gagal dipulai dari alarm. */
-    const val ADHAN_FALLBACK_NOTIFICATION_ID = 1003
+    private const val BASE_NOTIFICATION_ID = 1100
+    private const val NOTIFICATION_ID_SLOTS = 200
+    // ID notifikasi adzan sengaja di luar rentang ID ongoing. Jika berada di
+    // rentang yang sama, versi APK tertentu membuat ID keduanya identik dan
+    // notifikasi adzan ikut hilang saat service membersihkan ID lama.
+    const val ADHAN_FALLBACK_NOTIFICATION_ID = BASE_NOTIFICATION_ID + 500
+    const val CHANNEL_ID = "masjid_abu_dzar_ongoing"
+    const val ADHAN_CHANNEL_ID = "masjid_abu_dzar_adhan"
+
+    /**
+     * ID notifikasi berubah tiap versi. Ini mencegah SystemUI memakai ulang
+     * RemoteViews lama setelah update APK, yang bisa memicu RemoteServiceException
+     * "Bad notification" saat app dibuka. Fungsi ini murni agar rentang ID bisa
+     * diuji tanpa Context/Android framework.
+     */
+    fun notificationIdForVersion(version: Int): Int =
+        BASE_NOTIFICATION_ID + ((version and Int.MAX_VALUE) % NOTIFICATION_ID_SLOTS)
+
+    fun notificationId(context: Context): Int = try {
+        @Suppress("DEPRECATION")
+        val version = context.packageManager
+            .getPackageInfo(context.packageName, 0).versionCode
+        notificationIdForVersion(version)
+    } catch (_: Exception) {
+        BASE_NOTIFICATION_ID
+    }
+
+    fun cancelStaleNotifications(context: Context) {
+        val current = notificationId(context)
+        runCatching {
+            val manager = NotificationManagerCompat.from(context.applicationContext)
+            // Bersihkan seluruh slot yang mungkin dipakai versi lama. ID adzan
+            // berada di luar rentang ini sehingga tidak ikut dibatalkan.
+            (BASE_NOTIFICATION_ID until BASE_NOTIFICATION_ID + NOTIFICATION_ID_SLOTS)
+                .forEach { id ->
+                    if (id != current) manager.cancel(id)
+                }
+        }
+    }
 }
 
-data class PrayerEvent(
+data class Mosque(
+    val name: String = ReminderConfig.DEFAULT_LOCATION,
+    val logoUrl: String? = null,
+    val address: String? = null,
+    val mapUrl: String = "https://maps.app.goo.gl/aLWZpi1UhasHeHEP7",
+    val calculationMethod: String = "MWL",
+    val latitude: Double = ReminderConfig.DEFAULT_LATITUDE,
+    val longitude: Double = ReminderConfig.DEFAULT_LONGITUDE,
+)
+
+data class PrayerTimes(
+    val imsak: String = "",
+    val fajr: String = "",
+    val sunrise: String = "",
+    val dhuhr: String = "",
+    val asr: String = "",
+    val maghrib: String = "",
+    val isha: String = "",
+)
+
+data class PrayerDay(
+    val date: String = "",
+    val imsak: String = "",
+    val fajr: String = "",
+    val sunrise: String = "",
+    val dhuhr: String = "",
+    val asr: String = "",
+    val maghrib: String = "",
+    val isha: String = "",
+)
+
+data class NextPrayer(
+    val key: String = "",
+    val label: String = "",
+    val time: String = "",
+    val target: String = "",
+    val tomorrow: Boolean = false,
+)
+
+data class IqamahEvent(
+    val key: String = "",
+    val label: String = "",
+    val adhanTime: String = "",
+    val iqamahTime: String = "",
+    val adhanTarget: String = "",
+    val iqamahTarget: String = "",
+    val mode: String = "",
+    val delayMinutes: Int? = null,
+    val fixedIqamahTime: String? = null,
+)
+
+data class NextIqamah(
+    val label: String = "",
+    val adhanTime: String = "",
+    val iqamahTime: String = "",
+    val adhanTarget: String = "",
+    val iqamahTarget: String = "",
+    val isBetweenAdhanAndIqamah: Boolean = false,
+)
+
+data class ImamSchedule(
+    val id: String = "",
+    val date: String = "",
+    val prayerName: String = "",
+    val imamName: String = "",
+    val muadzinName: String = "",
+)
+
+data class Tarawih(
+    val id: String = "",
+    val imamName: String = "",
+    val imamName2: String? = null,
+    val notes: String? = null,
+)
+
+data class Jumat(
+    val fridayDate: String = "",
+    val khatibName: String? = null,
+    val sermonTopic: String? = null,
+    val imamSubuh: String? = null,
+)
+
+data class Khatib(
+    val id: String = "",
+    val fridayDate: String = "",
+    val khatibName: String = "",
+    val sermonTopic: String? = null,
+)
+
+data class Kajian(
+    val id: String = "",
+    val title: String = "",
+    val speakerName: String = "",
+    val bookOrTopic: String? = null,
+    val startDateTime: String = "",
+    val location: String = "",
+    val kajianType: String = "REGULAR",
+    val audience: String? = null,
+)
+
+data class Advice(
+    val id: String = "",
+    val content: String = "",
+    val sourceReference: String? = null,
+    val authorOrSource: String? = null,
+)
+
+data class RunningText(val id: String = "", val content: String = "")
+
+data class DisplaySettings(
+    val slideIntervalSeconds: Int = 12,
+    val autoRotateEnabled: Boolean = true,
+    val tickerSpeed: Int = 8,
+    val tickerEnabled: Boolean = true,
+    val showHijriDate: Boolean = true,
+)
+
+data class Khutbah(
+    val id: String = "",
+    val khatibName: String = "",
+    val sermonTopic: String? = null,
+    val endsAt: String = "",
+    val startedAt: String = "",
+)
+
+data class TvData(
+    val serverTime: String = "",
+    val mosque: Mosque = Mosque(),
+    val today: String = "",
+    val isFriday: Boolean = false,
+    val isRamadan: Boolean = false,
+    val tarawihToday: Tarawih? = null,
+    val prayerTimes: PrayerTimes = PrayerTimes(),
+    val prayerTimesWeek: List<PrayerDay> = emptyList(),
+    val nextPrayer: NextPrayer = NextPrayer(),
+    val iqamahEvents: List<IqamahEvent> = emptyList(),
+    val nextIqamah: NextIqamah? = null,
+    val imamToday: List<ImamSchedule> = emptyList(),
+    val imamWeek: List<ImamSchedule> = emptyList(),
+    val imamTomorrowSubuh: ImamSchedule? = null,
+    val jumat: Jumat = Jumat(),
+    val khatibUpcoming: List<Khatib> = emptyList(),
+    val kajian: List<Kajian> = emptyList(),
+    val advice: List<Advice> = emptyList(),
+    val runningTexts: List<RunningText> = emptyList(),
+    val display: DisplaySettings = DisplaySettings(),
+    val khutbah: Khutbah? = null,
+)
+
+object ApiParser {
+    private val gson = Gson()
+    private val zone: ZoneId = ZoneId.of("Asia/Jakarta")
+
+    fun parse(json: String): TvData = try {
+        gson.fromJson(json, TvData::class.java) ?: TvData()
+    } catch (_: Exception) {
+        TvData()
+    }
+
+    fun toJson(data: TvData): String = gson.toJson(data)
+
+    fun instant(iso: String?): Long? = try {
+        if (iso.isNullOrBlank()) null else Instant.parse(iso).toEpochMilli()
+    } catch (_: Exception) {
+        null
+    }
+
+    fun serverTime(data: TvData): Long = instant(data.serverTime) ?: System.currentTimeMillis()
+
+    fun zoned(epochMillis: Long): ZonedDateTime =
+        ZonedDateTime.ofInstant(Instant.ofEpochMilli(epochMillis), zone)
+
+    fun wallTime(epochMillis: Long): String =
+        zoned(epochMillis).format(DateTimeFormatter.ofPattern("HH:mm", Locale("id")))
+
+    fun gregorian(epochMillis: Long): String =
+        zoned(epochMillis).format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("id")))
+
+    fun shortDate(epochMillis: Long): String =
+        zoned(epochMillis).format(DateTimeFormatter.ofPattern("EEE, d MMM", Locale("id")))
+
+    fun ymd(epochMillis: Long): String =
+        zoned(epochMillis).format(DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale("id")))
+
+    fun atWallTime(ymd: String, hhmm: String): Long? = try {
+        val (h, m) = hhmm.split(":").map { it.toInt() }
+        zoned(Instant.parse("${ymd}T00:00:00Z").toEpochMilli())
+            .toLocalDate().atTime(h, m).atZone(zone).toInstant().toEpochMilli()
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private val HIJRI_MONTHS = arrayOf(
+    "Muharram", "Safar", "Rabiulawal", "Rabiulakhir",
+    "Jumadilawal", "Jumadilakhir", "Rajab", "Sya'ban",
+    "Ramadan", "Syawal", "Zulkaidah", "Zulhijjah",
+)
+
+object HijriUtil {
+    /** Umm al-Qura (Kemenag), zona Asia/Jakarta, dengan koreksi ±1 hari. */
+    fun format(epochMillis: Long, correction: Int = 0): String {
+        val cal = IslamicCalendar(IcuTimeZone.getTimeZone("Asia/Jakarta"), Locale("id", "ID"))
+        cal.setCalculationType(IslamicCalendar.CalculationType.ISLAMIC_UMALQURA)
+        cal.setTimeInMillis(epochMillis)
+        if (correction != 0) cal.add(Calendar.DATE, correction)
+        val day = cal.get(Calendar.DAY_OF_MONTH)
+        val month = cal.get(Calendar.MONTH).coerceIn(0, 11)
+        val year = cal.get(Calendar.YEAR)
+        return "$day ${HIJRI_MONTHS[month]} $year H"
+    }
+}
+
+data class PrayerMoment(
     val key: String,
     val label: String,
     val adhanTime: String,
     val iqamahTime: String,
     val adhanTarget: Long,
     val iqamahTarget: Long,
-    val imamName: String?,
-    val muadzinName: String?,
-    val date: String,
-) {
-    val id: String
-        get() = "$date|$key"
-
-    fun toBundle(): Bundle = Bundle().apply {
-        putString(ReminderConfig.EXTRA_EVENT_ID, id)
-        putString(ReminderConfig.EXTRA_EVENT_KEY, key)
-        putString(ReminderConfig.EXTRA_EVENT_LABEL, label)
-        putString(ReminderConfig.EXTRA_ADHAN_TIME, adhanTime)
-        putString(ReminderConfig.EXTRA_IQAMAH_TIME, iqamahTime)
-        putLong(ReminderConfig.EXTRA_ADHAN_TARGET, adhanTarget)
-        putLong(ReminderConfig.EXTRA_IQAMAH_TARGET, iqamahTarget)
-        putString(ReminderConfig.EXTRA_IMAM_NAME, imamName)
-        putString(ReminderConfig.EXTRA_MUADZIN_NAME, muadzinName)
-        putString(ReminderConfig.EXTRA_DATE, date)
-    }
-
-    companion object {
-        fun fromIntent(intent: Intent): PrayerEvent? {
-            val key = intent.getStringExtra(ReminderConfig.EXTRA_EVENT_KEY) ?: return null
-            val date = intent.getStringExtra(ReminderConfig.EXTRA_DATE) ?: return null
-            return PrayerEvent(
-                key = key,
-                label = intent.getStringExtra(ReminderConfig.EXTRA_EVENT_LABEL) ?: key,
-                adhanTime = intent.getStringExtra(ReminderConfig.EXTRA_ADHAN_TIME) ?: "",
-                iqamahTime = intent.getStringExtra(ReminderConfig.EXTRA_IQAMAH_TIME) ?: "",
-                adhanTarget = intent.getLongExtra(ReminderConfig.EXTRA_ADHAN_TARGET, 0L),
-                iqamahTarget = intent.getLongExtra(ReminderConfig.EXTRA_IQAMAH_TARGET, 0L),
-                imamName = intent.getStringExtra(ReminderConfig.EXTRA_IMAM_NAME),
-                muadzinName = intent.getStringExtra(ReminderConfig.EXTRA_MUADZIN_NAME),
-                date = date,
-            ).takeIf { it.adhanTarget > 0L }
-        }
-    }
-}
-
-data class ActivePrayer(
-    val event: PrayerEvent,
-    val isAdhanWindow: Boolean,
+    val imamName: String,
+    val muadzinName: String,
 )
 
-data class ReminderSnapshot(
-    /** Waktu lokal saat data diterima. */
-    val fetchedAt: Long,
-    /** Waktu server yang dikirim API (epoch UTC). */
-    val serverTime: Long,
-    val events: List<PrayerEvent>,
-    /** Lokasi masjid ringkas untuk baris 1 notifikasi. */
-    val location: String = ReminderConfig.DEFAULT_LOCATION,
-    /** Tanggal Hijriyah untuk baris 1 notifikasi. */
-    val hijriDate: String = "",
+enum class CountdownPhase { BEFORE_ADHAN, BEFORE_IQAMAH }
+
+data class CountdownState(
+    val phase: CountdownPhase,
+    val title: String,
+    val prayerLabel: String,
+    val displayTime: String,
+    val adhanTime: String = "",
+    val iqamahTime: String = "",
+    val targetMillis: Long,
+    val remainingSeconds: Long,
+    val isUrgent: Boolean,
+    val imamName: String,
+    val muadzinName: String,
+    val hijri: String,
+    val gregorian: String,
+    val location: String,
+    val shortLocation: String,
+    val isFriday: Boolean,
+    val offline: Boolean,
+    val mosqueName: String = "",
+    val logoUrl: String? = null,
 ) {
-    /** Selisih jam server terhadap jam perangkat. */
-    val clockOffset: Long
-        get() = serverTime - fetchedAt
-
-    /** Waktu "sekarang" yang sudah dikoreksi terhadap jam server. */
-    fun now(): Long = System.currentTimeMillis() + clockOffset
-
-    fun active(now: Long = now()): ActivePrayer? {
-        for (event in events) {
-            if (now >= event.adhanTarget && now < event.iqamahTarget) {
-                return ActivePrayer(event, true)
-            }
+    val countdown: String
+        get() {
+            val s = remainingSeconds.coerceAtLeast(0)
+            val h = s / 3600
+            val m = (s % 3600) / 60
+            val sec = s % 60
+            return "-%02d:%02d:%02d".format(Locale.US, h, m, sec)
         }
-        for (event in events) {
-            if (event.adhanTarget > now) {
-                return ActivePrayer(event, false)
-            }
-        }
-        return null
-    }
 
-    companion object {
-        fun merge(vararg snapshots: ReminderSnapshot?): ReminderSnapshot {
-            val byId = LinkedHashMap<String, PrayerEvent>()
-            val valid = snapshots.filterNotNull()
-            val newest = valid.maxByOrNull { it.fetchedAt }
-            for (snapshot in valid) {
-                snapshot.events.forEach { byId[it.id] = it }
-            }
-            return ReminderSnapshot(
-                fetchedAt = newest?.fetchedAt ?: System.currentTimeMillis(),
-                serverTime = newest?.serverTime ?: System.currentTimeMillis(),
-                events = byId.values.sortedBy { it.adhanTarget },
-                location = newest?.location?.takeIf { it.isNotBlank() }
-                    ?: ReminderConfig.DEFAULT_LOCATION,
-                hijriDate = newest?.hijriDate.orEmpty(),
-            )
-        }
-    }
+    val infoLine: String
+        get() = "$prayerLabel : $displayTime | $countdown"
 }
 
-object PrayerReminderRepository {
-    private const val TIMEOUT_CONNECT_MS = 10_000
-    private const val TIMEOUT_READ_MS = 15_000
+object PrayerEngine {
+    private val LABEL_BY_KEY = mapOf(
+        "fajr" to "Subuh", "dhuhr" to "Dzuhur", "asr" to "Ashar",
+        "maghrib" to "Maghrib", "isha" to "Isya",
+    )
+
+    private fun normalize(value: String): String = value.trim().lowercase(Locale.ROOT)
+
+    private fun maskFor(key: String): String = LABEL_BY_KEY[key] ?: key
+
+    fun clockOffset(data: TvData, fetchedAt: Long): Long = ApiParser.serverTime(data) - fetchedAt
+
+    fun moments(data: TvData): List<PrayerMoment> {
+        val result = mutableListOf<PrayerMoment>()
+        for (event in data.iqamahEvents) {
+            val a = ApiParser.instant(event.adhanTarget) ?: continue
+            val i = ApiParser.instant(event.iqamahTarget) ?: continue
+            if (a <= 0L || i <= a) continue
+            val label = event.label.ifBlank { maskFor(event.key) }
+            val duty = data.imamToday.firstOrNull {
+                normalize(it.prayerName) == normalize(label) ||
+                    normalize(it.prayerName) == normalize(maskFor(event.key))
+            }
+            result += PrayerMoment(
+                key = event.key,
+                label = label,
+                adhanTime = event.adhanTime,
+                iqamahTime = event.iqamahTime,
+                adhanTarget = a,
+                iqamahTarget = i,
+                imamName = duty?.imamName?.takeIf { it.isNotBlank() } ?: "-",
+                muadzinName = duty?.muadzinName?.takeIf { it.isNotBlank() } ?: "-",
+            )
+        }
+        if (result.isEmpty()) {
+            val a = ApiParser.instant(data.nextPrayer.target)
+            val iq = data.nextIqamah
+            val i = iq?.let { ApiParser.instant(it.iqamahTarget) }
+            if (a != null && i != null && i > a) {
+                val label = data.nextPrayer.label.ifBlank { maskFor(data.nextPrayer.key) }
+                val duty = data.imamToday.firstOrNull { normalize(it.prayerName) == normalize(label) }
+                result += PrayerMoment(
+                    key = data.nextPrayer.key,
+                    label = label,
+                    adhanTime = data.nextPrayer.time,
+                    iqamahTime = iq.iqamahTime,
+                    adhanTarget = a,
+                    iqamahTarget = i,
+                    imamName = duty?.imamName ?: "-",
+                    muadzinName = duty?.muadzinName ?: "-",
+                )
+            }
+        }
+        return result.distinctBy { it.adhanTarget }.sortedBy { it.adhanTarget }
+    }
 
     /**
-     * Ambil jadwal hari ini dan besok (WIB) agar notifikasi ongoing tetap punya
-     * data petugas setelah shalat terakhir hari ini.
+     * Alarm memakai jadwal 7 hari dari API supaya tidak perlu membuka aplikasi
+     * dulu setiap berganti hari. Aturan iqamah diambil dari event hari ini.
      */
-    fun fetch(context: Context, clockOffsetMs: Long = 0L): ReminderSnapshot {
-        val now = System.currentTimeMillis() + clockOffsetMs
-        val today = wibDate(now)
-        val tomorrow = wibDate(now + 24L * 60L * 60L * 1000L)
-        return ReminderSnapshot.merge(
-            fetchForDate(context, today),
-            fetchForDate(context, tomorrow),
-        )
-    }
+    fun weeklyMoments(data: TvData): List<PrayerMoment> {
+        if (data.prayerTimesWeek.isEmpty()) return moments(data)
 
-    private fun fetchForDate(context: Context, date: String?): ReminderSnapshot? {
-        var connection: HttpURLConnection? = null
-        return try {
-            val endpoint = if (date.isNullOrBlank()) {
-                ReminderConfig.TV_DATA_URL
+        data class IqamahRule(val fixedTime: String?, val delayMinutes: Int)
+        val rules = data.iqamahEvents.associate { event ->
+            val a = ApiParser.instant(event.adhanTarget)
+            val i = ApiParser.instant(event.iqamahTarget)
+            val derivedDelay = if (a != null && i != null && i > a) {
+                ((i - a) / 60_000L).toInt()
             } else {
-                "${ReminderConfig.TV_DATA_URL}?date=$date"
+                20
             }
-            connection = URL(endpoint).openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = TIMEOUT_CONNECT_MS
-            connection.readTimeout = TIMEOUT_READ_MS
-            connection.setRequestProperty("Accept", "application/json")
-
-            val code = connection.responseCode
-            if (code !in 200..299) return null
-
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            val root = JSONObject(body)
-            val resolvedDate = date?.takeIf { it.isNotBlank() }
-                ?: root.optString("today").ifBlank { wibDate(System.currentTimeMillis()) }
-            parseSnapshot(context, root, resolvedDate)
-        } catch (_: Exception) {
-            null
-        } finally {
-            connection?.disconnect()
-        }
-    }
-
-    private fun parseSnapshot(
-        context: Context,
-        root: JSONObject,
-        date: String,
-    ): ReminderSnapshot {
-        val imamByKey = HashMap<String, Pair<String?, String?>>()
-        val imamArray = root.optJSONArray("imamToday") ?: JSONArray()
-        for (i in 0 until imamArray.length()) {
-            val item = imamArray.optJSONObject(i) ?: continue
-            val key = canonicalPrayerKey(item.optString("prayerName")) ?: continue
-            val imam = cleanName(item.optNullableString("imamName"))
-            val muadzin = cleanName(item.optNullableString("muadzinName"))
-            if (imam != null || muadzin != null) {
-                imamByKey[key] = imam to muadzin
+            val fixed = event.fixedIqamahTime
+                ?.takeIf { it.isNotBlank() && event.mode == "FIXED_TIME" }
+            val delay = if (event.mode == "DELAY_MINUTES") {
+                event.delayMinutes ?: derivedDelay
+            } else {
+                derivedDelay
             }
+            event.key to IqamahRule(fixed, delay.takeIf { it > 0 } ?: 20)
         }
 
-        val events = ArrayList<PrayerEvent>()
-        val eventArray = root.optJSONArray("iqamahEvents") ?: JSONArray()
-        for (i in 0 until eventArray.length()) {
-            val item = eventArray.optJSONObject(i) ?: continue
-            val rawKey = item.optString("key").trim()
-            val label = item.optString("label").ifBlank { rawKey }
-            val key = canonicalPrayerKey(rawKey) ?: canonicalPrayerKey(label) ?: continue
+        val week = mutableListOf<PrayerMoment>()
+        for (day in data.prayerTimesWeek) {
+            if (day.date.isBlank()) continue
+            val times = listOf(
+                "fajr" to day.fajr,
+                "dhuhr" to day.dhuhr,
+                "asr" to day.asr,
+                "maghrib" to day.maghrib,
+                "isha" to day.isha,
+            )
+            for ((key, adhanTime) in times) {
+                if (adhanTime.isBlank()) continue
+                val adhanTarget = ApiParser.atWallTime(day.date, adhanTime) ?: continue
+                val rule = rules[key] ?: IqamahRule(null, 20)
+                // Waktu tetap bisa lebih awal dari adzan pada hari lain karena
+                // adzan bergeser. Pada hari seperti itu pakai jeda menit agar
+                // jadwal tidak hilang—bukan membuang shalat tersebut.
+                val fixedTarget = rule.fixedTime?.let { ApiParser.atWallTime(day.date, it) }
+                val iqamahTarget = if (fixedTarget != null && fixedTarget > adhanTarget) {
+                    fixedTarget
+                } else {
+                    adhanTarget + rule.delayMinutes * 60_000L
+                }
+                if (iqamahTarget <= adhanTarget) continue
 
-            val adhan = parseIsoTimestamp(item.optString("adhanTarget")) ?: continue
-            val iqamah = parseIsoTimestamp(item.optString("iqamahTarget"))
-                ?: (adhan + 10L * 60L * 1000L)
-
-            val petugas = imamByKey[key]
-            val fallback = ReminderSettings.getLastGoodPetugas(context, key)
-            val imam = petugas?.first?.let(::cleanName) ?: fallback?.first?.let(::cleanName)
-            val muadzin = petugas?.second?.let(::cleanName)
-                ?: fallback?.second?.let(::cleanName)
-            if (imam != null || muadzin != null) {
-                ReminderSettings.saveLastGoodPetugas(context, key, imam, muadzin)
-            }
-
-            events.add(
-                PrayerEvent(
-                    // Simpan key kanonik agar resolveReciter("fajr-makkah") bekerja
-                    // walaupun API mengirim "Subuh"/"Fajr" dengan huruf lain.
+                val label = maskFor(key)
+                val duty = data.imamWeek.firstOrNull { s ->
+                    s.date == day.date &&
+                        (normalize(s.prayerName) == normalize(label) ||
+                            normalize(s.prayerName) == normalize(key))
+                }
+                week += PrayerMoment(
                     key = key,
                     label = label,
-                    adhanTime = item.optString("adhanTime"),
-                    iqamahTime = item.optString("iqamahTime"),
-                    adhanTarget = adhan,
-                    iqamahTarget = iqamah,
-                    imamName = imam,
-                    muadzinName = muadzin,
-                    date = date,
+                    adhanTime = adhanTime,
+                    iqamahTime = ApiParser.wallTime(iqamahTarget),
+                    adhanTarget = adhanTarget,
+                    iqamahTarget = iqamahTarget,
+                    imamName = duty?.imamName?.takeIf { it.isNotBlank() } ?: "-",
+                    muadzinName = duty?.muadzinName?.takeIf { it.isNotBlank() } ?: "-",
                 )
-            )
+            }
         }
-
-        val receivedAt = System.currentTimeMillis()
-        val serverMs = parseIsoTimestamp(root.optString("serverTime")) ?: receivedAt
-        val rawAddress = root.optJSONObject("mosque")?.optNullableString("address")
-        return ReminderSnapshot(
-            fetchedAt = receivedAt,
-            serverTime = serverMs,
-            events = events.sortedBy { it.adhanTarget },
-            location = shortLocation(rawAddress),
-            hijriDate = formatHijriDate(serverMs),
-        )
+        return (week + moments(data))
+            .distinctBy { "${it.key}|${it.adhanTime}|${ApiParser.ymd(it.adhanTarget)}" }
+            .sortedBy { it.adhanTarget }
     }
 
-    /** Lokasi ringkas: maksimal dua segmen alamat, mengikuti tampilan web. */
-    private fun shortLocation(address: String?): String {
-        val source = address?.takeIf { it.isNotBlank() } ?: ReminderConfig.DEFAULT_LOCATION
-        return source
-            .split(",")
-            .take(2)
-            .joinToString(", ") { it.trim() }
+    fun state(
+        snapshots: List<TvData>,
+        now: Long,
+        correction: Int,
+        offline: Boolean,
+    ): CountdownState? {
+        val primary = snapshots.firstOrNull() ?: return null
+        val all = snapshots.flatMap { moments(it) }.distinctBy { it.adhanTarget }.sortedBy { it.adhanTarget }
+        val current = all.firstOrNull { now < it.iqamahTarget } ?: return null
+
+        val beforeAdhan = now < current.adhanTarget
+        val phase = if (beforeAdhan) CountdownPhase.BEFORE_ADHAN else CountdownPhase.BEFORE_IQAMAH
+        val target = if (beforeAdhan) current.adhanTarget else current.iqamahTarget
+        val displayTime = if (beforeAdhan) current.adhanTime else current.iqamahTime
+        val title = if (beforeAdhan) {
+            "Adzan ${current.label}"
+        } else {
+            "Iqamah ${current.label}"
+        }
+        val urgentLimit = if (beforeAdhan) 30 * 60L else 5 * 60L
+
+        val remaining = ((target - now) / 1000L).coerceAtLeast(0L)
+        val locationFull = listOfNotNull(primary.mosque.name, primary.mosque.address)
+            .joinToString(", ")
             .ifBlank { ReminderConfig.DEFAULT_LOCATION }
-    }
-
-    /**
-     * Format Hijriyah Umm al-Qura dengan locale Indonesia, tanpa suffix "H".
-     *
-     * Penting: `IslamicCalendar()` tanpa argumen memakai varian *Islamic Civil*
-     * yang bisa selisih 1–3 hari dari Kalender Hijriah Kemenag (Umm al-Qura).
-     * Web memakai `id-ID-u-ca-islamic-umalqura`, jadi Android harus memakai
-     * kalender yang sama supaya tanggal di notifikasi identik dengan web.
-     */
-    fun formatHijriDate(millis: Long): String {
-        return try {
-            val zone = android.icu.util.TimeZone.getTimeZone("Asia/Jakarta")
-            val locale = Locale("id", "ID")
-            val calendar = android.icu.util.IslamicCalendar(zone, locale).apply {
-                setCalculationType(
-                    android.icu.util.IslamicCalendar.CalculationType.ISLAMIC_UMALQURA,
-                )
-                setTime(Date(millis))
-            }
-            val formatter = android.icu.text.DateFormat.getInstanceForSkeleton(
-                "d MMMM y",
-                locale,
-            )
-            formatter.calendar = calendar
-            formatter.format(Date(millis))
-                .replace(Regex("\\s+H$", RegexOption.IGNORE_CASE), "")
-                .trim()
-        } catch (_: Exception) {
-            ""
+        val locationShort = if (primary.mosque.name.contains("Abu Dzar", ignoreCase = true)) {
+            "Masjid Abu Dzar"
+        } else {
+            primary.mosque.name
         }
-    }
 
-    /** Samakan "Subuh", "Fajr", "Dzuhur", dll. dengan key iqamahEvents. */
-    private fun canonicalPrayerKey(value: String): String? {
-        val text = value.trim().lowercase(Locale.ROOT)
-        return when {
-            text.contains("subuh") || text.contains("fajr") -> "fajr"
-            text.contains("zuhur") || text.contains("dzuhur") || text.contains("dhuhr") -> "dhuhr"
-            text.contains("asar") || text.contains("ashar") || text.contains("asr") -> "asr"
-            text.contains("magrib") || text.contains("maghrib") -> "maghrib"
-            text.contains("isya") || text.contains("isha") -> "isha"
-            else -> null
-        }
-    }
-
-    private fun cleanName(value: String?): String? {
-        val text = value?.trim().orEmpty()
-        if (text.isEmpty()) return null
-        return when (text.lowercase(Locale.ROOT)) {
-            "-", "--", "n/a", "null", "belum ditentukan", "tidak ditentukan" -> null
-            else -> text
-        }
-    }
-
-    private fun JSONObject.optNullableString(name: String): String? =
-        optString(name).trim().takeIf { it.isNotEmpty() }
-
-    private fun parseIsoTimestamp(value: String?): Long? {
-        if (value.isNullOrBlank()) return null
-        val patterns = arrayOf(
-            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        return CountdownState(
+            phase = phase,
+            title = title,
+            prayerLabel = if (phase == CountdownPhase.BEFORE_ADHAN) current.label else "Iqamah ${current.label}",
+            displayTime = displayTime,
+            adhanTime = current.adhanTime,
+            iqamahTime = current.iqamahTime,
+            targetMillis = target,
+            remainingSeconds = remaining,
+            isUrgent = remaining <= urgentLimit,
+            imamName = current.imamName,
+            muadzinName = current.muadzinName,
+            hijri = HijriUtil.format(now, correction),
+            gregorian = ApiParser.gregorian(now),
+            location = locationFull,
+            shortLocation = locationShort,
+            isFriday = primary.isFriday,
+            offline = offline,
+            mosqueName = primary.mosque.name,
+            logoUrl = primary.mosque.logoUrl,
         )
-        for (pattern in patterns) {
-            try {
-                val format = SimpleDateFormat(pattern, Locale.US)
-                format.timeZone = TimeZone.getTimeZone("UTC")
-                return format.parse(value)?.time
-            } catch (_: ParseException) {
-                // Coba format berikutnya.
-            }
-        }
-        return null
-    }
-
-    private fun wibDate(millis: Long): String {
-        val format = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        format.timeZone = TimeZone.getTimeZone("Asia/Jakarta")
-        return format.format(Date(millis))
     }
 }

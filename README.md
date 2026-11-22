@@ -227,7 +227,8 @@ dipilih admin tetap dipakai untuk menentukan tanggal target.
 Uji tanpa mengirim email:
 
 ```bash
-curl "http://localhost:3000/api/cron/h-1-reminders?dryRun=1&secret=$CRON_SECRET"
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  "http://localhost:3000/api/cron/h-1-reminders?dryRun=1"
 ```
 
 ## Catatan Teknis

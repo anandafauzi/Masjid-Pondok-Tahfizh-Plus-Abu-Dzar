@@ -21,6 +21,18 @@ export async function writeAudit(input: AuditInput) {
       },
     });
   } catch (error) {
+    // Structured metric so failed audit writes are visible/alertable without
+    // failing the main operation (writeAudit stays best-effort).
+    console.error(
+      "[AUDIT][METRIC] audit_write_failed",
+      JSON.stringify({
+        action: input.action,
+        entityType: input.entityType,
+        entityId: input.entityId ?? null,
+        adminId: input.adminId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    );
     console.error("Failed to write audit log", error);
   }
 }

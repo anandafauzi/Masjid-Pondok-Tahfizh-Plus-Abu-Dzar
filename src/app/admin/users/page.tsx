@@ -288,6 +288,11 @@ export default function AdminUsersPage() {
                                 ? "Nonaktifkan"
                                 : "Aktifkan"
                           }
+                          aria-label={
+                            isLastActiveSuperAdmin(u)
+                              ? `Super Admin aktif terakhir tidak boleh dinonaktifkan: ${u.name}`
+                              : `${u.isActive ? "Nonaktifkan" : "Aktifkan"} ${u.name}`
+                          }
                         >
                           <Power className="h-4 w-4" />
                         </button>
@@ -309,6 +314,13 @@ export default function AdminUsersPage() {
                                 ? "Jadikan Admin"
                                 : "Jadikan Super Admin"
                           }
+                          aria-label={
+                            isLastActiveSuperAdmin(u)
+                              ? `Super Admin aktif terakhir tidak boleh diturunkan: ${u.name}`
+                              : u.role === "SUPER_ADMIN"
+                                ? `Jadikan ${u.name} Admin`
+                                : `Jadikan ${u.name} Super Admin`
+                          }
                         >
                           <ShieldCheck className="h-4 w-4" />
                         </button>
@@ -316,6 +328,7 @@ export default function AdminUsersPage() {
                           className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-sky-100 hover:text-sky-700"
                           onClick={() => resetPassword(u)}
                           title="Reset Password"
+                          aria-label={`Reset password ${u.name} (${u.email})`}
                         >
                           <KeyRound className="h-4 w-4" />
                         </button>
@@ -327,6 +340,11 @@ export default function AdminUsersPage() {
                             isLastActiveSuperAdmin(u)
                               ? "Super Admin aktif terakhir tidak boleh dihapus"
                               : "Hapus"
+                          }
+                          aria-label={
+                            isLastActiveSuperAdmin(u)
+                              ? `Super Admin aktif terakhir tidak boleh dihapus: ${u.name}`
+                              : `Hapus ${u.name}`
                           }
                         >
                           <Trash2 className="h-4 w-4" />

@@ -60,7 +60,7 @@ export function resolveRolling(
 ): RollingResult | null {
   const target = asUTCDate(date);
 
-  let active = settings
+  const active = settings
     .filter((s) => {
       if (!s.isActive) return false;
       const from = asUTCDate(s.effectiveFrom);
@@ -73,13 +73,9 @@ export function resolveRolling(
     })
     .sort(compareRollingSettings);
 
-  // Fallback to all active settings if strict effectiveFrom filtered them out
-  if (active.length === 0) {
-    active = settings
-      .filter((s) => s.isActive)
-      .sort(compareRollingSettings);
-  }
-
+  // Jangan jatuh ke "semua entri aktif" saat tidak ada konfigurasi yang
+  // benar-benar berlaku pada tanggal ini. Fallback lama membuat imam/khatib
+  // yang belum mulai atau sudah selesai tetap tampil di jadwal publik.
   if (active.length === 0) return null;
 
   const anchor = active.reduce((min, s) => {

@@ -9,6 +9,20 @@ export interface IqamahSettingLike {
   fixedIqamahTime: string | null;
 }
 
+/** Ubah HH:mm menjadi menit sejak 00:00, atau null bila formatnya invalid. */
+export function timeToMinutes(value: string): number | null {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value.trim());
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+/** Iqamah wajib setelah adzan agar countdown tidak negatif/terbalik. */
+export function isIqamahAfterAdhan(adhanTime: string, iqamahTime: string): boolean {
+  const adhan = timeToMinutes(adhanTime);
+  const iqamah = timeToMinutes(iqamahTime);
+  return adhan !== null && iqamah !== null && iqamah > adhan;
+}
+
 export interface IqamahEvent {
   key: Exclude<PrayerKey, "imsak" | "sunrise">;
   label: string;
@@ -37,12 +51,19 @@ export function computeIqamahEvents(
     let iqamahTarget: Date;
     let mode: "DELAY_MINUTES" | "FIXED_TIME" = "DELAY_MINUTES";
     const delayMinutes = setting?.delayMinutes ?? 10;
-    const fixedIqamahTime = setting?.fixedIqamahTime ?? null;
+    let fixedIqamahTime = setting?.fixedIqamahTime ?? null;
 
-    if (setting?.mode === "FIXED_TIME" && setting.fixedIqamahTime) {
+    if (
+      setting?.mode === "FIXED_TIME" &&
+      setting.fixedIqamahTime &&
+      isIqamahAfterAdhan(adhanTime, setting.fixedIqamahTime)
+    ) {
       mode = "FIXED_TIME";
       iqamahTarget = combineDateTime(dateOnly, setting.fixedIqamahTime);
     } else {
+      // Data lama yang iqamahnya sebelum adzan dinormalisasi saat dibaca,
+      // agar TV/web/Android tidak menampilkan waktu yang mustahil.
+      fixedIqamahTime = null;
       iqamahTarget = addMinutes(adhanTarget, delayMinutes);
     }
 

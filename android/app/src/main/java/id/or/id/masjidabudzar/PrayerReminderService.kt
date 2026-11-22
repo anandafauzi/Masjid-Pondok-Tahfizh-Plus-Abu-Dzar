@@ -1,632 +1,186 @@
 package id.or.id.masjidabudzar
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
+import android.Manifest
+import android.app.Notification
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.net.Uri
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
-import android.media.MediaMetadata
-import android.media.MediaPlayer
-import android.media.session.MediaSession
-import android.media.session.PlaybackState
 import android.os.Build
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.IBinder
-import android.os.Looper
-import android.widget.RemoteViews
-import androidx.core.app.NotificationCompat
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.TimeZone
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.max
+import android.util.Log
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 class PrayerReminderService : Service() {
-
-    private lateinit var notificationManager: NotificationManager
-    private lateinit var mediaSession: MediaSession
-    private lateinit var tickHandler: Handler
-
-    private var handlerThread: HandlerThread? = null
-    private val executor = Executors.newSingleThreadExecutor()
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private val refreshing = AtomicBoolean(false)
-    private val destroyed = AtomicBoolean(false)
-    private val audioGeneration = AtomicInteger(0)
-
-    @Volatile
-    private var snapshot: ReminderSnapshot? = null
-
-    @Volatile
-    private var currentAdhan: PrayerEvent? = null
-
-    private var foregroundStarted = false
-
-    @Volatile
-    private var adhanSkippedReason: String? = null
-
-    private var mediaPlayer: MediaPlayer? = null
-    private var audioFocusRequest: AudioFocusRequest? = null
-    private var audioFocusGranted = false
-    private var adhanBaseVolume = 0.8f
-    private var pausedByTransientLoss = false
-
-    private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
-        when (focusChange) {
-            AudioManager.AUDIOFOCUS_GAIN -> {
-                val player = mediaPlayer ?: return@OnAudioFocusChangeListener
-                try {
-                    player.setVolume(adhanBaseVolume, adhanBaseVolume)
-                    if (pausedByTransientLoss) {
-                        pausedByTransientLoss = false
-                        if (!player.isPlaying) player.start()
-                        setPlaybackState(PlaybackState.STATE_PLAYING)
-                    }
-                } catch (_: IllegalStateException) {
-                    // Pemutar sudah dilepas.
-                }
-            }
-
-            AudioManager.AUDIOFOCUS_LOSS -> releaseAudio()
-
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                val player = mediaPlayer ?: return@OnAudioFocusChangeListener
-                try {
-                    if (player.isPlaying) {
-                        player.pause()
-                        pausedByTransientLoss = true
-                        setPlaybackState(PlaybackState.STATE_PAUSED)
-                    }
-                } catch (_: IllegalStateException) {
-                    // Pemutar sudah dilepas.
-                }
-            }
-
-            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
-                try {
-                    val ducked = adhanBaseVolume * 0.25f
-                    mediaPlayer?.setVolume(ducked, ducked)
-                } catch (_: IllegalStateException) {
-                    // Pemutar sudah dilepas.
-                }
-            }
-        }
-    }
-
-    private val ticker = object : Runnable {
-        override fun run() {
-            updateNotifications()
-            scheduleTicker()
-        }
-    }
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.Main.immediate + job)
+    private lateinit var repository: PrayerRepository
 
     override fun onCreate() {
         super.onCreate()
-        notificationManager = getSystemService(NotificationManager::class.java)
-        createChannels()
-        destroyed.set(false)
-        notificationManager.cancel(ADHAN_NOTIFICATION_ID)
-        notificationManager.cancel(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID)
+        if (!notificationsGranted(this)) {
+            stopSelf()
+            return
+        }
+        OngoingNotification.createChannels(this)
+        repository = PrayerRepository(this)
 
-        handlerThread = HandlerThread("prayer-reminder-ticker").also { thread ->
-            thread.start()
-            tickHandler = Handler(thread.looper)
+        // Penjelasan singkat: startForegroundService bisa dipanggil oleh watchdog,
+        // WorkManager, atau alarm sebelum preferensi pengguna diperiksa. Hentikan
+        // service lebih awal bila notifikasi aplikasi sedang dimatikan agar
+        // notifikasi "Menyiapkan data…" tidak berkedip.
+        if (!remindersEnabled()) {
+            stopSelf()
+            return
         }
 
-        mediaSession = MediaSession(this, "MasjidAbuDzarAdzan").apply {
-            isActive = true
-            setMetadata(
-                MediaMetadata.Builder()
-                    .putString(MediaMetadata.METADATA_KEY_TITLE, "Adzan Masjid Abu Dzar")
-                    .build()
-            )
+        // Tanpa foreground notification yang valid, service bisa dibunuh
+        // sistem kapan saja. Jangan lanjutkan kerja diam-diam.
+        if (!startAsForeground(OngoingNotification.build(this, null))) {
+            stopSelf()
+            return
         }
 
-        updateNotifications()
-        scheduleTicker()
-        refreshData()
+        scope.launch {
+            repository.bundle.collectLatest { bundle ->
+                if (!bundle.notificationsEnabled) {
+                    stopAsForeground()
+                    stopSelf()
+                    return@collectLatest
+                }
+
+                while (isActive) {
+                    val state = withContext(Dispatchers.Default) {
+                        PrayerEngine.state(
+                            snapshots = bundle.snapshots,
+                            now = bundle.now(),
+                            correction = bundle.hijriCorrection,
+                            offline = bundle.offline,
+                        )
+                    }
+                    runCatching {
+                        OngoingNotification.show(this@PrayerReminderService, state)
+                    }
+                    delay(1_000L)
+                }
+            }
+        }
+
+        scope.launch {
+            while (isActive) {
+                if (repository.settings.prefsAfterMigration().notificationsEnabled) {
+                    repository.refresh()
+                }
+                delay(15L * 60 * 1000)
+            }
+        }
+
+        scope.launch {
+            PrayerReminderScheduler.scheduleNext(this@PrayerReminderService, repository)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ReminderConfig.ACTION_PLAY_ADHAN -> {
-                val event = PrayerEvent.fromIntent(intent)
-                if (event != null) playAdhan(event) else refreshData()
-            }
-
-            else -> refreshData()
-        }
+        OngoingNotification.createChannels(this)
         return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onDestroy() {
-        destroyed.set(true)
-        foregroundStarted = false
-        mainHandler.removeCallbacksAndMessages(null)
-        releaseAudio()
-        if (::tickHandler.isInitialized) tickHandler.removeCallbacksAndMessages(null)
-        handlerThread?.quitSafely()
-        executor.shutdownNow()
-        if (::mediaSession.isInitialized) {
-            mediaSession.isActive = false
-            mediaSession.release()
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Saat aplikasi diusap dari recents, Android bisa menghentikan service.
+        // Nyalakan lagi segera dan susun ulang alarm.
+        if (notificationsGranted(this) && remindersEnabled()) {
+            start(this)
+            scope.launch { PrayerReminderScheduler.scheduleNext(this@PrayerReminderService, repository) }
         }
+    }
+
+    override fun onDestroy() {
+        job.cancel()
         super.onDestroy()
     }
 
-    private fun refreshData() {
-        if (!refreshing.compareAndSet(false, true)) return
-
-        executor.execute {
-            val fresh = PrayerReminderRepository.fetch(
-                applicationContext,
-                ReminderSettings.getClockOffset(applicationContext),
+    private fun startAsForeground(notification: Notification): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ServiceCompat.startForeground(
+                this,
+                ReminderConfig.notificationId(this),
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
             )
-            mainHandler.post {
-                refreshing.set(false)
-                if (destroyed.get()) return@post
-
-                if (fresh.events.isNotEmpty()) {
-                    // Jangan timpa offset yang sudah baik dengan offset ~0 saat fetch gagal.
-                    ReminderSettings.setClockOffset(applicationContext, fresh.clockOffset)
-                    snapshot = fresh
-                    PrayerReminderScheduler.scheduleFrom(applicationContext, fresh)
-                } else {
-                    PrayerReminderScheduler.ensureRefreshAlarm(applicationContext)
-                }
-                updateNotifications()
-                scheduleTicker()
-            }
+        } else {
+            startForeground(ReminderConfig.notificationId(this), notification)
         }
+        true
+    }.getOrElse { error ->
+        Log.e(TAG, "Gagal menjalankan service sebagai foreground", error)
+        false
     }
 
-    private fun playAdhan(event: PrayerEvent) {
-        currentAdhan = event
-        adhanSkippedReason = null
-        // Service berhasil dipulai, jadi notifikasi fallback dari receiver tidak diperlukan.
-        notificationManager.cancel(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID)
-        snapshot = snapshot?.let { current ->
-            ReminderSnapshot.merge(
-                current,
-                ReminderSnapshot(current.fetchedAt, current.serverTime, listOf(event)),
-            )
-        } ?: ReminderSnapshot(
-            System.currentTimeMillis(),
-            System.currentTimeMillis(),
-            listOf(event),
-        )
-
-        updateNotifications()
-        scheduleTicker()
-
-        val settings = ReminderSettings.getAdzanSettings(this)
-        if (!settings.soundEnabled) {
-            adhanSkippedReason = "Suara adzan dimatikan di pengaturan."
-            updateNotifications()
-            return
-        }
-        if (isSilentOrDnd()) {
-            adhanSkippedReason = "HP dalam mode silent/DND — audio dilewati."
-            updateNotifications()
-            return
-        }
-
-        playAdhanAudio(event, settings)
-    }
-
-    private fun isSilentOrDnd(): Boolean {
-        val audioManager = getSystemService(AudioManager::class.java)
-        if (audioManager.ringerMode != AudioManager.RINGER_MODE_NORMAL) return true
-        return notificationManager.currentInterruptionFilter !=
-            NotificationManager.INTERRUPTION_FILTER_ALL
-    }
-
-    private fun playAdhanAudio(
-        event: PrayerEvent,
-        settings: ReminderSettings.AdzanSettings,
-    ) {
-        releaseAudio()
-
-        val generation = audioGeneration.incrementAndGet()
-        try {
-            // MediaPlayer(Context) hanya ada di API 34; pakai konstruktor default agar aman di minSdk 24.
-            val player = MediaPlayer()
-            mediaPlayer = player
-            player.setAudioAttributes(adhanAudioAttributes())
-            val audioUrl = ReminderConfig.AUDIO_BASE_URL +
-                resolveReciter(event.key, settings.selectedMuadzinId) + ".mp3"
-            player.setDataSource(this, Uri.parse(audioUrl))
-            player.isLooping = false
-            val volume = settings.volume.coerceIn(0f, 1f)
-            adhanBaseVolume = volume
-            pausedByTransientLoss = false
-            player.setVolume(volume, volume)
-            player.setOnPreparedListener { prepared ->
-                if (
-                    destroyed.get() ||
-                    generation != audioGeneration.get() ||
-                    mediaPlayer !== prepared
-                ) {
-                    return@setOnPreparedListener
-                }
-                // Cek ulang: DND bisa aktif saat audio masih di-buffer.
-                if (isSilentOrDnd()) {
-                    adhanSkippedReason = "HP dalam mode silent/DND — audio dilewati."
-                    releaseAudio()
-                    updateNotifications()
-                    return@setOnPreparedListener
-                }
-                if (requestAudioFocus()) {
-                    prepared.start()
-                    setPlaybackState(PlaybackState.STATE_PLAYING)
-                } else {
-                    adhanSkippedReason = "Audio tidak tersedia saat ini."
-                    releaseAudio()
-                    updateNotifications()
-                }
-            }
-            player.setOnCompletionListener { completed ->
-                if (
-                    destroyed.get() ||
-                    generation != audioGeneration.get() ||
-                    mediaPlayer !== completed
-                ) {
-                    return@setOnCompletionListener
-                }
-                finishAdhanAudio()
-            }
-            player.setOnErrorListener { errored, _, _ ->
-                if (
-                    destroyed.get() ||
-                    generation != audioGeneration.get() ||
-                    mediaPlayer !== errored
-                ) {
-                    return@setOnErrorListener true
-                }
-                adhanSkippedReason = "Gagal memutar audio adzan."
-                finishAdhanAudio()
-                true
-            }
-            player.prepareAsync()
-        } catch (_: Exception) {
-            adhanSkippedReason = "Gagal memutar audio adzan."
-            releaseAudio()
-            updateNotifications()
-        }
-    }
-
-    private fun resolveReciter(prayerKey: String, selectedId: String): String {
-        val supported = setOf(
-            "makkah",
-            "madinah",
-            "alaqsa",
-            "turkey",
-            "egypt",
-            "indonesia",
-            "fajr-makkah",
-        )
-        val id = selectedId.trim().ifBlank { "makkah" }
-        if (id !in supported) return "makkah"
-        if (id == "fajr-makkah" && prayerKey != "fajr") return "makkah"
-        return id
-    }
-
-    private fun adhanAudioAttributes(): AudioAttributes =
-        AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-            .build()
-
-    private fun requestAudioFocus(): Boolean {
-        val audioManager = getSystemService(AudioManager::class.java)
-        audioFocusGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-                .setAudioAttributes(adhanAudioAttributes())
-                .setOnAudioFocusChangeListener(audioFocusListener)
-                .build()
-            audioFocusRequest = request
-            audioManager.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+    private fun stopAsForeground() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(Service.STOP_FOREGROUND_REMOVE)
         } else {
             @Suppress("DEPRECATION")
-            audioManager.requestAudioFocus(
-                audioFocusListener,
-                AudioManager.STREAM_ALARM,
-                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK,
-            ) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            stopForeground(true)
         }
-        return audioFocusGranted
-    }
-
-    private fun finishAdhanAudio() {
-        // Timer iqamah tetap ditampilkan sampai iqamah terlewat.
-        releaseAudio()
-        updateNotifications()
-        scheduleTicker()
-    }
-
-    private fun releaseAudio() {
-        audioGeneration.incrementAndGet()
-        pausedByTransientLoss = false
-        mediaPlayer?.let { player ->
-            try {
-                if (player.isPlaying) player.stop()
-            } catch (_: IllegalStateException) {
-                // Pemutar sudah tidak aktif.
-            }
-            try {
-                player.release()
-            } catch (_: Exception) {
-                // Abaikan.
-            }
-        }
-        mediaPlayer = null
-
-        if (audioFocusGranted) {
-            val audioManager = getSystemService(AudioManager::class.java)
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && audioFocusRequest != null) {
-                    audioManager.abandonAudioFocusRequest(audioFocusRequest!!)
-                } else {
-                    @Suppress("DEPRECATION")
-                    audioManager.abandonAudioFocus(audioFocusListener)
-                }
-            } catch (_: Exception) {
-                // Abaikan.
-            }
-            audioFocusGranted = false
-        }
-        audioFocusRequest = null
-        setPlaybackState(PlaybackState.STATE_STOPPED)
-    }
-
-    private fun setPlaybackState(state: Int) {
-        if (!::mediaSession.isInitialized) return
-        mediaSession.setPlaybackState(
-            PlaybackState.Builder()
-                .setState(state, 0L, 1f)
-                .build()
-        )
-    }
-
-    private fun createChannels() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-
-        val ongoing = NotificationChannel(
-            ONGOING_CHANNEL_ID,
-            "Jadwal Shalat (Selalu Aktif)",
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = "Menampilkan waktu shalat berikutnya dan nama petugas di status bar."
-            setSound(null, null)
-            enableVibration(false)
-        }
-
-        val adhan = NotificationChannel(
-            ADHAN_CHANNEL_ID,
-            "Pengingat Adzan",
-            NotificationManager.IMPORTANCE_HIGH,
-        ).apply {
-            description = "Notifikasi saat adzan dan hitung mundur menuju iqamah."
-            setSound(null, null)
-            enableVibration(false)
-            enableLights(false)
-        }
-
-        notificationManager.createNotificationChannel(ongoing)
-        notificationManager.createNotificationChannel(adhan)
-    }
-
-    private fun updateNotifications() {
-        if (destroyed.get()) return
-        val now = snapshot?.now() ?: System.currentTimeMillis()
-        val active = currentAdhan
-        if (active != null && now >= active.iqamahTarget) {
-            currentAdhan = null
-            adhanSkippedReason = null
-            notificationManager.cancel(ADHAN_NOTIFICATION_ID)
-            notificationManager.cancel(ReminderConfig.ADHAN_FALLBACK_NOTIFICATION_ID)
-        }
-
-        val ongoing = buildOngoingNotification(now)
-        if (!foregroundStarted) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(
-                    ONGOING_NOTIFICATION_ID,
-                    ongoing,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
-                )
-            } else {
-                startForeground(ONGOING_NOTIFICATION_ID, ongoing)
-            }
-            foregroundStarted = true
-        } else {
-            notificationManager.notify(ONGOING_NOTIFICATION_ID, ongoing)
-        }
-
-        currentAdhan?.let { event ->
-            notificationManager.notify(ADHAN_NOTIFICATION_ID, buildAdhanNotification(event, now))
-        }
-    }
-
-    private fun buildOngoingNotification(now: Long): android.app.Notification {
-        val (line1, line2, line3) = taskbarLines(now)
-
-        val refreshIntent = Intent(this, PrayerReminderService::class.java)
-            .setAction(ReminderConfig.ACTION_REFRESH_DATA)
-        val refreshPendingIntent = PendingIntent.getService(
-            this,
-            2,
-            refreshIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-
-        // RemoteViews dipakai untuk memaksa tiga baris tampil tanpa perlu
-        // menarik panel notifikasi. Tiap baris dibatasi satu baris teks.
-        val views = RemoteViews(packageName, R.layout.notification_taskbar).apply {
-            setTextViewText(R.id.taskbar_line1, line1)
-            setTextViewText(R.id.taskbar_line2, line2)
-            setTextViewText(R.id.taskbar_line3, line3)
-        }
-
-        return NotificationCompat.Builder(this, ONGOING_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_prayer_notification)
-            .setContentTitle(line1)
-            .setContentText("$line2 · $line3")
-            .setCustomContentView(views)
-            .setCustomBigContentView(views)
-            .setContentIntent(openAppPendingIntent("/"))
-            .addAction(android.R.drawable.ic_popup_sync, "Perbarui", refreshPendingIntent)
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setShowWhen(false)
-            .build()
     }
 
     /**
-     * Tiga baris notifikasi ongoing, mengikuti format taskbar web:
-     * 1. Lokasi | Tanggal Hijriyah
-     * 2. Shalat : Waktu Shalat/Iqamah | -Mundur
-     * 3. Imam: Nama | Muadzin: Nama
+     * DataStore hanya bisa dibaca suspend, sedangkan pengecekan ini harus
+     * selesai sebelum startForeground. Fallback ke `true` bila bacaan gagal
+     * supaya pengingat tidak mati karena masalah I/O sesaat.
      */
-    private fun taskbarLines(now: Long): List<String> {
-        val current = snapshot
-        val location = current?.location?.takeIf { it.isNotBlank() }
-            ?: ReminderConfig.DEFAULT_LOCATION
-        // Hitung live setiap update agar tanggal tidak basi saat HP menyala
-        // terus melewati tengah malam (snapshot jadwal bisa lebih lama).
-        val hijri = PrayerReminderRepository.formatHijriDate(now)
-        val line1 = "$location | $hijri"
+    private fun remindersEnabled(): Boolean = runCatching {
+        runBlocking(Dispatchers.IO) {
+            withTimeoutOrNull(1_500L) {
+                repository.settings.prefsAfterMigration().notificationsEnabled
+            } ?: true
+        }
+    }.getOrDefault(true)
 
-        val active = current?.active(now)
-        val line2 = when {
-            active == null -> "Jadwal shalat belum tersedia | Perbarui data"
-            active.isAdhanWindow -> {
-                val remain = max(0L, active.event.iqamahTarget - now)
-                "${displayLabel(active.event)} : ${active.event.iqamahTime} | " +
-                    formatCountdown(remain, withMinus = true)
+    companion object {
+        private const val TAG = "PrayerReminderService"
+
+        private fun notificationsGranted(context: Context): Boolean {
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+            return ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        fun start(context: Context) {
+            if (!notificationsGranted(context)) return
+            val intent = Intent(context.applicationContext, PrayerReminderService::class.java)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.applicationContext.startForegroundService(intent)
+                } else {
+                    context.applicationContext.startService(intent)
+                }
+            } catch (_: IllegalStateException) {
+                // Android 12+ melarang start foreground service dari background.
+                // WorkManager/alarm akan mencoba lagi saat aplikasi dibuka.
+            } catch (_: SecurityException) {
+                // Izin notifikasi bisa dicabut kapan saja.
             }
-            else -> {
-                val remain = max(0L, active.event.adhanTarget - now)
-                "${displayLabel(active.event)} : ${active.event.adhanTime} | " +
-                    formatCountdown(remain, withMinus = true)
-            }
         }
-        val line3 = active?.event?.let(::petugasInline) ?: "- | -"
-
-        return listOf(line1, line2, line3)
-    }
-
-    private fun displayLabel(event: PrayerEvent): String {
-        return if (event.key == "dhuhr" && isFridayWib(event.date)) "Jumat" else event.label
-    }
-
-    private fun isFridayWib(date: String): Boolean {
-        return try {
-            val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            parser.timeZone = TimeZone.getTimeZone("Asia/Jakarta")
-            val parsed = parser.parse(date) ?: return false
-            val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Jakarta"), Locale.US)
-            calendar.time = parsed
-            calendar.get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun buildAdhanNotification(
-        event: PrayerEvent,
-        now: Long,
-    ): android.app.Notification {
-        val remain = max(0L, event.iqamahTarget - now)
-        val body = buildString {
-            append("Iqamah ").append(event.iqamahTime).append(" · ")
-            append(formatCountdown(remain, withMinus = true))
-            adhanSkippedReason?.let { reason ->
-                append('\n').append(reason)
-            }
-            append('\n').append(petugasInline(event))
-        }
-
-        return NotificationCompat.Builder(this, ADHAN_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_prayer_notification)
-            .setContentTitle(
-                if (adhanSkippedReason == null) "🕌 Adzan ${event.label}"
-                else "Adzan ${event.label} · notifikasi"
-            )
-            .setContentText(body.replace("\n", " · "))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setContentIntent(openAppPendingIntent("/adzan-iqamah"))
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .setSound(null)
-            .setVibrate(longArrayOf(0))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .build()
-    }
-
-    private fun openAppPendingIntent(path: String): PendingIntent {
-        val safePath = if (path.startsWith("/")) path else "/$path"
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra(ReminderConfig.EXTRA_OPEN_PATH, safePath)
-        }
-        return PendingIntent.getActivity(
-            this,
-            safePath.hashCode(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-    }
-
-    private fun petugasInline(event: PrayerEvent): String {
-        val imam = event.imamName?.takeIf { it.isNotBlank() } ?: "-"
-        val muadzin = event.muadzinName?.takeIf { it.isNotBlank() } ?: "-"
-        return "Imam: $imam | Muadzin: $muadzin"
-    }
-
-    private fun formatCountdown(millis: Long, withMinus: Boolean = false): String {
-        val totalSeconds = max(0L, millis / 1000L)
-        val hours = totalSeconds / 3600L
-        val minutes = (totalSeconds % 3600L) / 60L
-        val seconds = totalSeconds % 60L
-        val body = if (hours > 0) {
-            String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-        } else {
-            String.format(Locale.US, "%02d:%02d", minutes, seconds)
-        }
-        return if (withMinus) "-$body" else body
-    }
-
-    private fun scheduleTicker() {
-        if (!::tickHandler.isInitialized) return
-        tickHandler.removeCallbacks(ticker)
-        // Detik pada notifikasi harus benar-benar live, jadi diperbarui tiap detik.
-        tickHandler.postDelayed(ticker, 1_000L)
-    }
-
-    private companion object {
-        const val ONGOING_CHANNEL_ID = "prayer_ongoing"
-        const val ADHAN_CHANNEL_ID = "adhan_alert"
-        const val ONGOING_NOTIFICATION_ID = 1001
-        const val ADHAN_NOTIFICATION_ID = 1002
     }
 }

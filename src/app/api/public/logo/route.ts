@@ -6,6 +6,16 @@ export const dynamic = "force-dynamic";
 const NO_STORE = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0";
 const FALLBACK_ICON = "/icon-512.png";
 
+// SVG dapat menjalankan skrip saat dibuka sebagai dokumen pada origin yang
+// sama. Ikon hanya boleh memakai format raster agar endpoint ini tidak bisa
+// dipakai untuk stored XSS.
+const ALLOWED_LOGO_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+
 /**
  * Serves the logo uploaded from the admin panel as the web favicon / PWA icon.
  * Data URLs are decoded here; a plain http(s) URL is redirected, and anything
@@ -25,14 +35,20 @@ export async function GET(request: Request) {
       logoUrl
     );
     if (dataUrl) {
-      const bytes = Buffer.from(dataUrl[2].replace(/\s/g, ""), "base64");
-      if (bytes.length > 0) {
-        return new NextResponse(new Uint8Array(bytes), {
-          headers: {
-            "Content-Type": dataUrl[1].toLowerCase(),
-            "Cache-Control": NO_STORE,
-          },
-        });
+      const mime = dataUrl[1].toLowerCase();
+      if (ALLOWED_LOGO_MIME.has(mime)) {
+        const bytes = Buffer.from(dataUrl[2].replace(/\s/g, ""), "base64");
+        if (bytes.length > 0) {
+          return new NextResponse(new Uint8Array(bytes), {
+            headers: {
+              "Content-Type": mime,
+              "Cache-Control": NO_STORE,
+              "X-Content-Type-Options": "nosniff",
+              "Content-Security-Policy": "default-src 'none'; sandbox",
+              "Content-Disposition": 'inline; filename="logo"',
+            },
+          });
+        }
       }
     }
 

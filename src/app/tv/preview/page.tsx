@@ -50,9 +50,12 @@ export default function TvPreviewPage() {
     };
   }, []);
 
+  // Bekukan waktu saat phase dipilih agar pratinjau tidak berubah sendiri.
+  const [frozenAt, setFrozenAt] = useState(() => Date.now());
+
   const previewData = useMemo(
-    () => (base ? buildPreviewTvData(base, config) : null),
-    [base, config],
+    () => (base ? buildPreviewTvData(base, config, frozenAt) : null),
+    [base, config, frozenAt],
   );
 
   const setPhase = useCallback(
@@ -63,6 +66,7 @@ export default function TvPreviewPage() {
         updatedAt: Date.now(),
       };
       writeTvPreviewConfig(next);
+      setFrozenAt(Date.now());
       setConfig(next);
     },
     [config],

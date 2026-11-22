@@ -3,10 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser, ok, serverError, unauthorized, badRequest } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
+import { getMosqueSettings } from "@/lib/settings";
+import { calculatePrayerTimes } from "@/lib/prayer-times";
+import { todayDateOnly } from "@/lib/datetime";
+import { isIqamahAfterAdhan } from "@/lib/iqamah";
 
 export const dynamic = "force-dynamic";
 
 const PRAYER_NAMES = new Set(["Subuh", "Zuhur", "Asar", "Magrib", "Isya"]);
+const ADHAN_KEY: Record<string, "fajr" | "dhuhr" | "asr" | "maghrib" | "isha"> = {
+  Subuh: "fajr",
+  Zuhur: "dhuhr",
+  Asar: "asr",
+  Magrib: "maghrib",
+  Isya: "isha",
+};
 
 function isValidTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -30,11 +41,34 @@ export async function PUT(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return unauthorized();
   try {
-    const body = await request.json();
-    const items = Array.isArray(body) ? body : body.items;
-    if (!Array.isArray(items)) return badRequest("Format data tidak valid");
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return badRequest("Format data tidak valid");
+    }
+    const items = Array.isArray(body)
+      ? body
+      : body && typeof body === "object" && Array.isArray((body as { items?: unknown }).items)
+        ? (body as { items: unknown[] }).items
+        : null;
+    if (!items) return badRequest("Format data tidak valid");
 
-    const results = [];
+    const mosque = await getMosqueSettings();
+    const adhanTimes = calculatePrayerTimes(todayDateOnly(), {
+      method: mosque.prayerCalculationMethod,
+      asrMethod: mosque.asrMethod,
+      adjustments: mosque.prayerAdjustments,
+      latitude: mosque.latitude,
+      longitude: mosque.longitude,
+    });
+
+    const validated: Array<{
+      prayerName: string;
+      mode: "FIXED_TIME" | "DELAY_MINUTES";
+      delayMinutes: number;
+      fixedIqamahTime: string | null;
+    }> = [];
     for (const item of items) {
       const prayerName = item?.prayerName ? String(item.prayerName).trim() : "";
       if (!PRAYER_NAMES.has(prayerName)) {
@@ -57,21 +91,33 @@ export async function PUT(request: NextRequest) {
             `Waktu iqamah tetap untuk ${prayerName} tidak valid (format HH:mm)`
           );
         }
+        const adhanTime = adhanTimes[ADHAN_KEY[prayerName]];
+        if (!isIqamahAfterAdhan(adhanTime, fixed)) {
+          return badRequest(
+            `Waktu iqamah ${prayerName} (${fixed}) harus setelah adzan (${adhanTime})`
+          );
+        }
         fixedIqamahTime = fixed;
       }
 
-      const saved = await prisma.iqamahSetting.upsert({
-        where: { prayerName },
-        update: { mode, delayMinutes, fixedIqamahTime },
-        create: {
-          prayerName,
-          mode,
-          delayMinutes,
-          fixedIqamahTime,
-        },
-      });
-      results.push(saved);
+      validated.push({ prayerName, mode, delayMinutes, fixedIqamahTime });
     }
+
+    // Validasi selesai untuk semua item sebelum menulis. Transaksi memastikan
+    // tidak ada sebagian jadwal yang tersimpan ketika salah satu item gagal.
+    const results = await prisma.$transaction(
+      validated.map((item) =>
+        prisma.iqamahSetting.upsert({
+          where: { prayerName: item.prayerName },
+          update: {
+            mode: item.mode,
+            delayMinutes: item.delayMinutes,
+            fixedIqamahTime: item.fixedIqamahTime,
+          },
+          create: item,
+        })
+      )
+    );
 
     await writeAudit({
       adminId: user.id,

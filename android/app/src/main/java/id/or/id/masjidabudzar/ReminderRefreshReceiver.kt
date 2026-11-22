@@ -3,34 +3,23 @@ package id.or.id.masjidabudzar
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
-/**
- * Refresh jadwal tanpa menyalakan foreground service dari broadcast inexact.
- * Alarm yang sudah lewat tetap dipertahankan bila fetch gagal.
- */
 class ReminderRefreshReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != ReminderConfig.ACTION_REFRESH_REMINDERS) return
-
-        val pendingResult = goAsync()
-        Thread {
+        val pending = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
-                val snapshot = PrayerReminderRepository.fetch(
-                    context.applicationContext,
-                    ReminderSettings.getClockOffset(context),
-                )
-                if (snapshot.events.isNotEmpty()) {
-                    // Fetch gagal menghasilkan clockOffset ~0; jangan hapus offset baik.
-                    ReminderSettings.setClockOffset(context, snapshot.clockOffset)
-                    PrayerReminderScheduler.scheduleFrom(context.applicationContext, snapshot)
-                } else {
-                    PrayerReminderScheduler.ensureRefreshAlarm(context.applicationContext)
-                }
-            } catch (_: Exception) {
-                PrayerReminderScheduler.ensureRefreshAlarm(context.applicationContext)
+                val repository = PrayerRepository(context)
+                PrayerReminderScheduler.scheduleNext(context, repository)
+                SyncWorker.enqueueNow(context)
+                PrayerReminderService.start(context)
             } finally {
-                pendingResult.finish()
+                pending.finish()
             }
-        }.start()
+        }
     }
 }

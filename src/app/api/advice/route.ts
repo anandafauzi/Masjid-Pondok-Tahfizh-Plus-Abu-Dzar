@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  readJsonBody,
   ok,
   parseIntOr,
   serverError,
@@ -37,7 +38,8 @@ export async function POST(request: NextRequest) {
   const user = await getSessionUser();
   if (!user) return unauthorized();
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
+    if (!body) return badRequest("Format data tidak valid");
     if (!body.content || !String(body.content).trim()) {
       return badRequest("Isi nasihat wajib diisi");
     }

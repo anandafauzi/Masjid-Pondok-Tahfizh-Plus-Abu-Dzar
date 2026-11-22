@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { MASJID_INFO } from "@/utils/constants";
 import type { IqamahSettingLike } from "@/lib/iqamah";
@@ -215,56 +214,36 @@ export async function getDisplaySettings(): Promise<DisplaySettingsData> {
 
 /**
  * Simpan sebagian themeSettings tanpa menghapus key lain.
- * Membuat baris DisplaySetting default bila belum ada, sehingga penyimpanan
- * tidak lagi menjadi no-op diam-diam.
+ * Merge terjadi di database (jsonb `||`), jadi dua admin yang menyimpan
+ * fitur berbeda bersamaan tidak saling menimpa. Baris default dibuat bila
+ * belum ada; ON CONFLICT menangani race saat baris pertama dibuat bareng.
  */
 export async function saveDisplayThemePatch(
   patch: Record<string, unknown>
 ): Promise<void> {
-  const display = await prisma.displaySetting.findFirst({
-    orderBy: { id: "asc" },
-    select: { id: true, themeSettings: true },
-  });
+  if (Object.keys(patch).length === 0) return;
 
-  const existingTheme =
-    (display?.themeSettings as Record<string, unknown>) ?? {};
-  const newTheme = { ...existingTheme, ...patch };
-
-  if (display) {
-    await prisma.displaySetting.update({
-      where: { id: display.id },
-      data: { themeSettings: newTheme as Prisma.InputJsonValue },
-    });
-    return;
-  }
-
-  try {
-    await prisma.displaySetting.create({
-      data: {
-        id: "default",
-        themeSettings: newTheme as Prisma.InputJsonValue,
-      },
-    });
-  } catch (error) {
-    // Bisa terjadi race saat dua request membuat baris pertama bersamaan.
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      const created = await prisma.displaySetting.findFirst({
-        orderBy: { id: "asc" },
-        select: { id: true },
-      });
-      if (created) {
-        await prisma.displaySetting.update({
-          where: { id: created.id },
-          data: { themeSettings: newTheme as Prisma.InputJsonValue },
-        });
-        return;
-      }
-    }
-    throw error;
-  }
+  const patchJson = JSON.stringify(patch);
+  await prisma.$executeRaw`
+    WITH target AS (
+      SELECT id FROM display_settings ORDER BY id ASC LIMIT 1
+    ),
+    ensure AS (
+      INSERT INTO display_settings (id, "themeSettings", "updatedAt")
+      SELECT 'default', ${patchJson}::jsonb, NOW()
+      WHERE NOT EXISTS (SELECT 1 FROM target)
+      ON CONFLICT (id) DO UPDATE
+        SET "themeSettings" =
+              COALESCE(display_settings."themeSettings", '{}'::jsonb)
+              || EXCLUDED."themeSettings",
+            "updatedAt" = NOW()
+    )
+    UPDATE display_settings AS d
+    SET "themeSettings" = COALESCE(d."themeSettings", '{}'::jsonb) || ${patchJson}::jsonb,
+        "updatedAt" = NOW()
+    FROM target
+    WHERE d.id = target.id
+  `;
 }
 
 export async function getIqamahSettings(): Promise<IqamahSettingLike[]> {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   badRequest,
   getSessionUser,
+  readJsonBody,
   isPrismaNotFound,
   notFound,
   ok,
@@ -25,7 +26,8 @@ export async function PUT(
   if (!user) return unauthorized();
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = await readJsonBody(request);
+    if (!body) return badRequest("Format data tidak valid");
 
     const khatibName =
       body.khatibName !== undefined ? String(body.khatibName).trim() : undefined;

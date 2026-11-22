@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import {
   badRequest,
   getSessionUser,
   ok,
+  readJsonBody,
   serverError,
   unauthorized,
 } from "@/lib/api";
@@ -50,7 +52,7 @@ function parsePetugasItems(raw: unknown[]): PetugasItem[] | null {
       id:
         typeof item.id === "string" && item.id.trim()
           ? item.id
-          : `p-${Date.now()}-${items.length}`,
+          : randomUUID(),
       name,
       roles,
       email,
@@ -87,7 +89,7 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
     if (!body) return badRequest("Data tidak valid");
 
     // Case 1: Bulk update
@@ -112,12 +114,19 @@ export async function POST(request: NextRequest) {
 
     // Case 2: Add single petugas
     if (body.name && String(body.name).trim()) {
-      const roles = Array.isArray(body.roles)
-        ? body.roles.filter(
-            (role: unknown): role is PetugasRole =>
-              typeof role === "string" && VALID_ROLES.has(role as PetugasRole)
-          )
-        : [];
+      let roles: PetugasRole[] = ["IMAM"];
+      if (body.roles !== undefined) {
+        if (!Array.isArray(body.roles)) {
+          return badRequest("Peran petugas tidak valid");
+        }
+        roles = body.roles.filter(
+          (role: unknown): role is PetugasRole =>
+            typeof role === "string" && VALID_ROLES.has(role as PetugasRole)
+        );
+        if (roles.length === 0) {
+          return badRequest("Minimal satu peran petugas harus valid");
+        }
+      }
       const email = normalizeEmail(body.email ? String(body.email) : null);
       if (body.email && String(body.email).trim() && !email) {
         return badRequest("Alamat email tidak valid");
@@ -125,9 +134,9 @@ export async function POST(request: NextRequest) {
 
       const existing = await getPetugasList();
       const newPetugas: PetugasItem = {
-        id: `p-${Date.now()}`,
+        id: randomUUID(),
         name: String(body.name).trim(),
-        roles: roles.length > 0 ? roles : ["IMAM"],
+        roles,
         email,
         notes: body.notes ? String(body.notes).trim() : null,
         isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,

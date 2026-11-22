@@ -194,60 +194,77 @@ async function deliverRecipient(
     message: recipient.message,
   };
 
-  let existing = await prisma.reminderLog.findUnique({
-    where: { dedupeKey: recipient.dedupeKey },
+  const skipped = () => ({
+    dedupeKey: recipient.dedupeKey,
+    name: recipient.name,
+    email: recipient.email,
+    status: "SKIPPED" as const,
+    error: "Pengingat sedang diproses atau sudah pernah terkirim",
   });
 
-  if (existing?.status === "SENT" && !force) {
-    return {
-      dedupeKey: recipient.dedupeKey,
-      name: recipient.name,
-      email: recipient.email,
-      status: "SKIPPED",
-      error: "Pengingat tanggal ini sudah pernah terkirim",
-    };
+  const existing = await prisma.reminderLog.findUnique({
+    where: { dedupeKey: recipient.dedupeKey },
+  });
+  if (existing?.status === "SENT" && !force) return skipped();
+
+  // Satu pengiriman diproses maksimal 10 menit; setelah itu dianggap gagal
+  // dan boleh diambil alih (misalnya proses cron yang mati mendadak).
+  const staleBefore = new Date(Date.now() - 10 * 60 * 1000);
+  const claimedAt = new Date();
+
+  async function claim(current: typeof existing): Promise<{ id: string } | null> {
+    let row = current;
+
+    if (!row) {
+      try {
+        return await prisma.reminderLog.create({
+          data: { ...base, status: "SENDING", claimedAt },
+        });
+      } catch (error) {
+        if ((error as { code?: string })?.code !== "P2002") throw error;
+        row = await prisma.reminderLog.findUnique({
+          where: { dedupeKey: recipient.dedupeKey },
+        });
+      }
+    }
+
+    if (!row) return null;
+    if (row.status === "SENT" && !force) return null;
+    if (
+      row.status === "SENDING" &&
+      !force &&
+      row.claimedAt &&
+      row.claimedAt > staleBefore
+    ) {
+      return null;
+    }
+
+    const statuses: ReminderStatus[] = ["PENDING", "FAILED"];
+    if (force) statuses.push("SENT", "SENDING");
+    else if (row.status === "SENDING") statuses.push("SENDING");
+
+    const claimed = await prisma.reminderLog.updateMany({
+      where: {
+        id: row.id,
+        status: { in: statuses },
+        ...(row.status === "SENDING" && !force
+          ? { claimedAt: { lt: staleBefore } }
+          : {}),
+      },
+      data: { ...base, status: "SENDING", claimedAt, error: null, sentAt: null },
+    });
+
+    return claimed.count === 1 ? { id: row.id } : null;
   }
 
-  let log;
-  if (existing) {
-    log = await prisma.reminderLog.update({
-      where: { id: existing.id },
-      data: { ...base, status: "PENDING", error: null },
-    });
-  } else {
-    try {
-      log = await prisma.reminderLog.create({ data: { ...base, status: "PENDING" } });
-    } catch (error) {
-      // Bisa terjadi bila cron dan admin mengirim bersamaan: baris sudah dibuat
-      // oleh proses lain. Baca ulang agar tidak membuat duplikat.
-      if ((error as { code?: string })?.code !== "P2002") throw error;
-      existing = await prisma.reminderLog.findUnique({
-        where: { dedupeKey: recipient.dedupeKey },
-      });
-      if (existing?.status === "SENT") {
-        return {
-          dedupeKey: recipient.dedupeKey,
-          name: recipient.name,
-          email: recipient.email,
-          status: "SKIPPED",
-          error: "Pengingat tanggal ini sudah pernah terkirim",
-        };
-      }
-      log = existing
-        ? await prisma.reminderLog.update({
-            where: { id: existing.id },
-            data: { ...base, status: "PENDING", error: null },
-          })
-        : null;
-      if (!log) throw error;
-    }
-  }
+  const log = await claim(existing);
+  if (!log) return skipped();
 
   if (!recipient.email) {
     const message = "Email petugas belum diisi di menu Data Petugas";
     await prisma.reminderLog.update({
       where: { id: log.id },
-      data: { status: "SKIPPED", error: message },
+      data: { status: "SKIPPED", claimedAt: null, error: message },
     });
     return {
       dedupeKey: recipient.dedupeKey,
@@ -272,6 +289,7 @@ async function deliverRecipient(
     data: result.ok
       ? {
           status: "SENT",
+          claimedAt: null,
           provider: result.provider,
           providerRef: result.reference ?? null,
           error: null,
@@ -279,6 +297,7 @@ async function deliverRecipient(
         }
       : {
           status: "FAILED",
+          claimedAt: null,
           provider: result.provider,
           error: result.error ?? "Gagal mengirim email",
         },

@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { writeAudit } from "@/lib/audit";
 import { withSerializableRetry } from "@/lib/db-retry";
+import { revalidateAllAppPaths } from "@/lib/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
       changeSummary: `Mengubah urutan rotasi khatib ${outcome.name}`,
     });
 
+    revalidateAllAppPaths();
     return ok(outcome.result);
   } catch (error) {
     console.error(error);

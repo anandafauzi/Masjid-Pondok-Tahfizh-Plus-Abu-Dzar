@@ -5,135 +5,145 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import androidx.core.app.NotificationManagerCompat
-
-private const val REQUEST_CODE_REFRESH = 99001
-
-object PrayerReminderLauncher {
-    fun start(context: Context, action: String) {
-        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
-
-        val intent = Intent(context, PrayerReminderService::class.java).setAction(action)
-        start(context, intent)
-    }
-
-    fun start(context: Context, intent: Intent) {
-        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-        } else {
-            context.startService(intent)
-        }
-    }
-}
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 object PrayerReminderScheduler {
-    /**
-     * Refresh bisa dipanggil bersamaan dari service, receiver alarm, dan boot.
-     * Kunci ini mencegah cancel + schedule dari dua thread saling menimpa sehingga
-     * menyisakan alarm yatim yang tidak tercatat lagi di prefs.
-     */
-    private val scheduleLock = Any()
+    private val mutex = Mutex()
+    private const val REQUEST_ADHAN = 100
+    private const val REQUEST_IQAMAH = 300
+    private const val REQUEST_SHOW = 24
+    private const val REQUEST_WATCHDOG = 500
+    private const val MAX_EVENTS = 30
+    private const val WATCHDOG_INTERVAL_MS = 5 * 60 * 1000L
 
-    fun scheduleFrom(context: Context, snapshot: ReminderSnapshot) {
-        synchronized(scheduleLock) {
-            if (snapshot.events.isEmpty()) {
-                setRefreshAlarmLocked(context)
-                return
-            }
+    private fun flags(): Int = PendingIntent.FLAG_UPDATE_CURRENT or
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
 
-            cancelAllLocked(context)
-
-            val now = snapshot.now()
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            val scheduledIds = LinkedHashSet<String>()
-
-            for (event in snapshot.events) {
-                if (event.adhanTarget <= now) continue
-                scheduledIds.add(event.id)
-                alarmManager.setAdhanAlarm(context, event)
-            }
-
-            ReminderSettings.setScheduledEventIds(context, scheduledIds)
-            setRefreshAlarmLocked(context)
-        }
-    }
-
-    /** Tetap pasang alarm refresh walau fetch gagal/empty, agar aplikasi bisa pulih sendiri. */
-    fun ensureRefreshAlarm(context: Context) {
-        synchronized(scheduleLock) {
-            setRefreshAlarmLocked(context)
-        }
-    }
-
-    fun cancelAll(context: Context) {
-        synchronized(scheduleLock) {
-            cancelAllLocked(context)
-        }
-    }
-
-    private fun setRefreshAlarmLocked(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setRefreshAlarm(context)
-    }
-
-    private fun cancelAllLocked(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val ids = ReminderSettings.getScheduledEventIds(context)
-
-        ids.forEach { id ->
-            alarmManager.cancel(adhanPendingIntent(context, id))
-        }
-        alarmManager.cancel(refreshPendingIntent(context))
-        ReminderSettings.setScheduledEventIds(context, emptySet())
-    }
-
-    private fun AlarmManager.setAdhanAlarm(context: Context, event: PrayerEvent) {
-        val pendingIntent = adhanPendingIntent(context, event.id, event)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !canScheduleExactAlarms()) {
-            // Fallback bila pengguna belum memberi izin alarms & reminders.
-            setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, event.adhanTarget, pendingIntent)
-        } else {
-            setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, event.adhanTarget, pendingIntent)
-        }
-    }
-
-    private fun AlarmManager.setRefreshAlarm(context: Context) {
-        val triggerAt = System.currentTimeMillis() + 15L * 60L * 1000L
-        setInexactRepeating(
-            AlarmManager.RTC_WAKEUP,
-            triggerAt,
-            AlarmManager.INTERVAL_FIFTEEN_MINUTES,
-            refreshPendingIntent(context),
-        )
-    }
-
-    private fun adhanPendingIntent(
+    private fun pending(
         context: Context,
-        eventId: String,
-        event: PrayerEvent? = null,
+        action: String,
+        requestCode: Int,
+        moment: PrayerMoment? = null,
     ): PendingIntent {
-        val intent = Intent(ReminderConfig.ACTION_ADHAN_ALARM)
-            .setPackage(context.packageName)
-            .putExtra(ReminderConfig.EXTRA_EVENT_ID, eventId)
-        if (event != null) intent.putExtras(event.toBundle())
-        return PendingIntent.getBroadcast(
-            context,
-            eventId.hashCode(),
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+        val intent = Intent(context, AdhanAlarmReceiver::class.java).apply {
+            this.action = action
+            if (moment != null) {
+                putExtra(ReminderConfig.EXTRA_EVENT_KEY, moment.key)
+                putExtra(ReminderConfig.EXTRA_EVENT_LABEL, moment.label)
+                putExtra(ReminderConfig.EXTRA_ADHAN_TARGET, moment.adhanTarget)
+                putExtra(ReminderConfig.EXTRA_IQAMAH_TARGET, moment.iqamahTarget)
+                putExtra(ReminderConfig.EXTRA_IMAM_NAME, moment.imamName)
+                putExtra(ReminderConfig.EXTRA_MUADZIN_NAME, moment.muadzinName)
+            }
+        }
+        return PendingIntent.getBroadcast(context, requestCode, intent, flags())
     }
 
-    private fun refreshPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, ReminderRefreshReceiver::class.java)
-            .setAction(ReminderConfig.ACTION_REFRESH_REMINDERS)
-        return PendingIntent.getBroadcast(
-            context,
-            REQUEST_CODE_REFRESH,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    private fun watchdogPending(context: Context): PendingIntent {
+        val intent = Intent(context, ReminderWatchdogReceiver::class.java).apply {
+            action = ReminderConfig.ACTION_WATCHDOG_ALARM
+        }
+        return PendingIntent.getBroadcast(context, REQUEST_WATCHDOG, intent, flags())
+    }
+
+    /** Dipakai saat ikon jam di status bar diketuk, tidak memicu shalat palsu. */
+    private fun showIntent(context: Context): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("open_tab", "home")
+        }
+        return PendingIntent.getActivity(context, REQUEST_SHOW, intent, flags())
+    }
+
+    suspend fun scheduleNext(context: Context, repository: PrayerRepository) = mutex.withLock {
+        val prefs = repository.settings.prefsAfterMigration()
+        val snapshots = listOfNotNull(
+            prefs.todayJson.takeIf { it.isNotBlank() }?.let { ApiParser.parse(it) },
+            prefs.tomorrowJson.takeIf { it.isNotBlank() }?.let { ApiParser.parse(it) },
         )
+        val moments = snapshots
+            .flatMap { PrayerEngine.weeklyMoments(it) }
+            .distinctBy { "${it.key}|${it.adhanTime}|${ApiParser.ymd(it.adhanTarget)}" }
+            .sortedBy { it.adhanTarget }
+
+        val offset = prefs.clockOffset
+        val now = System.currentTimeMillis() + offset
+        val upcoming = moments.filter { it.iqamahTarget > now }.take(MAX_EVENTS)
+
+        val manager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return@withLock
+
+        // Batalkan jadwal lama pada rentang request code yang sama.
+        repeat(MAX_EVENTS) { index ->
+            manager.cancel(pending(context, ReminderConfig.ACTION_ADHAN_ALARM, REQUEST_ADHAN + index))
+            manager.cancel(pending(context, ReminderConfig.ACTION_IQAMAH_ALARM, REQUEST_IQAMAH + index))
+        }
+
+        // Watchdog tetap dijadwalkan walau notifikasi mati, supaya bisa mendeteksi
+        // saat pengguna mengaktifkannya kembali tanpa membuka aplikasi.
+        val show = showIntent(context)
+        manager.cancel(watchdogPending(context))
+        setAlarm(
+            manager,
+            System.currentTimeMillis() + WATCHDOG_INTERVAL_MS,
+            watchdogPending(context),
+            show,
+        )
+
+        if (!prefs.notificationsEnabled) return@withLock
+
+        // AlarmManager memakai RTC perangkat, sedangkan target API memakai waktu server.
+        upcoming.forEachIndexed { index, moment ->
+            if (moment.adhanTarget > now) {
+                setAlarm(
+                    manager,
+                    moment.adhanTarget - offset,
+                    pending(context, ReminderConfig.ACTION_ADHAN_ALARM, REQUEST_ADHAN + index, moment),
+                    show,
+                )
+            }
+            if (moment.iqamahTarget > now) {
+                setAlarm(
+                    manager,
+                    moment.iqamahTarget - offset,
+                    pending(context, ReminderConfig.ACTION_IQAMAH_ALARM, REQUEST_IQAMAH + index, moment),
+                    show,
+                )
+            }
+        }
+    }
+
+    /**
+     * Pakai exact alarm bila diizinkan. Bila belum, setAlarmClock tetap tepat dan
+     * tidak ditunda Doze tanpa perlu membuka aplikasi lebih dulu.
+     */
+    private fun setAlarm(
+        manager: AlarmManager,
+        atDevice: Long,
+        operation: PendingIntent,
+        showIntent: PendingIntent,
+    ) {
+        val exactAllowed = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            manager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+        try {
+            if (exactAllowed) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atDevice, operation)
+                } else {
+                    manager.setExact(AlarmManager.RTC_WAKEUP, atDevice, operation)
+                }
+            } else {
+                manager.setAlarmClock(AlarmManager.AlarmClockInfo(atDevice, showIntent), operation)
+            }
+        } catch (_: SecurityException) {
+            try {
+                manager.setAlarmClock(AlarmManager.AlarmClockInfo(atDevice, showIntent), operation)
+            } catch (_: SecurityException) {
+                manager.setWindow(AlarmManager.RTC_WAKEUP, atDevice, 60_000L, operation)
+            }
+        }
     }
 }

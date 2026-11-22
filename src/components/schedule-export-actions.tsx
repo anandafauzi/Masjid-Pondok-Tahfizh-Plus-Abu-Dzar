@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useDialogA11y } from "@/lib/use-dialog-a11y";
 import toast from "react-hot-toast";
 import {
   Printer,
@@ -58,10 +59,29 @@ export function ScheduleExportActions({
   const [modalOpen, setModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sharePeriod, setSharePeriod] = useState<"week" | "today">("week");
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useDialogA11y(
+    modalOpen,
+    modalRef,
+    shareButtonRef,
+    () => setModalOpen(false)
+  );
 
   // Generate WhatsApp message text based on selection
   function generateWhatsAppText(): string {
     const siteUrl = typeof window !== "undefined" ? window.location.origin : "https://masjid-pondok-tahfizh-plus-abu-dzar.vercel.app";
+    // Jumat tidak punya iqamah Zuhur (diganti Shalat Jumat), termasuk saat
+    // komponen dipakai dari halaman yang mengirim daftar iqamah mentah.
+    const isFriday =
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Jakarta",
+        weekday: "long",
+      }).format(new Date()) === "Friday";
+    const iqamahItems = isFriday
+      ? todayIqamah.filter((e) => e.key !== "dhuhr")
+      : todayIqamah;
 
     if (type === "imam") {
       if (sharePeriod === "today") {
@@ -162,8 +182,8 @@ export function ScheduleExportActions({
         text += `السلام عليكم ورحمة الله وبركاته\n`;
         text += `Berikut waktu adzan dan iqamah shalat fardhu hari ini (WIB):\n\n`;
 
-        if (todayIqamah.length > 0) {
-          for (const item of todayIqamah) {
+        if (iqamahItems.length > 0) {
+          for (const item of iqamahItems) {
             text += `• *${item.label}*: Adzan ${item.adhanTime} WIB (Iqamah: ${item.iqamahTime} WIB)\n`;
           }
         }
@@ -226,6 +246,7 @@ export function ScheduleExportActions({
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         {/* WhatsApp Share Modal Trigger */}
         <button
+          ref={shareButtonRef}
           type="button"
           onClick={() => setModalOpen(true)}
           className={`inline-flex items-center gap-1.5 rounded-xl border font-bold shadow-sm transition-all active:scale-95 text-xs sm:text-sm px-3.5 py-2 ${variant === "admin"
@@ -273,7 +294,13 @@ export function ScheduleExportActions({
       {/* WhatsApp Share Modal Dialog */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm animate-fade-in print:hidden">
-          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div
+            ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wa-share-modal-title"
+            className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-[#0f7a6e] bg-[#128c7e] px-6 py-4 text-white">
               <div className="flex items-center gap-2.5">
@@ -281,7 +308,7 @@ export function ScheduleExportActions({
                   <MessageCircle className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 id="wa-share-modal-title" className="text-base font-bold text-white">
                     Bagikan Jadwal ke WhatsApp
                   </h3>
                   <p className="text-[11px] text-white/80">
@@ -293,6 +320,7 @@ export function ScheduleExportActions({
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
+                aria-label="Tutup dialog bagikan WhatsApp"
                 className="rounded-full p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors"
               >
                 <X className="h-5 w-5" />

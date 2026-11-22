@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TvData } from "@/lib/public-data";
 import { kajianTypeLabel } from "@/lib/kajian-type";
 import { tarawihImamLabel } from "@/lib/tarawih";
+import { getPrayerMethodLabel } from "@/lib/prayer-times";
+import { dateOnlyToString, todayDateOnly } from "@/lib/datetime";
+import type { WeatherInfo } from "@/lib/weather";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import {
   playCountdownBeep,
@@ -112,13 +115,9 @@ export function TvDisplay({
   const [slide, setSlide] = useState(0);
   const [adviceIndex, setAdviceIndex] = useState(0);
   const [connected, setConnected] = useState(true);
-  const [weather, setWeather] = useState<{
-    temperature: number;
-    humidity: number;
-    condition: string;
-    icon: string;
-    locationName: string;
-  } | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [weather, setWeather] = useState<WeatherInfo | null>(null);
 
   // TV Controls & Wake Lock State
   const [wakeLockActive, setWakeLockActive] = useState(false);
@@ -129,12 +128,20 @@ export function TvDisplay({
   // Audio Beep Tracker Refs
   const lastBeepSecRef = useRef<number | null>(null);
   const lastChimeKeyRef = useRef<string | null>(null);
+  const requestSeqRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const failedLoadsRef = useRef(0);
   // Nasihat berganti satu per satu setiap kali slide 4 diputar ulang.
   const adviceVisitRef = useRef(0);
   const adviceLengthRef = useRef(0);
 
   const load = useCallback(async () => {
+    // Polling dan perubahan visibility bisa tumpang tindih. Batalkan request
+    // lama dan abaikan responsnya agar tidak menimpa state yang lebih baru.
+    abortRef.current?.abort();
     const controller = new AbortController();
+    abortRef.current = controller;
+    const seq = ++requestSeqRef.current;
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch("/api/public/tv-data", {
@@ -143,6 +150,7 @@ export function TvDisplay({
       });
       if (!res.ok) throw new Error("bad status");
       const d = (await res.json()) as TvData;
+      if (seq !== requestSeqRef.current) return;
       setData((prev) => {
         let nextData = d;
         // Jangan timpa data petugas yang valid dengan array kosong bila
@@ -174,8 +182,13 @@ export function TvDisplay({
       });
       setOffset(new Date(d.serverTime).getTime() - Date.now());
       setConnected(true);
+      failedLoadsRef.current = 0;
+      setLoadFailed(false);
     } catch {
+      if (seq !== requestSeqRef.current) return;
+      failedLoadsRef.current += 1;
       setConnected(false);
+      if (failedLoadsRef.current >= 3) setLoadFailed(true);
     } finally {
       clearTimeout(timeout);
     }
@@ -188,13 +201,19 @@ export function TvDisplay({
       setData(initialData);
       setOffset(new Date(initialData.serverTime).getTime() - Date.now());
     } else {
-      // Fallback offline hanya dipakai bila server tidak mengirim data awal.
+      // Fallback offline hanya dipakai bila data masih tanggal hari ini.
       try {
         const cached = localStorage.getItem("masjid_tv_cached_data");
         if (cached) {
           const parsed = JSON.parse(cached) as TvData;
-          if (parsed && parsed.prayerTimes) {
+          if (
+            parsed &&
+            parsed.prayerTimes &&
+            parsed.today === dateOnlyToString(todayDateOnly())
+          ) {
             setData(parsed);
+          } else {
+            localStorage.removeItem("masjid_tv_cached_data");
           }
         }
       } catch {
@@ -221,6 +240,7 @@ export function TvDisplay({
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      abortRef.current?.abort();
       clearInterval(poll);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
@@ -257,11 +277,14 @@ export function TvDisplay({
 
     const requestLock = async () => {
       if (typeof window === "undefined" || !("wakeLock" in navigator)) return;
+      // Visibility bisa berubah berulang kali; jangan menumpuk sentinel.
+      if (wakeLockSentinel) return;
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         wakeLockSentinel = await (navigator as any).wakeLock.request("screen");
         setWakeLockActive(true);
         wakeLockSentinel.addEventListener("release", () => {
+          wakeLockSentinel = null;
           setWakeLockActive(false);
         });
       } catch {
@@ -290,8 +313,11 @@ export function TvDisplay({
   useEffect(() => {
     let idleTimer: NodeJS.Timeout;
 
-    const handleActivity = () => {
+    const handleActivity = (event: Event) => {
       unlockTvAudio();
+      // mousemove bukan "user activation" di browser; klik/sentuh/new keyboard baru menjamin
+      // AudioContext boleh di-resume.
+      if (event.type !== "mousemove") setAudioUnlocked(true);
       setIsMouseIdle(false);
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
@@ -508,6 +534,7 @@ export function TvDisplay({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       unlockTvAudio();
+      setAudioUnlocked(true);
       if (e.key === "ArrowRight" || e.key === " ") {
         e.preventDefault();
         setSlide((cur) => {
@@ -675,11 +702,25 @@ export function TvDisplay({
         </span>
       </div>
 
+      {!audioUnlocked && (
+        <button
+          type="button"
+          onClick={() => {
+            unlockTvAudio();
+            setAudioUnlocked(true);
+          }}
+          className="rounded-xl bg-emerald-500/20 px-2.5 py-1.5 text-[11px] font-bold text-emerald-200 hover:bg-emerald-500/30"
+        >
+          Aktifkan Suara
+        </button>
+      )}
+
       {/* Audio Mute/Unmute Beep */}
       <button
         type="button"
         onClick={() => {
           unlockTvAudio();
+          setAudioUnlocked(true);
           setAudioMuted(!audioMuted);
         }}
         className={`rounded-xl p-2 transition-colors ${audioMuted
@@ -724,8 +765,19 @@ export function TvDisplay({
             Sistem Informasi Layar TV Masjid
           </h2>
           <p className="mt-2 text-base text-[#2d946e] font-semibold font-mono">
-            Menghubungkan &amp; Mengambil Data...
+            {loadFailed
+              ? "Gagal menghubungi server. Periksa jaringan lalu coba lagi."
+              : "Menghubungkan & Mengambil Data..."}
           </p>
+          {loadFailed && (
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="mt-5 rounded-xl bg-[#2d946e] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#237a58]"
+            >
+              Coba Lagi
+            </button>
+          )}
         </div>
       </div>
     );
@@ -939,7 +991,7 @@ export function TvDisplay({
                   <span className="text-[10px] font-normal text-[#5a685e] hidden xl:inline">({weather.condition})</span>
                 </div>
                 <span className="text-[9px] text-[#5a685e] font-medium truncate max-w-[120px]">
-                  {weather.locationName}
+                  {weather.isFallback ? "Perkiraan" : weather.locationName}
                 </span>
               </div>
             </div>
@@ -949,7 +1001,7 @@ export function TvDisplay({
             {data.display.showHijriDate && (
               <div suppressHydrationWarning className="flex items-center justify-end gap-1 text-[11px] font-semibold text-[#8a6820] sm:text-xs">
                 <span>🌙</span>
-                <span>{hijriString(serverNow)} H</span>
+                <span suppressHydrationWarning>{hijriString(serverNow)} H</span>
               </div>
             )}
             <div suppressHydrationWarning className="text-[11px] text-[#5a685e] font-medium sm:text-xs">
@@ -1295,7 +1347,9 @@ export function TvDisplay({
               {/* Footer */}
               <div className="shrink-0 flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
                 <span>Pondok Tahfizh Plus Abu Dzar • Rumpin, Bogor</span>
-                <span className="font-semibold text-[#1e6149]">Metode Kemenag RI (+2 Menit Ihtiyat)</span>
+                <span className="font-semibold text-[#1e6149]">
+                  Metode {getPrayerMethodLabel(data.mosque.calculationMethod)}
+                </span>
               </div>
             </div>
           </div>
@@ -1722,13 +1776,16 @@ export function TvDisplay({
               <span>INFO MASJID</span>
             </div>
             <div className="flex-1 overflow-hidden min-w-0 relative flex items-center">
-              <span
+              <div
                 key={tickerContent}
-                className="inline-block whitespace-nowrap animate-marquee-tv pl-4"
+                className="flex min-w-max animate-marquee-tv"
                 style={{ animationDuration: `${tickerDuration}s` }}
               >
-                {tickerContent}
-              </span>
+                <span className="shrink-0 whitespace-nowrap pl-4">{tickerContent}</span>
+                <span aria-hidden="true" className="shrink-0 whitespace-nowrap pl-4">
+                  {tickerContent}
+                </span>
+              </div>
             </div>
           </div>
         </footer>
@@ -1739,6 +1796,15 @@ export function TvDisplay({
         <div className="absolute bottom-16 right-3 z-40 flex max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-xl bg-red-600/90 px-3 py-2 text-[10px] font-bold text-white shadow-2xl backdrop-blur sm:bottom-14 sm:right-6 sm:px-4 sm:py-2.5 sm:text-xs">
           <WifiOff className="h-4 w-4 shrink-0" />
           <span>Koneksi Offline — Menampilkan Data Tersimpan</span>
+          {loadFailed && (
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="rounded-lg bg-white/20 px-2 py-1 font-bold hover:bg-white/30"
+            >
+              Coba Lagi
+            </button>
+          )}
         </div>
       )}
 

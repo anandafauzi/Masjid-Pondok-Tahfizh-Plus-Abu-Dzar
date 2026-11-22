@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import type { PrayerTimesStrings } from "@/lib/prayer-times";
 import { Clock, Calendar, Tv, ArrowRight, Sparkles } from "lucide-react";
@@ -47,6 +48,8 @@ export function HomeHero({
   // `now` sengaja null saat render pertama (SSR) agar tidak terjadi hydration
   // mismatch; setelah mount, waktu dihitung memakai offset jam server.
   const [now, setNow] = useState<number | null>(null);
+  const router = useRouter();
+  const refreshingRef = useRef(false);
 
   useEffect(() => {
     const offset = serverTime ? new Date(serverTime).getTime() - Date.now() : 0;
@@ -55,6 +58,20 @@ export function HomeHero({
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, [serverTime]);
+
+  // Target nextPrayer berasal dari server. Begitu lewat, minta server render
+  // ulang agar label dan waktu shalat berikutnya ikut berganti (countdown
+  // tidak boleh mandek di 00:00).
+  useEffect(() => {
+    if (now === null) return;
+    const targetMs = new Date(nextPrayer.target).getTime();
+    if (now >= targetMs && !refreshingRef.current) {
+      refreshingRef.current = true;
+      router.refresh();
+    } else if (now < targetMs) {
+      refreshingRef.current = false;
+    }
+  }, [now, nextPrayer.target, router]);
 
   const mounted = now !== null;
   const currentMs = now ?? 0;

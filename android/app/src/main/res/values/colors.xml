@@ -1,9 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#2D946E</color>
-    <color name="primary_dark">#1B5E46</color>
-    <color name="accent">#C5A880</color>
-    <color name="background">#FAF7F2</color>
-    <color name="notification_text_primary">#19261F</color>
-    <color name="notification_text_secondary">#5A685E</color>
+    <color name="primary">#0B3B2E</color>
+    <color name="primary_dark">#061F18</color>
+    <color name="accent">#C6A15B</color>
+    <color name="background">#F8F5EE</color>
+
+    <color name="emerald_950">#061F18</color>
+    <color name="emerald_900">#0B3B2E</color>
+    <color name="emerald_800">#125340</color>
+    <color name="emerald_700">#1B6E55</color>
+    <color name="emerald_100">#DCEFE6</color>
+    <color name="ivory">#F8F5EE</color>
+    <!-- Warna notifikasi dikembalikan ke nilai lama yang stabil di SystemUI. -->
+    <color name="notif_bg">#B3FDFBF6</color>
+    <color name="notif_header_bg">#CC0B3B2E</color>
+    <color name="notif_action_bg">#B3EDE3D1</color>
+    <color name="beige">#EDE3D1</color>
+    <color name="gold">#C6A15B</color>
+    <color name="gold_soft">#E7D09A</color>
+    <color name="alert">#C8453B</color>
+    <color name="alert_soft">#FBE3E0</color>
+    <color name="countdown_bg">#DCEFE6</color>
+    <color name="countdown_text">#125340</color>
+    <color name="ink">#14231D</color>
+    <color name="muted">#52645A</color>
+
+    <color name="notification_text_primary">#14231D</color>
+    <color name="notification_text_secondary">#6E7D74</color>
 </resources>

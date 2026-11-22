@@ -38,6 +38,8 @@ export interface TvData {
     address: string | null;
     mapUrl: string;
     calculationMethod: string;
+    latitude: number;
+    longitude: number;
   };
   today: string;
   isFriday: boolean;
@@ -338,11 +340,18 @@ function parseRequestedDate(value: string | null | undefined): Date {
 }
 
 export async function buildTvData(date?: string | null): Promise<TvData> {
-  const now = new Date();
+  const realNow = new Date();
   const today = parseRequestedDate(date);
+  // Saat ?date= menunjuk hari lain, hitung phase relatif terhadap tanggal itu.
+  // serverTime tetap waktu nyata agar klien tidak salah menghitung offset jam.
+  const isPreviewDate =
+    dateOnlyToString(today) !== dateOnlyToString(todayDateOnly());
+  const referenceNow = isPreviewDate
+    ? combineDateTime(today, "00:00")
+    : realNow;
   const friday = nextFriday(today);
 
-  const bundle = await loadPublicBundle(now, today, friday);
+  const bundle = await loadPublicBundle(referenceNow, today, friday);
   const {
     mosque,
     iqamahSettings,
@@ -383,10 +392,10 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
     };
   });
 
-  const nextPrayer = getNextPrayer(prayerTimes, today, now, prayerOptions);
+  const nextPrayer = getNextPrayer(prayerTimes, today, referenceNow, prayerOptions);
 
   const iqamahEvents = computeIqamahEvents(today, prayerTimes, iqamahSettings);
-  const nextIqamah = getNextIqamah(iqamahEvents, now);
+  const nextIqamah = getNextIqamah(iqamahEvents, referenceNow);
 
   const rollingKhatibSettings = khatibRolling.map((r) => ({
     id: r.id,
@@ -442,7 +451,12 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
 
   // Otomatis aktifkan mode Khutbah Jumat selama window shalat Jumat
   let resolvedKhutbah = khutbah;
-  if (!resolvedKhutbah && isFridayToday && now >= dhuhrStart && now < dhuhrEnd) {
+  if (
+    !resolvedKhutbah &&
+    isFridayToday &&
+    referenceNow >= dhuhrStart &&
+    referenceNow < dhuhrEnd
+  ) {
     resolvedKhutbah = {
       id: `friday-auto-${dateOnlyToString(today)}`,
       khatibName: fridaySchedule?.khatibName ?? rollingKhatib?.name ?? "Khatib Jumat",
@@ -455,20 +469,23 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
   // Pada hari Jumat, sembunyikan countdown iqamah Zuhur HANYA saat window Khutbah Jumat aktif
   let resolvedNextIqamah = nextIqamah;
   const isKhutbahActiveNow = Boolean(
-    isFridayToday && (resolvedKhutbah || (now >= dhuhrStart && now < dhuhrEnd))
+    isFridayToday &&
+    (resolvedKhutbah || (referenceNow >= dhuhrStart && referenceNow < dhuhrEnd))
   );
   if (isKhutbahActiveNow && resolvedNextIqamah?.label?.toLowerCase().includes("zuhur")) {
     resolvedNextIqamah = null;
   }
 
   return {
-    serverTime: now.toISOString(),
+    serverTime: realNow.toISOString(),
     mosque: {
       name: mosque.mosqueName,
       logoUrl: (mosque as { logoUrl?: string | null }).logoUrl ?? null,
       address: mosque.address,
       mapUrl: mosque.mapUrl,
       calculationMethod: mosque.prayerCalculationMethod,
+      latitude: mosque.latitude,
+      longitude: mosque.longitude,
     },
     today: dateOnlyToString(today),
     isFriday: isFridayToday,

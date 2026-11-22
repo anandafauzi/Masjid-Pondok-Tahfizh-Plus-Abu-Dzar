@@ -54,6 +54,27 @@ export function serverError(message = "Terjadi kesalahan pada server") {
   return NextResponse.json({ error: message }, { status: 500 });
 }
 
+/**
+ * Body JSON dipars sekali di sini. Payload rusak, null, atau bukan objek
+ * menghasilkan `null` agar route bisa membalas 400, bukan 500.
+ * Catatan: tipe longgar sengaja dipertahankan agar kompatibel dengan route
+ * lama yang membaca field body tanpa deklarasi tipe eksplisit.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type JsonBody = Record<string, any>;
+
+export async function readJsonBody(request: Request): Promise<JsonBody | null> {
+  try {
+    const value: unknown = await request.json();
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+    return value as JsonBody;
+  } catch {
+    return null;
+  }
+}
+
 /** Prisma melaporkan record yang hilang saat update/delete dengan P2025. */
 export function isPrismaNotFound(error: unknown): boolean {
   return (

@@ -9,6 +9,11 @@ export class RateLimitedError extends CredentialsSignin {
   code = "rate_limited";
 }
 
+/** Bedakan kegagalan penyimpanan login dari password salah. */
+export class AuthStoreError extends CredentialsSignin {
+  code = "auth_store_error";
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -35,8 +40,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new RateLimitedError();
         }
 
+        let user;
         try {
-          const user = await prisma.user.findFirst({
+          user = await prisma.user.findFirst({
             where: {
               OR: [
                 { email: rawEmail },
@@ -47,36 +53,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
             orderBy: { createdAt: "asc" },
           });
-
-          if (!user || !user.isActive) {
-            console.warn(`[AUTH] Login failed: User '${rawEmail}' not found or inactive.`);
-            await recordLoginAttempt(rawEmail, false, reqHeaders, userAgent);
-            return null;
-          }
-
-          const rawPassword = String(credentials.password);
-          const isValid = await bcrypt.compare(rawPassword, user.password);
-
-          if (!isValid) {
-            console.warn(`[AUTH] Login failed: Password mismatch for '${rawEmail}'.`);
-            await recordLoginAttempt(rawEmail, false, reqHeaders, userAgent);
-            return null;
-          }
-
-          // Catat percobaan berhasil
-          await recordLoginAttempt(rawEmail, true, reqHeaders, userAgent);
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          };
         } catch (error) {
-          if (error instanceof RateLimitedError) throw error;
-          console.error("[AUTH] Database error during authorize:", error);
+          console.error("[AUTH][METRIC] auth_store_error (user lookup):", error);
+          throw new AuthStoreError();
+        }
+
+        if (!user || !user.isActive) {
+          console.warn(`[AUTH] Login failed: User '${rawEmail}' not found or inactive.`);
+          await recordLoginAttempt(rawEmail, false, reqHeaders, userAgent);
           return null;
         }
+
+        const rawPassword = String(credentials.password);
+        let isValid: boolean;
+        try {
+          isValid = await bcrypt.compare(rawPassword, user.password);
+        } catch (error) {
+          console.error("[AUTH][METRIC] auth_store_error (password verify):", error);
+          throw new AuthStoreError();
+        }
+
+        if (!isValid) {
+          console.warn(`[AUTH] Login failed: Password mismatch for '${rawEmail}'.`);
+          await recordLoginAttempt(rawEmail, false, reqHeaders, userAgent);
+          return null;
+        }
+
+        // Catat percobaan berhasil
+        await recordLoginAttempt(rawEmail, true, reqHeaders, userAgent);
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
       },
     }),
   ],

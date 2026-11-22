@@ -39,6 +39,22 @@ export function MuadzinSelectorCard() {
     }
   }, []);
 
+  useEffect(() => () => stopAdzanSound(), []);
+
+  useEffect(() => {
+    const handlePageHide = () => stopAdzanSound();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") stopAdzanSound();
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const updateSetting = <K extends keyof AdzanSettings>(
     key: K,
     val: AdzanSettings[K]

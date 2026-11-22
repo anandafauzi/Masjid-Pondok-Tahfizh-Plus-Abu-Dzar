@@ -109,8 +109,11 @@ function toWibTime(ms: number): string {
 export function buildPreviewTvData(
   base: TvData,
   config: TvPreviewConfig,
+  frozenNow?: number,
 ): TvData {
-  const now = Date.now();
+  // Tanpa waktu yang dibekukan, phase pratinjau bergeser tiap render dan
+  // overlay bisa tiba-tiba hilang setelah beberapa menit.
+  const now = frozenNow ?? Date.now();
   const configuredDuration = normalizeShalatScreenDurationMinutes(
     config.form.themeSettings?.shalatScreenDurationMinutes,
   );

@@ -101,8 +101,11 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        if (result.error.toLowerCase().includes("rate_limited")) {
+        const errorCode = result.error.toLowerCase();
+        if (errorCode.includes("rate_limited")) {
           toast.error("Terlalu banyak percobaan gagal. Silakan tunggu 15 menit.");
+        } else if (errorCode.includes("auth_store_error")) {
+          toast.error("Layanan autentikasi sedang bermasalah. Silakan coba lagi nanti.");
         } else {
           toast.error("Email atau kata sandi tidak sesuai. Silakan periksa kembali.");
         }
@@ -198,7 +201,7 @@ function LoginForm() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-3 text-slate-400 hover:text-slate-700 transition-colors"
                 title={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                tabIndex={-1}
+                aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4 text-slate-400" />

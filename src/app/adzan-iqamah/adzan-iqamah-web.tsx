@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PublicShell } from "@/components/public-shell";
 import { MuadzinSelectorCard } from "@/components/muadzin-selector";
 import type { TvData } from "@/lib/public-data";
@@ -21,16 +21,33 @@ export function AdzanIqamahWebPage() {
   const [offset, setOffset] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [mounted, setMounted] = useState(false);
+  const activeFetchRef = useRef<AbortController | null>(null);
 
   const load = useCallback(async () => {
+    activeFetchRef.current?.abort();
+    const controller = new AbortController();
+    activeFetchRef.current = controller;
+
     try {
-      const res = await fetch("/api/public/tv-data", { cache: "no-store" });
+      const res = await fetch("/api/public/tv-data", {
+        cache: "no-store",
+        signal: controller.signal,
+      });
       if (!res.ok) return;
       const d = (await res.json()) as TvData;
+      if (controller.signal.aborted) return;
       setData(d);
       setOffset(new Date(d.serverTime).getTime() - Date.now());
-    } catch {
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "name" in error &&
+        error.name === "AbortError"
+      ) return;
       // keep last data
+    } finally {
+      if (activeFetchRef.current === controller) activeFetchRef.current = null;
     }
   }, []);
 
@@ -42,6 +59,8 @@ export function AdzanIqamahWebPage() {
     return () => {
       clearInterval(poll);
       clearInterval(clock);
+      activeFetchRef.current?.abort();
+      activeFetchRef.current = null;
     };
   }, [load]);
 

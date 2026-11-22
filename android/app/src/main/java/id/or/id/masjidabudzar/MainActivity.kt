@@ -1,316 +1,112 @@
 package id.or.id.masjidabudzar
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.app.AlarmManager
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
-import android.view.View
-import android.webkit.*
-import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.NotificationManagerCompat
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import id.or.id.masjidabudzar.ui.AppTheme
+import id.or.id.masjidabudzar.ui.AppViewModel
+import id.or.id.masjidabudzar.ui.MasjidApp
+import id.or.id.masjidabudzar.ui.OpenTabRequest
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
+    private lateinit var repository: PrayerRepository
 
-    private lateinit var webView: WebView
-    private lateinit var swipeRefresh: SwipeRefreshLayout
-    private val appUrl = "https://masjid-pondok-tahfizh-plus-abu-dzar.vercel.app"
-    private val appHost = "masjid-pondok-tahfizh-plus-abu-dzar.vercel.app"
+    // StateFlow + id unik: membuka "home" dua kali tetap memicu LaunchedEffect.
+    private val openTab = MutableStateFlow(OpenTabRequest("home", 0L))
+    private var openTabSequence = 0L
 
-    private val requestNotificationPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
+    private val notificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (granted) {
-            startReminderService()
-            maybeRequestExactAlarm()
-        } else {
-            Toast.makeText(
-                this,
-                "Izin notifikasi dibutuhkan agar pengingat shalat muncul di status bar.",
-                Toast.LENGTH_LONG,
-            ).show()
+            lifecycleScope.launch { activateReminders() }
         }
     }
 
-    private var pendingGeoOrigin: String? = null
-    private var pendingGeoCallback: GeolocationPermissions.Callback? = null
-    private val requestLocationPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        val origin = pendingGeoOrigin
-        val callback = pendingGeoCallback
-        pendingGeoOrigin = null
-        pendingGeoCallback = null
-        callback?.invoke(origin, granted && origin != null && isAppOrigin(origin), false)
-    }
-
-    private var exactAlarmDialogShown = false
-
-    private fun isAppOrigin(origin: String): Boolean {
-        return try {
-            val uri = Uri.parse(origin)
-            uri.scheme == "https" && uri.host == appHost
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        swipeRefresh = SwipeRefreshLayout(this).apply {
-            setColorSchemeColors(0xFF2D946E.toInt(), 0xFF1B5E46.toInt())
+        OngoingNotification.createChannels(this)
+        repository = PrayerRepository(this)
+        val viewModel = ViewModelProvider(
+            this,
+            AppViewModel.Factory(repository),
+        )[AppViewModel::class.java]
+
+        lifecycleScope.launch {
+            repository.settings.migrateLegacySettings()
+            // Jangan nyalakan FGS saat preferensi notifikasi aplikasi dimatikan.
+            if (repository.settings.prefsAfterMigration().notificationsEnabled) {
+                PrayerReminderService.start(this@MainActivity)
+            }
+            repository.refresh()
+            PrayerReminderScheduler.scheduleNext(this@MainActivity, repository)
         }
 
-        webView = WebView(this).apply {
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                databaseEnabled = true
-                cacheMode = WebSettings.LOAD_DEFAULT
-                userAgentString = "$userAgentString $WEB_VIEW_UA_MARKER"
-                useWideViewPort = true
-                loadWithOverviewMode = true
-                mediaPlaybackRequiresUserGesture = false
-                setGeolocationEnabled(true)
-                allowFileAccess = false
-                allowContentAccess = false
-            }
+        SyncWorker.enqueue(this)
 
-            addJavascriptInterface(NativeBridge(), BRIDGE_NAME)
-
-            webChromeClient = object : WebChromeClient() {
-                override fun onGeolocationPermissionsShowPrompt(
-                    origin: String?,
-                    callback: GeolocationPermissions.Callback?
-                ) {
-                    if (origin == null || !isAppOrigin(origin)) {
-                        callback?.invoke(origin, false, false)
-                        return
-                    }
-                    if (
-                        ContextCompat.checkSelfPermission(
-                            this@MainActivity,
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                        ) == PackageManager.PERMISSION_GRANTED
-                    ) {
-                        callback?.invoke(origin, true, false)
-                        return
-                    }
-                    pendingGeoOrigin = origin
-                    pendingGeoCallback = callback
-                    requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                }
-            }
-
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(
-                    view: WebView?,
-                    request: WebResourceRequest?
-                ): Boolean {
-                    val url = request?.url?.toString() ?: return false
-                    if (isAppOrigin(url)) return false
-
-                    return try {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        true
-                    } catch (_: Exception) {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Tautan tidak dapat dibuka.",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                        true
-                    }
-                }
-
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    swipeRefresh.isRefreshing = false
-                    if (url != null && isAppOrigin(url)) {
-                        view?.evaluateJavascript(BRIDGE_SCRIPT, null)
-                    }
-                }
-
-                override fun onReceivedError(
-                    view: WebView?,
-                    request: WebResourceRequest?,
-                    error: WebResourceError?
-                ) {
-                    super.onReceivedError(view, request, error)
-                    swipeRefresh.isRefreshing = false
-                }
+        requestOpenTab(intent?.getStringExtra("open_tab") ?: "home")
+        setContent {
+            val tabRequest by openTab.collectAsState()
+            AppTheme {
+                MasjidApp(
+                    viewModel = viewModel,
+                    openTabRequest = tabRequest,
+                    onNotificationsChange = { enabled ->
+                        lifecycleScope.launch {
+                            repository.settings.setNotificationsEnabled(enabled)
+                            if (enabled) {
+                                activateReminders()
+                                requestNotificationPermission()
+                            }
+                        }
+                    },
+                )
             }
         }
 
-        swipeRefresh.addView(webView)
-        setContentView(swipeRefresh)
-
-        swipeRefresh.setOnRefreshListener {
-            webView.reload()
-        }
-
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    finish()
-                }
-            }
-        })
-
-        val openPath = intent?.getStringExtra(ReminderConfig.EXTRA_OPEN_PATH)
-            ?.takeIf { it.startsWith("/") && !it.startsWith("//") }
-        webView.loadUrl(appUrl + (openPath.orEmpty()))
-        ensureReminderPermissionAndStart()
+        if (!notificationsGranted()) requestNotificationPermission()
     }
 
-    override fun onNewIntent(intent: Intent) {
+    override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        val path = intent.getStringExtra(ReminderConfig.EXTRA_OPEN_PATH)
-            ?.takeIf { it.startsWith("/") && !it.startsWith("//") }
-        if (!path.isNullOrBlank() && ::webView.isInitialized) {
-            webView.loadUrl(appUrl + path)
+        requestOpenTab(intent.getStringExtra("open_tab") ?: "home")
+    }
+
+    private fun requestOpenTab(tab: String) {
+        openTab.value = OpenTabRequest(tab, ++openTabSequence)
+    }
+
+    /** Dipanggil setelah prefs ON ditulis, juga setelah izin OS diberikan. */
+    private suspend fun activateReminders() {
+        PrayerReminderService.start(this)
+        repository.refresh()
+        PrayerReminderScheduler.scheduleNext(this, repository)
+    }
+
+    private fun notificationsGranted(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted()) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        webView.onResume()
-
-        if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
-        ) {
-            // User baru saja memberi izin alarm & pengingat dari Settings.
-            startReminderService()
-        } else {
-            maybeRequestExactAlarm()
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        webView.onPause()
-    }
-
-    override fun onDestroy() {
-        webView.removeJavascriptInterface(BRIDGE_NAME)
-        webView.destroy()
-        super.onDestroy()
-    }
-
-    private fun ensureReminderPermissionAndStart() {
-        if (
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-            return
-        }
-
-        startReminderService()
-        maybeRequestExactAlarm()
-    }
-
-    private fun startReminderService() {
-        if (NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-            PrayerReminderLauncher.start(this, ReminderConfig.ACTION_REFRESH_DATA)
-        }
-    }
-
-    private fun maybeRequestExactAlarm() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
-
-        val alarmManager = getSystemService(AlarmManager::class.java)
-        if (alarmManager.canScheduleExactAlarms() || exactAlarmDialogShown) return
-        exactAlarmDialogShown = true
-
-        AlertDialog.Builder(this)
-            .setTitle("Izin alarm shalat")
-            .setMessage(
-                "Agar adzan berbunyi tepat waktu, izinkan aplikasi mengatur " +
-                    "alarm & pengingat pada pengaturan berikut."
-            )
-            .setPositiveButton("Buka pengaturan") { _, _ ->
-                ReminderSettings.markExactAlarmPrompted(this)
-                try {
-                    startActivity(
-                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
-                            .setData(Uri.parse("package:$packageName"))
-                    )
-                } catch (_: Exception) {
-                    Toast.makeText(
-                        this,
-                        "Pengaturan alarm tidak tersedia di perangkat ini.",
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                }
-            }
-            .setNegativeButton("Nanti") { _, _ -> exactAlarmDialogShown = false }
-            .setOnCancelListener { exactAlarmDialogShown = false }
-            .show()
-    }
-
-    inner class NativeBridge {
-        @JavascriptInterface
-        fun getPlatform(): String = "android"
-
-        @JavascriptInterface
-        fun syncAdzanSettings(raw: String) {
-            ReminderSettings.saveAdzanSettingsFromJson(applicationContext, raw)
-        }
-
-        /** Kembalikan status saat ini, bukan asumsi "granted" setelah dialog dibuka. */
-        @JavascriptInterface
-        fun requestNotifications(): Boolean {
-            runOnUiThread { ensureReminderPermissionAndStart() }
-            return NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled()
-        }
-
-        /** Dipakai JS untuk mengecek ulang setelah dialog izin Android ditutup. */
-        @JavascriptInterface
-        fun areNotificationsEnabled(): Boolean =
-            NotificationManagerCompat.from(this@MainActivity).areNotificationsEnabled()
-    }
-
-    private companion object {
-        /** Penanda UA agar web bisa membedakan WebView aplikasi dari browser biasa. */
-        const val WEB_VIEW_UA_MARKER = "MasjidAppAndroid"
-
-        const val BRIDGE_NAME = "MasjidNative"
-        val BRIDGE_SCRIPT = """
-            (function () {
-              if (window.__masjidNativeBridgeInstalled) return;
-              window.__masjidNativeBridgeInstalled = true;
-              function sync() {
-                try {
-                  var raw = localStorage.getItem('abu_dzar_adzan_settings');
-                  if (raw && window.MasjidNative && window.MasjidNative.syncAdzanSettings) {
-                    window.MasjidNative.syncAdzanSettings(raw);
-                  }
-                } catch (e) {}
-              }
-              sync();
-              setInterval(sync, 5000);
-            })();
-        """.trimIndent()
     }
 }

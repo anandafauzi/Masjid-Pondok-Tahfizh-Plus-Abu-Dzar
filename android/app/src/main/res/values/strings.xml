@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Masjid Abu Dzar</string>
+    <string name="notif_action_open">Buka Aplikasi</string>
 </resources>

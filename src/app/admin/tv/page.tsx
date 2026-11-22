@@ -110,12 +110,15 @@ export default function AdminTvPage() {
   // Pratinjau di tab lain ikut berubah saat admin mengedit form, tanpa perlu
   // menunggu simpan atau menunggu jadwal iqamah asli.
   useEffect(() => {
+    // Jangan menimpa konfigurasi tab pratinjau dengan DEFAULTS sebelum data
+    // pengaturan asli selesai dimuat.
+    if (loading) return;
     writeTvPreviewConfig({
       phase: readTvPreviewConfig()?.phase ?? "shalat-bright",
       form,
       updatedAt: Date.now(),
     });
-  }, [form]);
+  }, [form, loading]);
 
   function openPreview() {
     writeTvPreviewConfig({

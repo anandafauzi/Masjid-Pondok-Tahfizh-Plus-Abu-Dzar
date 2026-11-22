@@ -71,7 +71,11 @@ export default async function JadwalImamPage() {
     friday
   );
 
-  const dates = Array.from(grouped.keys()).sort();
+  // Sertakan tanggal yang hanya memiliki jadwal Tarawih agar tidak hilang.
+  const tarawihDateKeys = [...tarawihByDate.keys()].filter((key) =>
+    isRamadanDate(key)
+  );
+  const dates = Array.from(new Set([...grouped.keys(), ...tarawihDateKeys])).sort();
   const todayKey = dateOnlyToString(today);
   const todayTarawih = tarawihForDate(todayKey);
 
@@ -280,11 +284,12 @@ export default async function JadwalImamPage() {
 
         {/* Schedule Lists */}
         {dates.length === 0 ? (
-          <EmptyState message="Belum ada data penugasan imam & muadzin pada sistem." />
+          <EmptyState message="Belum ada data penugasan imam & muadzin maupun Tarawih pada sistem." />
         ) : (
           <div className="space-y-6">
             {dates.map((key) => {
               const list = grouped.get(key) ?? [];
+              const hasTarawih = Boolean(tarawihForDate(key));
               const isToday = key === todayKey;
               const dateObj = new Date(key + "T00:00:00.000Z");
 
@@ -315,7 +320,7 @@ export default async function JadwalImamPage() {
                       )}
                     </div>
                     <span className="text-xs opacity-80">
-                      {list.length} Waktu Terjadwal
+                      {list.length + (hasTarawih ? 1 : 0)} Waktu Terjadwal
                     </span>
                   </div>
 

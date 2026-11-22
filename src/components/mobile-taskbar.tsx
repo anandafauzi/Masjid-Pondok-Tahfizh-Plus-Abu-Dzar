@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import type { TvData } from "@/lib/public-data";
+import { useDialogA11y } from "@/lib/use-dialog-a11y";
 import {
   MUADZIN_OPTIONS,
   AdzanSettings,
@@ -56,6 +57,16 @@ export function MobilePrayerTaskbar() {
   const [now, setNow] = useState(Date.now());
   const [mounted, setMounted] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeDrawer = useCallback(() => setExpanded(false), []);
+  const toggleDrawer = useCallback((trigger: HTMLButtonElement | null) => {
+    drawerTriggerRef.current = trigger;
+    setExpanded((value) => !value);
+  }, []);
+
+  useDialogA11y(expanded, drawerRef, drawerTriggerRef, closeDrawer);
 
   // Settings
   const [settings, setSettings] = useState<AdzanSettings>(DEFAULT_ADZAN_SETTINGS);
@@ -425,7 +436,7 @@ export function MobilePrayerTaskbar() {
             {/* Left: Next Prayer Badge & Dynamic Countdown */}
             <button
               type="button"
-              onClick={() => setExpanded(!expanded)}
+              onClick={(event) => toggleDrawer(event.currentTarget)}
               className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus:outline-none group"
             >
               <div
@@ -523,7 +534,7 @@ export function MobilePrayerTaskbar() {
               {/* Expand Drawer Button */}
               <button
                 type="button"
-                onClick={() => setExpanded(!expanded)}
+                onClick={(event) => toggleDrawer(event.currentTarget)}
                 className="flex items-center gap-1 rounded-xl border border-sage-600 bg-sage-600 px-2.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-sage-700 active:scale-95 transition-all"
                 title="Buka Panel 5 Waktu Sholat & Pilihan Muadzin"
               >
@@ -543,10 +554,12 @@ export function MobilePrayerTaskbar() {
       {/* 2. EXPANDED BOTTOM DRAWER (FULL 5 WAKTU SHOLAT & AUDIO SETTINGS) */}
       {expanded && (
         <div
+          ref={drawerRef}
           role="dialog"
           aria-modal="true"
+          aria-labelledby="prayer-drawer-title"
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 backdrop-blur-sm animate-fade-in"
-          onClick={() => setExpanded(false)}
+          onClick={closeDrawer}
         >
           <div
             className="w-full max-w-2xl rounded-t-3xl border-t border-[#ded5c4] bg-[#faf7f2] text-slate-900 shadow-2xl max-h-[88vh] overflow-y-auto flex flex-col"
@@ -558,7 +571,7 @@ export function MobilePrayerTaskbar() {
               <div className="flex items-center gap-2">
                 <span className="text-xl">🕌</span>
                 <div>
-                  <h3 className="font-extrabold text-sm text-slate-900 sm:text-base">
+                  <h3 id="prayer-drawer-title" className="font-extrabold text-sm text-slate-900 sm:text-base">
                     Jadwal 5 Waktu &amp; Notifikasi Adzan
                   </h3>
                   <p className="text-[11px] text-slate-500">
@@ -568,7 +581,8 @@ export function MobilePrayerTaskbar() {
               </div>
               <button
                 type="button"
-                onClick={() => setExpanded(false)}
+                onClick={closeDrawer}
+                aria-label="Tutup panel jadwal sholat"
                 className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                 title="Tutup"
               >

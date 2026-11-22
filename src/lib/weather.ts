@@ -4,6 +4,8 @@ export interface WeatherInfo {
   condition: string;
   icon: string;
   locationName: string;
+  /** true bila nilai berasal dari fallback offline, bukan data live. */
+  isFallback?: boolean;
 }
 
 export function getWeatherDescription(code: number, isDay: number = 1): { condition: string; icon: string } {

@@ -4,6 +4,8 @@ import {
   badRequest,
   getSessionUser,
   ok,
+  parseDateOnly,
+  readJsonBody,
   serverError,
   unauthorized,
 } from "@/lib/api";
@@ -16,8 +18,6 @@ import {
 } from "@/lib/weekly-imam";
 
 export const dynamic = "force-dynamic";
-
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Validasi & normalisasi jadwal imam pekanan dari body request. */
 function parseWeeklyItems(raw: unknown[]): WeeklyImamItem[] | null {
@@ -46,13 +46,13 @@ function parseWeeklyItems(raw: unknown[]): WeeklyImamItem[] | null {
 
     const effectiveFrom =
       typeof item.effectiveFrom === "string" ? item.effectiveFrom.trim() : "";
-    if (effectiveFrom && !DATE_ONLY.test(effectiveFrom)) return null;
+    if (effectiveFrom && !parseDateOnly(effectiveFrom)) return null;
 
     const effectiveUntil =
       typeof item.effectiveUntil === "string" && item.effectiveUntil.trim()
         ? item.effectiveUntil.trim()
         : null;
-    if (effectiveUntil && !DATE_ONLY.test(effectiveUntil)) return null;
+    if (effectiveUntil && !parseDateOnly(effectiveUntil)) return null;
 
     items.push({
       id:
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
   if (!user) return unauthorized();
 
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request);
     if (!body || !Array.isArray(body.items)) {
       return badRequest("Format data jadwal pekanan tidak valid");
     }
