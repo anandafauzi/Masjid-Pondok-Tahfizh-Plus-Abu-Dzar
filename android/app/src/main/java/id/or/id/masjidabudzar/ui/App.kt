@@ -96,10 +96,12 @@ import id.or.id.masjidabudzar.BuildConfig
 import id.or.id.masjidabudzar.AppBundle
 import id.or.id.masjidabudzar.CountdownState
 import id.or.id.masjidabudzar.HijriUtil
+import id.or.id.masjidabudzar.Kajian
 import id.or.id.masjidabudzar.PrayerDay
 import id.or.id.masjidabudzar.ReminderConfig
 import id.or.id.masjidabudzar.TvData
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -379,32 +381,15 @@ private fun ScreenTopBar(
                     Spacer(Modifier.width(10.dp))
                 }
                 Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = title,
-                            fontSize = titleTextSize.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Serif,
-                            color = AppColors.Ink,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(AppColors.Emerald100)
-                                .padding(horizontal = 5.dp, vertical = 1.dp),
-                        ) {
-                            Text(
-                                "RESMI",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = AppColors.Emerald800,
-                                letterSpacing = 0.5.sp,
-                            )
-                        }
-                    }
+                    Text(
+                        text = title,
+                        fontSize = titleTextSize.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif,
+                        color = AppColors.Ink,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     Spacer(Modifier.height(1.dp))
                     Text(
                         text = subtitle,
@@ -461,27 +446,38 @@ private fun SectionCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .clip(CircleShape)
-                            .background(AppColors.Gold),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = title.uppercase(),
-                        fontSize = titleTextSize.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = titleColor,
-                        letterSpacing = 0.8.sp,
-                    )
-                }
+                Text(
+                    text = title,
+                    fontSize = titleTextSize.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = titleColor,
+                )
                 action?.invoke()
             }
             Spacer(Modifier.height(12.dp))
             content()
         }
+    }
+}
+
+@Composable
+private fun FlatSectionCard(title: String, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            fontSize = 13.sp,
+            color = AppColors.Emerald800,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        content()
+        Spacer(Modifier.height(12.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(AppColors.BorderSubtle.copy(alpha = 0.55f)),
+        )
     }
 }
 
@@ -545,6 +541,35 @@ private fun kajianScheduleLabel(startDateTime: String, now: Long): String {
     return "$day · ${ApiParser.wallTime(start)}"
 }
 
+private data class DatedKajian(val item: Kajian, val start: Long, val end: Long)
+
+/**
+ * Ambil seluruh kajian dalam satu pekan (Senin–Minggu). Pekan berikutnya
+ * dipakai setelah kajian terakhir di pekan berjalan selesai.
+ */
+private fun kajianWeekItems(all: List<Kajian>, now: Long): List<Kajian> {
+    val dated = all.mapNotNull { item ->
+        val start = ApiParser.instant(item.startDateTime) ?: return@mapNotNull null
+        val end = ApiParser.instant(item.endDateTime) ?: (start + 90 * 60_000L)
+        DatedKajian(item, start, maxOf(start, end))
+    }.sortedBy { it.start }
+    if (dated.isEmpty()) return emptyList()
+
+    val currentWeek = ApiParser.zoned(now).toLocalDate().with(DayOfWeek.MONDAY)
+    val groups = dated.groupBy {
+        ApiParser.zoned(it.start).toLocalDate().with(DayOfWeek.MONDAY)
+    }
+    val current = groups[currentWeek].orEmpty()
+    if (current.isNotEmpty() && current.any { it.end > now }) {
+        return current.map { it.item }
+    }
+    return groups.filterKeys { it > currentWeek }
+        .minByOrNull { it.key }
+        ?.value
+        ?.map { it.item }
+        ?: emptyList()
+}
+
 @Composable
 private fun HomeScreen(
     bundle: AppBundle,
@@ -604,8 +629,6 @@ private fun HomeScreen(
                                 modifier = Modifier.padding(10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Avatar(initials(state?.imamName ?: "-"), textSize = 13)
-                                Spacer(Modifier.width(8.dp))
                                 Column {
                                     Text("IMAM", fontSize = 10.5.sp, color = AppColors.Emerald700, fontWeight = FontWeight.ExtraBold)
                                     Text(
@@ -631,8 +654,6 @@ private fun HomeScreen(
                                 modifier = Modifier.padding(10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Avatar(initials(state?.muadzinName ?: "-"), gold = true, textSize = 13)
-                                Spacer(Modifier.width(8.dp))
                                 Column {
                                     Text("MUADZIN", fontSize = 10.5.sp, color = AppColors.GoldDeep, fontWeight = FontWeight.ExtraBold)
                                     Text(
@@ -662,7 +683,7 @@ private fun HomeScreen(
                 val khatibDate = if (fridayDate.isBlank()) {
                     "Jumat mendatang"
                 } else {
-                    "Jumat, ${ApiParser.shortDate(ApiParser.instant("${fridayDate}T00:00:00Z") ?: now)}"
+                    ApiParser.shortDate(ApiParser.instant("${fridayDate}T00:00:00Z") ?: now)
                 }
                 SectionCard(
                     title = "Khatib Shalat Jumat",
@@ -679,12 +700,10 @@ private fun HomeScreen(
                             modifier = Modifier.padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Avatar(initials(khatibName), gold = true, textSize = 15)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
+                            Column(Modifier.fillMaxWidth()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        "KHATIB JUM'AT",
+                                        "KHATIB",
                                         fontSize = 10.5.sp,
                                         color = AppColors.GoldDeep,
                                         fontWeight = FontWeight.ExtraBold,
@@ -721,52 +740,52 @@ private fun HomeScreen(
                 Spacer(Modifier.height(14.dp))
             }
             item {
-                val kajian = primary?.kajian?.firstOrNull()
+                val kajian = kajianWeekItems(primary?.kajian.orEmpty(), now)
                 SectionCard(
-                    title = "Agenda Kajian Terdekat",
+                    title = "Agenda Kajian Pekan Ini",
                     titleTextSize = 12,
                     titleColor = AppColors.Emerald800,
                 ) {
-                    if (kajian == null) {
+                    if (kajian.isEmpty()) {
                         EmptyState("Belum ada agenda kajian terjadwal.")
                     } else {
-                        Surface(
-                            shape = RoundedCornerShape(15.dp),
-                            color = AppColors.SurfaceElevated,
-                            border = BorderStroke(1.dp, AppColors.BorderSubtle),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
+                        kajian.forEachIndexed { index, item ->
+                            if (index > 0) {
+                                Spacer(Modifier.height(10.dp))
+                                GoldRule()
+                                Spacer(Modifier.height(10.dp))
+                            }
                             Row(
-                                modifier = Modifier.padding(14.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Box(
                                     Modifier
                                         .width(3.5.dp)
-                                        .height(52.dp)
+                                        .height(48.dp)
                                         .clip(RoundedCornerShape(2.dp))
                                         .background(AppColors.Gold),
                                 )
                                 Spacer(Modifier.width(12.dp))
-                                Column {
+                                Column(Modifier.weight(1f)) {
                                     Text(
-                                        kajian.title,
-                                        fontSize = 16.sp,
+                                        item.title,
+                                        fontSize = 15.5.sp,
                                         color = AppColors.Ink,
                                         fontWeight = FontWeight.Bold,
                                     )
                                     Spacer(Modifier.height(4.dp))
-                                    val schedule = kajianScheduleLabel(kajian.startDateTime, now)
-                                    val detail = if (kajian.kajianType == "LIBUR") {
+                                    val schedule = kajianScheduleLabel(item.startDateTime, now)
+                                    val detail = if (item.kajianType == "LIBUR") {
                                         "Tidak ada kajian"
                                     } else {
-                                        listOf(kajian.speakerName, kajian.location)
+                                        listOf(item.speakerName, item.location)
                                             .filter { it.isNotBlank() }
                                             .joinToString(" · ")
                                     }
                                     Text(
                                         "$schedule · $detail",
-                                        fontSize = 13.5.sp,
+                                        fontSize = 13.sp,
                                         color = AppColors.Muted,
                                     )
                                 }
@@ -1147,7 +1166,7 @@ private fun ScheduleScreen(
                                     } else {
                                         ApiParser.shortDate(dateMillis)
                                     }
-                                    SectionCard(title = dayTitle) {
+                                    FlatSectionCard(title = dayTitle) {
                                         val prayers = listOf(
                                             "Subuh" to day.fajr,
                                             "Dzuhur" to day.dhuhr,
@@ -1191,7 +1210,7 @@ private fun ScheduleScreen(
                             } else {
                                 items(events.size) { index ->
                                     val event = events[index]
-                                    SectionCard(title = event.label.uppercase()) {
+                                    FlatSectionCard(title = event.label) {
                                         Row(
                                             Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1305,35 +1324,28 @@ private fun SlidingSegmentedControl(
 
 @Composable
 private fun ScheduleRow(label: String, adhan: String, iqamah: String, active: Boolean) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (active) AppColors.Emerald50 else AppColors.Ivory2,
-        ),
-        border = BorderStroke(
-            width = if (active) 1.5.dp else 0.8.dp,
-            color = if (active) AppColors.Gold else AppColors.BorderSubtle,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (active) 2.dp else 1.dp),
-    ) {
+    Column(Modifier.fillMaxWidth()) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 13.dp),
+                .background(
+                    color = if (active) AppColors.Emerald50 else Color.Transparent,
+                    shape = RoundedCornerShape(12.dp),
+                )
+                .padding(horizontal = 10.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 Modifier
-                    .size(8.dp)
+                    .size(7.dp)
                     .clip(CircleShape)
                     .background(if (active) AppColors.Gold else AppColors.Emerald700.copy(alpha = 0.3f)),
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     label,
-                    fontSize = 16.sp,
+                    fontSize = 15.5.sp,
                     color = AppColors.Ink,
                     fontWeight = FontWeight.Bold,
                 )
@@ -1348,18 +1360,18 @@ private fun ScheduleRow(label: String, adhan: String, iqamah: String, active: Bo
             }
             Text(
                 adhan,
-                fontSize = 16.sp,
+                fontSize = 15.5.sp,
                 color = AppColors.Ink,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 "➔",
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 color = AppColors.GoldDeep,
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 iqamah,
                 fontSize = 15.sp,
@@ -1368,6 +1380,14 @@ private fun ScheduleRow(label: String, adhan: String, iqamah: String, active: Bo
                 fontFamily = FontFamily.Monospace,
             )
         }
+        Spacer(Modifier.height(6.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(AppColors.BorderSubtle.copy(alpha = 0.45f)),
+        )
+        Spacer(Modifier.height(6.dp))
     }
 }
 
@@ -1397,7 +1417,7 @@ private fun DataStatus(bundle: AppBundle) {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(
-                    "Sumber Resmi Masjid Abu Dzar",
+                    "Sumber Data Masjid Abu Dzar",
                     fontSize = 13.5.sp,
                     color = AppColors.Ink,
                     fontWeight = FontWeight.Bold,
@@ -1603,7 +1623,7 @@ private fun OfficersScreen(bundle: AppBundle) {
                             } else {
                                 items(duties.size) { index ->
                                     val duty = duties[index]
-                                    SectionCard(title = duty.prayerName.uppercase()) {
+                                    FlatSectionCard(title = duty.prayerName) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Avatar(
                                                 initials = initials(
@@ -1651,7 +1671,7 @@ private fun OfficersScreen(bundle: AppBundle) {
                                     } else {
                                         ApiParser.shortDate(dateMillis)
                                     }
-                                    SectionCard(title = title) {
+                                    FlatSectionCard(title = title) {
                                         dayDuties
                                             .sortedBy { prayerOrder[it.prayerName.lowercase(Locale.ROOT)] ?: 99 }
                                             .forEachIndexed { dutyIndex, duty ->
@@ -1796,7 +1816,7 @@ private fun QiblaScreen(bundle: AppBundle) {
             }
 
             item {
-                SectionCard(title = "Koordinat Resmi Masjid") {
+                SectionCard(title = "Koordinat Masjid") {
                     InfoLine("Koordinat", String.format(Locale.ROOT, "%.4f, %.4f", lat, lon))
                     Spacer(Modifier.height(10.dp))
                     GoldRule()
@@ -1909,12 +1929,12 @@ private fun InfoScreen(
             }
 
             item {
-                SectionCard(title = "Agenda Kajian Mendatang") {
-                    val kajian = bundle.primary?.kajian.orEmpty()
+                SectionCard(title = "Agenda Kajian Pekan Ini") {
+                    val kajian = kajianWeekItems(bundle.primary?.kajian.orEmpty(), now)
                     if (kajian.isEmpty()) {
                         Text("Belum ada agenda kajian terjadwal.", fontSize = 13.5.sp, color = AppColors.Muted)
                     } else {
-                        kajian.take(3).forEachIndexed { index, item ->
+                        kajian.forEachIndexed { index, item ->
                             if (index > 0) {
                                 Spacer(Modifier.height(10.dp))
                                 GoldRule()

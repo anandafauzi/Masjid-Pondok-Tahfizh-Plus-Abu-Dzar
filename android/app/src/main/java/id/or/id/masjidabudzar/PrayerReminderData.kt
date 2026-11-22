@@ -173,6 +173,7 @@ data class Kajian(
     val speakerName: String = "",
     val bookOrTopic: String? = null,
     val startDateTime: String = "",
+    val endDateTime: String? = null,
     val location: String = "",
     val kajianType: String = "REGULAR",
     val audience: String? = null,

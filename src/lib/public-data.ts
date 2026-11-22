@@ -115,6 +115,7 @@ export interface TvData {
     speakerName: string;
     bookOrTopic: string | null;
     startDateTime: string;
+    endDateTime: string | null;
     location: string;
     kajianType: "REGULAR" | "LIBUR" | "KHUSUS";
     audience: string | null;
@@ -254,7 +255,7 @@ async function loadPublicBundle(
     getDisplaySettings(),
     getRunningTextsSafe(),
     getAdviceSafe(),
-    getKajianSafe(now, 5),
+    getKajianSafe(now, 40),
     getActiveKhutbah(now).catch(() => null),
     getUpcomingKhatibSchedules(addDaysUTC(friday, 1), 4),
     getKhatibRollingActive(),
@@ -575,6 +576,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
       speakerName: k.speakerName,
       bookOrTopic: k.bookOrTopic,
       startDateTime: k.startDateTime.toISOString(),
+      endDateTime: k.endDateTime ? k.endDateTime.toISOString() : null,
       location: k.location,
       kajianType: k.kajianType,
       audience: k.audience,
