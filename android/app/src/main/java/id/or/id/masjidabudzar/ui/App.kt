@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -161,69 +162,82 @@ fun MasjidApp(
     }
 
     Scaffold(
+        containerColor = AppColors.Ivory,
         bottomBar = {
-            PremiumBottomNavBar(
-                items = NAV_ITEMS,
-                pagerState = pagerState,
-                onItemSelect = { index ->
-                    scope.launch {
-                        pagerState.animateScrollToPage(index, animationSpec = pageSpec)
-                    }
-                },
-            )
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+            ) {
+                PremiumBottomNavBar(
+                    items = NAV_ITEMS,
+                    pagerState = pagerState,
+                    onItemSelect = { index ->
+                        scope.launch {
+                            pagerState.animateScrollToPage(index, animationSpec = pageSpec)
+                        }
+                    },
+                )
+            }
         },
     ) { padding ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.padding(padding),
-            beyondBoundsPageCount = 1,
-            flingBehavior = PagerDefaults.flingBehavior(
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(AppColors.CanvasGradient),
+        ) {
+            HorizontalPager(
                 state = pagerState,
-                snapAnimationSpec = pageSpec,
-            ),
-        ) { page ->
-            // Efek transformasi slide mulus: parallax halus + scale + fade ringan.
-            // Snapshot pager dibaca di dalam graphicsLayer agar tidak memicu
-            // recomposition seluruh halaman pada setiap frame geseran.
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        val pageOffset =
-                            ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
-                        val absOffset = abs(pageOffset).coerceIn(0f, 1f)
-                        scaleX = 1f - (absOffset * 0.04f)
-                        scaleY = 1f - (absOffset * 0.04f)
-                        alpha = 1f - (absOffset * 0.40f)
-                    },
-            ) {
-                when (NAV_ITEMS[page].route) {
-                    "home" -> HomeScreen(
-                        bundle = bundle,
-                        stateHolder = countdown,
-                        onRefresh = { viewModel.refresh() },
-                    )
-                    "schedule" -> ScheduleScreen(
-                        bundle = bundle,
-                        stateHolder = countdown,
-                        onRefresh = { viewModel.refresh() },
-                    )
-                    "officers" -> OfficersScreen(bundle = bundle)
-                    "qibla" -> QiblaScreen(bundle = bundle)
-                    "info" -> InfoScreen(
-                        bundle = bundle,
-                        onCorrectionChange = { viewModel.setHijriCorrection(it) },
-                        onNotificationsChange = { enabled ->
-                            val handler = onNotificationsChange
-                            if (handler != null) {
-                                handler(enabled)
-                            } else {
-                                viewModel.setNotificationsEnabled(enabled)
-                                if (enabled) onEnableNotifications()
-                            }
+                modifier = Modifier.fillMaxSize(),
+                beyondBoundsPageCount = 1,
+                flingBehavior = PagerDefaults.flingBehavior(
+                    state = pagerState,
+                    snapAnimationSpec = pageSpec,
+                ),
+            ) { page ->
+                // Transformasi pager dibaca sebagai snapshot di dalam graphicsLayer:
+                // geseran tetap mulus tanpa recomposition seluruh halaman.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            val pageOffset =
+                                ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
+                            val absOffset = abs(pageOffset).coerceIn(0f, 1f)
+                            scaleX = 1f - (absOffset * 0.028f)
+                            scaleY = 1f - (absOffset * 0.028f)
+                            alpha = 1f - (absOffset * 0.24f)
                         },
-                        onRefresh = { viewModel.refresh() },
-                    )
+                ) {
+                    when (NAV_ITEMS[page].route) {
+                        "home" -> HomeScreen(
+                            bundle = bundle,
+                            stateHolder = countdown,
+                            onRefresh = { viewModel.refresh() },
+                        )
+                        "schedule" -> ScheduleScreen(
+                            bundle = bundle,
+                            stateHolder = countdown,
+                            onRefresh = { viewModel.refresh() },
+                        )
+                        "officers" -> OfficersScreen(bundle = bundle)
+                        "qibla" -> QiblaScreen(bundle = bundle)
+                        "info" -> InfoScreen(
+                            bundle = bundle,
+                            onCorrectionChange = { viewModel.setHijriCorrection(it) },
+                            onNotificationsChange = { enabled ->
+                                val handler = onNotificationsChange
+                                if (handler != null) {
+                                    handler(enabled)
+                                } else {
+                                    viewModel.setNotificationsEnabled(enabled)
+                                    if (enabled) onEnableNotifications()
+                                }
+                            },
+                            onRefresh = { viewModel.refresh() },
+                        )
+                    }
                 }
             }
         }
@@ -231,8 +245,8 @@ fun MasjidApp(
 }
 
 /**
- * Bottom Navigation Bar Mewah dengan Indikator Geser (Sliding Pill) Real-Time.
- * Indikator meluncur mengikuti sapuan jari di layar secara presisi.
+ * Floating bottom navigation dengan pill aktif yang mengikuti gestur pager.
+ * Permukaannya melayang di atas canvas agar terasa seperti produk native premium.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -244,21 +258,26 @@ private fun PremiumBottomNavBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(elevation = 14.dp, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-        color = AppColors.Ivory2,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        border = BorderStroke(0.8.dp, AppColors.Gold.copy(alpha = 0.25f)),
+            .height(66.dp)
+            .shadow(
+                elevation = 18.dp,
+                shape = RoundedCornerShape(26.dp),
+                spotColor = AppColors.SoftShadow,
+            ),
+        shape = RoundedCornerShape(26.dp),
+        color = AppColors.Ivory2.copy(alpha = 0.97f),
+        border = BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.32f)),
     ) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .fillMaxHeight()
+                .padding(horizontal = 6.dp, vertical = 5.dp),
         ) {
-            val totalWidth = maxWidth
-            val tabWidth = totalWidth / items.size
+            val tabWidth = maxWidth / items.size
 
-            // Indikator Geser Mulus (Sliding Pill). Posisi dibaca di dalam
-            // lambda offset supaya hanya layer indikator yang berubah.
+            // Indikator dibaca dari snapshot pager di dalam lambda offset sehingga
+            // mengikuti jari tanpa recomposition tiap frame.
             Box(
                 modifier = Modifier
                     .offset {
@@ -268,44 +287,47 @@ private fun PremiumBottomNavBar(
                         IntOffset((tabWidth.value * density * currentPos).roundToInt(), 0)
                     }
                     .width(tabWidth)
-                    .height(54.dp)
-                    .padding(horizontal = 4.dp, vertical = 3.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(21.dp))
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                AppColors.Emerald100.copy(alpha = 0.85f),
+                                AppColors.Emerald100,
                                 AppColors.Emerald50,
                             ),
                         ),
                     )
                     .border(
-                        BorderStroke(1.dp, AppColors.Emerald700.copy(alpha = 0.18f)),
-                        RoundedCornerShape(16.dp),
+                        BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.38f)),
+                        RoundedCornerShape(21.dp),
                     ),
             )
 
-            // Baris Tombol Tab
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(54.dp),
+                    .fillMaxHeight(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 items.forEachIndexed { index, item ->
                     val isSelected = pagerState.currentPage == index
                     val iconScale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.1f else 1f,
+                        targetValue = if (isSelected) 1.12f else 1f,
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                         label = "navIconScale",
                     )
+                    val press = rememberPressSource()
 
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable { onItemSelect(index) }
-                            .padding(vertical = 4.dp),
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(21.dp))
+                            .pressScale(press)
+                            .clickable(
+                                interactionSource = press,
+                                indication = null,
+                            ) { onItemSelect(index) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
@@ -314,7 +336,7 @@ private fun PremiumBottomNavBar(
                             contentDescription = item.label,
                             tint = if (isSelected) AppColors.Emerald800 else AppColors.Muted,
                             modifier = Modifier
-                                .size(21.dp)
+                                .size(20.dp)
                                 .graphicsLayer {
                                     scaleX = iconScale
                                     scaleY = iconScale
@@ -323,7 +345,7 @@ private fun PremiumBottomNavBar(
                         Spacer(Modifier.height(3.dp))
                         Text(
                             text = item.label,
-                            fontSize = 11.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) AppColors.Emerald900 else AppColors.Muted,
                             letterSpacing = 0.2.sp,
@@ -347,15 +369,21 @@ private fun ScreenTopBar(
 ) {
     var refreshRequest by remember { mutableIntStateOf(0) }
     val rotation = remember { Animatable(0f) }
+    val press = rememberPressSource()
     LaunchedEffect(refreshRequest) {
         if (refreshRequest > 0) {
             rotation.snapTo(0f)
-            rotation.animateTo(360f, animationSpec = tween(durationMillis = 500))
+            rotation.animateTo(360f, animationSpec = tween(durationMillis = 520))
             rotation.snapTo(0f)
         }
     }
 
     TopAppBar(
+        modifier = Modifier.shadow(
+            elevation = 5.dp,
+            shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+            spotColor = AppColors.SoftShadow,
+        ),
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -364,21 +392,28 @@ private fun ScreenTopBar(
                 if (logoUrl != null) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(Color.White)
-                            .border(BorderStroke(1.2.dp, AppColors.Gold.copy(alpha = 0.6f)), RoundedCornerShape(11.dp))
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(AppColors.Emerald900, AppColors.Emerald700),
+                                ),
+                            )
+                            .border(
+                                BorderStroke(1.2.dp, AppColors.Gold.copy(alpha = 0.65f)),
+                                RoundedCornerShape(13.dp),
+                            )
                             .padding(4.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         MosqueLogo(
                             logoUrl = logoUrl,
-                            modifier = Modifier.size(28.dp),
-                            fallbackTint = AppColors.GoldDeep,
+                            modifier = Modifier.size(29.dp),
+                            fallbackTint = AppColors.GoldSoft,
                             contentDescription = null,
                         )
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(11.dp))
                 }
                 Column {
                     Text(
@@ -390,7 +425,7 @@ private fun ScreenTopBar(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(1.dp))
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = subtitle,
                         fontSize = subtitleTextSize.sp,
@@ -403,23 +438,39 @@ private fun ScreenTopBar(
         },
         actions = {
             if (onRefresh != null) {
-                IconButton(
-                    onClick = {
-                        refreshRequest++
-                        onRefresh()
-                    },
+                Box(
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .pressScale(press)
+                        .clickable(
+                            interactionSource = press,
+                            indication = null,
+                        ) {
+                            refreshRequest++
+                            onRefresh()
+                        }
+                        .background(AppColors.Ivory2)
+                        .border(
+                            BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.38f)),
+                            CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         Icons.Filled.Refresh,
                         contentDescription = "Segarkan",
                         tint = AppColors.Emerald800,
-                        modifier = Modifier.rotate(rotation.value),
+                        modifier = Modifier
+                            .size(18.dp)
+                            .rotate(rotation.value),
                     )
                 }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = AppColors.Ivory,
+            containerColor = AppColors.Ivory.copy(alpha = 0.95f),
             titleContentColor = AppColors.Ink,
         ),
     )
@@ -433,51 +484,44 @@ private fun SectionCard(
     action: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    Card(
+    PremiumSurface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = AppColors.Ivory2),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
-        border = BorderStroke(0.9.dp, AppColors.BorderSubtle),
+        gradient = AppColors.CardGradient,
+        elevation = 3.dp,
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = title,
-                    fontSize = titleTextSize.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = titleColor,
-                )
-                action?.invoke()
-            }
-            Spacer(Modifier.height(12.dp))
-            content()
-        }
+        SectionHeading(
+            title = title,
+            titleSize = titleTextSize.sp,
+            titleColor = titleColor,
+            action = action,
+        )
+        Spacer(Modifier.height(13.dp))
+        content()
     }
 }
 
 @Composable
 private fun FlatSectionCard(title: String, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
-        Text(
-            text = title,
-            fontSize = 13.sp,
-            color = AppColors.Emerald800,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(width = 3.dp, height = 16.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(AppColors.GoldGradient),
+            )
+            Spacer(Modifier.width(9.dp))
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                color = AppColors.Emerald800,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.height(9.dp))
         content()
         Spacer(Modifier.height(12.dp))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(AppColors.BorderSubtle.copy(alpha = 0.55f)),
-        )
+        SoftGoldDivider()
     }
 }
 
@@ -495,8 +539,9 @@ private fun GoldRule() {
 private fun Avatar(initials: String, gold: Boolean = false, textSize: Int = 14) {
     Box(
         modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(13.dp))
+            .size(42.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = AppColors.SoftShadow)
             .background(
                 if (gold) {
                     Brush.linearGradient(listOf(AppColors.GoldSoft, AppColors.Gold))
@@ -507,9 +552,9 @@ private fun Avatar(initials: String, gold: Boolean = false, textSize: Int = 14) 
             .border(
                 BorderStroke(
                     1.2.dp,
-                    if (gold) AppColors.GoldDeep.copy(alpha = 0.5f) else AppColors.Emerald700.copy(alpha = 0.25f),
+                    if (gold) AppColors.GoldDeep.copy(alpha = 0.55f) else AppColors.Emerald700.copy(alpha = 0.28f),
                 ),
-                RoundedCornerShape(13.dp),
+                RoundedCornerShape(14.dp),
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -580,6 +625,7 @@ private fun HomeScreen(
     val primary = bundle.primary
     val now = bundle.now()
     Scaffold(
+        containerColor = AppColors.Ivory,
         topBar = {
             ScreenTopBar(
                 title = bundle.primary?.mosque?.name?.takeIf { it.isNotBlank() }
@@ -595,13 +641,15 @@ private fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(AppColors.Ivory)
+                .background(AppColors.CanvasGradient)
                 .padding(padding)
                 .padding(horizontal = 16.dp),
         ) {
             item {
                 Spacer(Modifier.height(8.dp))
-                HeroCard(bundle = bundle, state = state, now = now)
+                ScreenEnter {
+                    HeroCard(bundle = bundle, state = state, now = now)
+                }
                 Spacer(Modifier.height(14.dp))
             }
             item {
@@ -618,55 +666,8 @@ private fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        // Card Imam
-                        Surface(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            color = AppColors.Emerald50,
-                            border = BorderStroke(1.dp, AppColors.Emerald100),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column {
-                                    Text("IMAM", fontSize = 10.5.sp, color = AppColors.Emerald700, fontWeight = FontWeight.ExtraBold)
-                                    Text(
-                                        state?.imamName ?: "-",
-                                        fontSize = 14.5.sp,
-                                        color = AppColors.Ink,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                        }
-
-                        // Card Muadzin
-                        Surface(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            color = AppColors.GoldLight,
-                            border = BorderStroke(1.dp, AppColors.GoldSoft.copy(alpha = 0.5f)),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column {
-                                    Text("MUADZIN", fontSize = 10.5.sp, color = AppColors.GoldDeep, fontWeight = FontWeight.ExtraBold)
-                                    Text(
-                                        state?.muadzinName ?: "-",
-                                        fontSize = 14.5.sp,
-                                        color = AppColors.Ink,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                        }
+                        DutyCard(label = "Imam", name = state?.imamName.orEmpty())
+                        DutyCard(label = "Muadzin", name = state?.muadzinName.orEmpty(), gold = true)
                     }
                 }
                 Spacer(Modifier.height(14.dp))
@@ -691,44 +692,37 @@ private fun HomeScreen(
                     titleColor = AppColors.Emerald800,
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(15.dp),
-                        color = Color(0xFFF9F4EB),
-                        border = BorderStroke(1.dp, AppColors.GoldSoft.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(18.dp),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.42f)),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.fillMaxWidth()) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        "KHATIB",
-                                        fontSize = 10.5.sp,
-                                        color = AppColors.GoldDeep,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        letterSpacing = 0.5.sp,
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        "· $khatibDate",
-                                        fontSize = 11.5.sp,
-                                        color = AppColors.Muted,
-                                    )
-                                }
-                                Spacer(Modifier.height(2.dp))
+                        Row(Modifier.background(AppColors.DutyGoldGradient)) {
+                            Box(
+                                Modifier
+                                    .width(4.dp)
+                                    .height(58.dp)
+                                    .background(AppColors.GoldGradient),
+                            )
+                            Column(Modifier.padding(14.dp).fillMaxWidth()) {
+                                StatusPill(
+                                    text = "Khatib · $khatibDate",
+                                    color = AppColors.GoldDeep,
+                                    background = Color.White.copy(alpha = 0.58f),
+                                )
+                                Spacer(Modifier.height(8.dp))
                                 Text(
-                                    khatibName,
-                                    fontSize = 17.sp,
+                                    text = khatibName.ifBlank { "-" },
+                                    fontSize = 18.sp,
                                     fontFamily = FontFamily.Serif,
                                     color = AppColors.Ink,
                                     fontWeight = FontWeight.Bold,
                                 )
                                 if (!khatibTopic.isNullOrBlank()) {
-                                    Spacer(Modifier.height(3.dp))
+                                    Spacer(Modifier.height(4.dp))
                                     Text(
-                                        "“$khatibTopic”",
-                                        fontSize = 13.5.sp,
+                                        text = "“$khatibTopic”",
+                                        fontSize = 13.sp,
                                         color = AppColors.Muted,
                                         fontWeight = FontWeight.Medium,
                                     )
@@ -761,21 +755,23 @@ private fun HomeScreen(
                             ) {
                                 Box(
                                     Modifier
-                                        .width(3.5.dp)
-                                        .height(48.dp)
+                                        .width(4.dp)
+                                        .height(52.dp)
                                         .clip(RoundedCornerShape(2.dp))
-                                        .background(AppColors.Gold),
+                                        .background(AppColors.GoldGradient),
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
+                                    val schedule = kajianScheduleLabel(item.startDateTime, now)
+                                    StatusPill(text = schedule)
+                                    Spacer(Modifier.height(7.dp))
                                     Text(
-                                        item.title,
+                                        text = item.title,
                                         fontSize = 15.5.sp,
                                         color = AppColors.Ink,
                                         fontWeight = FontWeight.Bold,
                                     )
                                     Spacer(Modifier.height(4.dp))
-                                    val schedule = kajianScheduleLabel(item.startDateTime, now)
                                     val detail = if (item.kajianType == "LIBUR") {
                                         "Tidak ada kajian"
                                     } else {
@@ -784,7 +780,7 @@ private fun HomeScreen(
                                             .joinToString(" · ")
                                     }
                                     Text(
-                                        "$schedule · $detail",
+                                        text = detail,
                                         fontSize = 13.sp,
                                         color = AppColors.Muted,
                                     )
@@ -807,14 +803,19 @@ private fun HeroCard(bundle: AppBundle, state: CountdownState?, now: Long) {
     val hijri = state?.hijri ?: HijriUtil.format(now, bundle.hijriCorrection)
     val mosqueName = bundle.primary?.mosque?.name?.takeIf { it.isNotBlank() }
         ?: "Masjid Pondok Tahfizh Plus Abu Dzar"
+    val urgent = state?.isUrgent == true
 
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(elevation = 12.dp, shape = RoundedCornerShape(24.dp), spotColor = AppColors.Emerald950),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        border = BorderStroke(1.dp, AppColors.BorderGold),
+            .shadow(
+                elevation = 16.dp,
+                shape = RoundedCornerShape(26.dp),
+                spotColor = AppColors.Emerald950,
+            ),
+        shape = RoundedCornerShape(26.dp),
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.45f)),
     ) {
         Box(
             Modifier
@@ -822,50 +823,75 @@ private fun HeroCard(bundle: AppBundle, state: CountdownState?, now: Long) {
                 .background(AppColors.HeroGradient)
                 .padding(20.dp),
         ) {
+            // Dekorasi halus: bukan gambar, hanya layer ringan untuk kedalaman.
+            Box(
+                Modifier
+                    .size(168.dp)
+                    .offset(x = 138.dp, y = (-58).dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.055f)),
+            )
+            Box(
+                Modifier
+                    .size(120.dp)
+                    .offset(x = (-48).dp, y = 150.dp)
+                    .clip(CircleShape)
+                    .background(AppColors.Gold.copy(alpha = 0.07f)),
+            )
+
             Column {
-                // Header Lokasi Masjid
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .padding(horizontal = 9.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            text = "📍 ${mosqueName.uppercase()}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.GoldSoft,
-                            letterSpacing = 0.5.sp,
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
+                        Modifier
+                            .size(26.dp)
                             .clip(CircleShape)
-                            .background(if (bundle.offline) AppColors.Alert.copy(alpha = 0.2f) else AppColors.Gold.copy(alpha = 0.2f))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                            .background(AppColors.Gold.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = if (bundle.offline) "OFFLINE" else "ONLINE",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (bundle.offline) Color(0xFFFF9E95) else AppColors.GoldSoft,
-                            letterSpacing = 0.5.sp,
+                        Icon(
+                            Icons.Filled.Place,
+                            contentDescription = null,
+                            tint = AppColors.GoldSoft,
+                            modifier = Modifier.size(14.dp),
                         )
                     }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = mosqueName.uppercase(Locale.ROOT),
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppColors.GoldSoft,
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    StatusPill(
+                        text = if (bundle.offline) "OFFLINE" else "ONLINE",
+                        color = if (bundle.offline) Color(0xFFFFB0A8) else AppColors.GoldSoft,
+                        background = if (bundle.offline) {
+                            AppColors.Alert.copy(alpha = 0.22f)
+                        } else {
+                            AppColors.Gold.copy(alpha = 0.18f)
+                        },
+                        borderColor = Color.White.copy(alpha = 0.14f),
+                    )
                 }
 
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // Tanggal Hijriah & Masehi
+                EyebrowText(
+                    text = "TANGGAL HIJRI",
+                    color = AppColors.GoldSoft.copy(alpha = 0.78f),
+                )
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = hijri,
-                    fontSize = 24.sp,
+                    fontSize = 25.sp,
                     fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFFFCF7EE),
@@ -873,45 +899,44 @@ private fun HeroCard(bundle: AppBundle, state: CountdownState?, now: Long) {
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = ApiParser.gregorian(now),
-                    fontSize = 13.5.sp,
-                    color = AppColors.WhiteSoft.copy(alpha = 0.85f),
+                    fontSize = 13.sp,
+                    color = AppColors.WhiteSoft.copy(alpha = 0.82f),
                 )
 
                 Spacer(Modifier.height(20.dp))
 
-                // Label Status Fase Shalat
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(6.dp)
+                            .size(7.dp)
                             .clip(CircleShape)
-                            .background(if (state?.isUrgent == true) Color(0xFFFF8A7F) else AppColors.Gold),
+                            .background(if (urgent) Color(0xFFFF8A7F) else AppColors.Gold),
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(7.dp))
                     Text(
-                        text = state?.title?.uppercase() ?: "MENUNGGU JADWAL SHALAT",
-                        fontSize = 11.5.sp,
+                        text = state?.title?.uppercase(Locale.ROOT) ?: "MENUNGGU JADWAL SHALAT",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = if (state?.isUrgent == true) Color(0xFFFFADA5) else AppColors.GoldSoft,
-                        letterSpacing = 1.sp,
+                        color = if (urgent) Color(0xFFFFADA5) else AppColors.GoldSoft,
+                        letterSpacing = 0.9.sp,
                     )
                 }
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
 
-                // Jam Hitung Mundur Besar Berpendar
                 Text(
                     text = state?.countdown ?: "--:--:--",
                     fontSize = 46.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    color = if (state?.isUrgent == true) Color(0xFFFF8A7F) else Color(0xFFFFF9EC),
+                    color = if (urgent) Color(0xFFFF8A7F) else Color(0xFFFFF9EC),
                     letterSpacing = 1.sp,
                 )
 
                 Spacer(Modifier.height(16.dp))
+                SoftGoldDivider()
+                Spacer(Modifier.height(14.dp))
 
-                // Pil Adzan & Iqamah
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -919,12 +944,10 @@ private fun HeroCard(bundle: AppBundle, state: CountdownState?, now: Long) {
                     HeroPill(
                         label = "WAKTU ADZAN",
                         value = state?.adhanTime ?: "--:--",
-                        icon = "📢",
                     )
                     HeroPill(
                         label = "WAKTU IQAMAH",
                         value = state?.iqamahTime ?: "--:--",
-                        icon = "⏱",
                     )
                 }
             }
@@ -933,33 +956,72 @@ private fun HeroCard(bundle: AppBundle, state: CountdownState?, now: Long) {
 }
 
 @Composable
-private fun RowScope.HeroPill(label: String, value: String, icon: String) {
+private fun RowScope.HeroPill(label: String, value: String) {
     Surface(
         modifier = Modifier.weight(1f),
-        shape = RoundedCornerShape(13.dp),
-        color = Color.White.copy(alpha = 0.08f),
-        border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.12f)),
+        shape = RoundedCornerShape(15.dp),
+        color = AppColors.GlassWhite,
+        border = BorderStroke(0.8.dp, Color.White.copy(alpha = 0.16f)),
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(Modifier.padding(horizontal = 13.dp, vertical = 10.dp)) {
+            Text(
+                text = label,
+                fontSize = 9.5.sp,
+                color = AppColors.WhiteSoft.copy(alpha = 0.72f),
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.6.sp,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = value,
+                fontSize = 16.sp,
+                color = Color(0xFFF9F4EB),
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RowScope.DutyCard(label: String, name: String, gold: Boolean = false) {
+    val press = rememberPressSource()
+    Surface(
+        modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(18.dp))
+            .pressScale(press)
+            .clickable(
+                interactionSource = press,
+                indication = null,
+            ) { },
+        shape = RoundedCornerShape(18.dp),
+        color = Color.Transparent,
+        border = BorderStroke(
+            1.dp,
+            if (gold) AppColors.Gold.copy(alpha = 0.45f) else AppColors.Emerald100,
+        ),
+    ) {
+        Box(
+            Modifier
+                .background(if (gold) AppColors.DutyGoldGradient else AppColors.DutyEmeraldGradient)
+                .padding(12.dp),
         ) {
-            Text(icon, fontSize = 16.sp)
-            Spacer(Modifier.width(8.dp))
             Column {
-                Text(
-                    label,
-                    fontSize = 10.sp,
-                    color = AppColors.WhiteSoft.copy(alpha = 0.75f),
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.5.sp,
+                StatusPill(
+                    text = label,
+                    color = if (gold) AppColors.GoldDeep else AppColors.Emerald700,
+                    background = if (gold) Color.White.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.62f),
+                    borderColor = if (gold) AppColors.GoldSoft else AppColors.Emerald100,
                 )
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    value,
-                    fontSize = 15.sp,
-                    color = Color(0xFFF9F4EB),
+                    text = name.ifBlank { "-" },
+                    fontSize = 14.5.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
+                    color = AppColors.Ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -988,50 +1050,53 @@ private fun PrayerStrip(data: TvData?, activeLabel: String?) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         items.forEach { (label, time) ->
             val active = activeLabel?.contains(label, ignoreCase = true) == true
+            val scale by animateFloatAsState(
+                targetValue = if (active) 1.035f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "prayerTileScale",
+            )
             Surface(
                 modifier = Modifier
                     .weight(1f)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
                     .shadow(
-                        elevation = if (active) 4.dp else 0.5.dp,
-                        shape = RoundedCornerShape(14.dp),
+                        elevation = if (active) 8.dp else 2.dp,
+                        shape = RoundedCornerShape(16.dp),
+                        spotColor = AppColors.SoftShadow,
                     ),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = if (active) AppColors.Emerald800 else AppColors.Ivory2,
                 border = BorderStroke(
-                    width = if (active) 1.5.dp else 0.8.dp,
-                    color = if (active) AppColors.Gold else AppColors.BorderSubtle,
+                    width = if (active) 1.4.dp else 0.8.dp,
+                    color = if (active) AppColors.Gold else AppColors.GoldLine,
                 ),
             ) {
                 Column(
-                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 3.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (active) {
                         Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(AppColors.Gold)
-                                .padding(horizontal = 4.dp, vertical = 0.5.dp),
-                        ) {
-                            Text(
-                                "AKTIF",
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = AppColors.Emerald950,
-                            )
-                        }
-                        Spacer(Modifier.height(2.dp))
+                            Modifier
+                                .size(width = 22.dp, height = 2.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(AppColors.Gold),
+                        )
+                        Spacer(Modifier.height(5.dp))
                     }
                     Text(
-                        label,
-                        fontSize = 11.5.sp,
+                        text = label,
+                        fontSize = 11.sp,
                         fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                         color = if (active) Color(0xFFFCF6EA) else AppColors.Muted,
                     )
-                    Spacer(Modifier.height(3.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        time,
-                        fontSize = 13.5.sp,
+                        text = time,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (active) AppColors.GoldSoft else AppColors.Ink,
                         fontFamily = FontFamily.Monospace,
@@ -1059,6 +1124,7 @@ private fun ScheduleScreen(
     val tabLabels = listOf("Hari Ini", "7 Hari", "Iqamah")
 
     Scaffold(
+        containerColor = AppColors.Ivory,
         topBar = {
             ScreenTopBar(
                 title = "Jadwal Shalat",
@@ -1070,7 +1136,7 @@ private fun ScheduleScreen(
         Column(
             Modifier
                 .fillMaxSize()
-                .background(AppColors.Ivory)
+                .background(AppColors.CanvasGradient)
                 .padding(padding),
         ) {
             Spacer(Modifier.height(10.dp))
@@ -1266,54 +1332,65 @@ private fun SlidingSegmentedControl(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = AppColors.Beige.copy(alpha = 0.6f),
-        border = BorderStroke(1.dp, AppColors.BorderSubtle),
+        shape = RoundedCornerShape(18.dp),
+        color = AppColors.Beige.copy(alpha = 0.48f),
+        border = BorderStroke(1.dp, AppColors.GoldLine),
     ) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(3.dp),
+                .padding(4.dp),
         ) {
             val tabWidth = maxWidth / items.size
             val indicatorOffset by animateDpAsState(
                 targetValue = tabWidth * selectedIndex,
-                animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow),
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
                 label = "segmentOffset",
             )
 
-            // Pil indikator yang meluncur mulus
             Box(
                 modifier = Modifier
                     .offset(x = indicatorOffset)
                     .width(tabWidth)
-                    .height(38.dp)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(AppColors.Ivory2)
-                    .shadow(1.dp, RoundedCornerShape(13.dp))
-                    .border(BorderStroke(0.8.dp, AppColors.Gold.copy(alpha = 0.3f)), RoundedCornerShape(13.dp)),
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(AppColors.EmeraldGlassGradient)
+                    .shadow(3.dp, RoundedCornerShape(14.dp), spotColor = AppColors.SoftShadow)
+                    .border(
+                        BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.5f)),
+                        RoundedCornerShape(14.dp),
+                    ),
             )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(38.dp),
+                    .height(40.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 items.forEachIndexed { index, label ->
+                    val press = rememberPressSource()
+                    val selected = selectedIndex == index
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(13.dp))
-                            .clickable { onSelect(index) }
+                            .clip(RoundedCornerShape(14.dp))
+                            .pressScale(press)
+                            .clickable(
+                                interactionSource = press,
+                                indication = null,
+                            ) { onSelect(index) }
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = label,
-                            fontSize = 13.sp,
-                            fontWeight = if (selectedIndex == index) FontWeight.Bold else FontWeight.Medium,
-                            color = if (selectedIndex == index) AppColors.Emerald800 else AppColors.Muted,
+                            fontSize = 12.5.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) Color(0xFFFBF6EA) else AppColors.Muted,
                         )
                     }
                 }
@@ -1328,65 +1405,70 @@ private fun ScheduleRow(label: String, adhan: String, iqamah: String, active: Bo
         Row(
             Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
                 .background(
-                    color = if (active) AppColors.Emerald50 else Color.Transparent,
-                    shape = RoundedCornerShape(12.dp),
+                    brush = if (active) {
+                        Brush.linearGradient(
+                            listOf(AppColors.Emerald50, Color(0xFFE8F3EB)),
+                        )
+                    } else {
+                        Brush.linearGradient(
+                            listOf(Color.Transparent, Color.Transparent),
+                        )
+                    },
+                    shape = RoundedCornerShape(16.dp),
                 )
                 .padding(horizontal = 10.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(if (active) AppColors.Gold else AppColors.Emerald700.copy(alpha = 0.3f)),
+                    .size(width = 4.dp, height = 34.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .then(
+                        if (active) {
+                            Modifier.background(AppColors.GoldGradient)
+                        } else {
+                            Modifier.background(AppColors.Emerald100)
+                        },
+                    ),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    label,
+                    text = label,
                     fontSize = 15.5.sp,
                     color = AppColors.Ink,
                     fontWeight = FontWeight.Bold,
                 )
                 if (active) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        "Sedang Berlangsung",
+                        text = "Sedang berlangsung",
                         fontSize = 11.sp,
                         color = AppColors.Emerald700,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
-            Text(
-                adhan,
-                fontSize = 15.5.sp,
-                color = AppColors.Ink,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                "➔",
-                fontSize = 13.sp,
-                color = AppColors.GoldDeep,
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                iqamah,
-                fontSize = 15.sp,
-                color = AppColors.Emerald800,
-                fontWeight = FontWeight.ExtraBold,
-                fontFamily = FontFamily.Monospace,
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = adhan,
+                    fontSize = 15.5.sp,
+                    color = AppColors.Ink,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                )
+                Text(
+                    text = "iqamah $iqamah",
+                    fontSize = 10.5.sp,
+                    color = if (active) AppColors.Emerald700 else AppColors.GoldDeep,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
         Spacer(Modifier.height(6.dp))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(AppColors.BorderSubtle.copy(alpha = 0.45f)),
-        )
+        SoftGoldDivider()
         Spacer(Modifier.height(6.dp))
     }
 }
@@ -1395,15 +1477,20 @@ private fun ScheduleRow(label: String, adhan: String, iqamah: String, active: Bo
 private fun DataStatus(bundle: AppBundle) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = AppColors.Emerald50,
-        border = BorderStroke(1.dp, AppColors.Emerald100),
+        shape = RoundedCornerShape(18.dp),
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, AppColors.GoldLine),
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .background(AppColors.DutyEmeraldGradient)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(13.dp))
                     .background(AppColors.Emerald100),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1417,13 +1504,14 @@ private fun DataStatus(bundle: AppBundle) {
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(
-                    "Sumber Data Masjid Abu Dzar",
+                    text = "Sumber Data Masjid Abu Dzar",
                     fontSize = 13.5.sp,
                     color = AppColors.Ink,
                     fontWeight = FontWeight.Bold,
                 )
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    if (bundle.fetchedAt == 0L) {
+                    text = if (bundle.fetchedAt == 0L) {
                         "Belum pernah sinkron"
                     } else {
                         "Sinkron terakhir ${ApiParser.wallTime(bundle.fetchedAt)} WIB"
@@ -1438,19 +1526,17 @@ private fun DataStatus(bundle: AppBundle) {
 
 @Composable
 private fun EmptyState(message: String) {
-    Card(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = AppColors.Ivory2),
-        border = BorderStroke(0.8.dp, AppColors.BorderSubtle),
+    PremiumSurface(
+        modifier = Modifier.fillMaxWidth(),
+        color = AppColors.SurfaceElevated,
+        borderColor = AppColors.GoldLine,
+        elevation = 2.dp,
     ) {
         Text(
-            message,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
+            text = message,
+            modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
-            fontSize = 14.sp,
+            fontSize = 13.5.sp,
             color = AppColors.Muted,
         )
     }
@@ -1465,49 +1551,49 @@ private data class KhatibView(
 
 @Composable
 private fun KhatibEntry(view: KhatibView) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (view.featured) Color(0xFFF9F4EB) else AppColors.Ivory2,
-        ),
+        shape = RoundedCornerShape(19.dp),
+        color = Color.Transparent,
         border = BorderStroke(
             1.dp,
-            if (view.featured) AppColors.GoldSoft else AppColors.BorderSubtle,
+            if (view.featured) AppColors.Gold.copy(alpha = 0.5f) else AppColors.GoldLine,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (view.featured) 2.dp else 1.dp),
+        shadowElevation = if (view.featured) 5.dp else 2.dp,
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (view.featured) AppColors.Gold else AppColors.Emerald100)
-                        .padding(horizontal = 7.dp, vertical = 2.dp),
-                ) {
-                    Text(
-                        view.title.uppercase(),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (view.featured) AppColors.Emerald950 else AppColors.Emerald800,
-                        letterSpacing = 0.5.sp,
-                    )
-                }
+        Row(
+            Modifier.background(
+                if (view.featured) AppColors.DutyGoldGradient else AppColors.DutyEmeraldGradient,
+            ),
+        ) {
+            Box(
+                Modifier
+                    .width(4.dp)
+                    .height(if (view.featured) 96.dp else 84.dp)
+                    .background(AppColors.GoldGradient),
+            )
+            Column(Modifier.padding(15.dp)) {
+                StatusPill(
+                    text = view.title,
+                    color = if (view.featured) AppColors.GoldDeep else AppColors.Emerald800,
+                    background = Color.White.copy(alpha = 0.6f),
+                )
+                Spacer(Modifier.height(9.dp))
+                Text(
+                    text = view.name?.takeIf { it.isNotBlank() } ?: "-",
+                    fontSize = if (view.featured) 20.sp else 17.sp,
+                    fontFamily = FontFamily.Serif,
+                    fontWeight = FontWeight.Bold,
+                    color = AppColors.Ink,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = view.topic?.takeIf { it.isNotBlank() }
+                        ?: "Tema khutbah belum dijadwalkan",
+                    fontSize = 13.sp,
+                    color = AppColors.Muted,
+                )
             }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                view.name?.takeIf { it.isNotBlank() } ?: "-",
-                fontSize = if (view.featured) 20.sp else 17.sp,
-                fontFamily = FontFamily.Serif,
-                fontWeight = FontWeight.Bold,
-                color = AppColors.Ink,
-            )
-            Spacer(Modifier.height(3.dp))
-            Text(
-                view.topic?.takeIf { it.isNotBlank() } ?: "Tema khutbah belum dijadwalkan",
-                fontSize = 13.5.sp,
-                color = AppColors.Muted,
-            )
         }
     }
     Spacer(Modifier.height(10.dp))
@@ -1565,6 +1651,7 @@ private fun OfficersScreen(bundle: AppBundle) {
         }
 
     Scaffold(
+        containerColor = AppColors.Ivory,
         topBar = {
             ScreenTopBar(
                 title = "Petugas Masjid",
@@ -1575,7 +1662,7 @@ private fun OfficersScreen(bundle: AppBundle) {
         Column(
             Modifier
                 .fillMaxSize()
-                .background(AppColors.Ivory)
+                .background(AppColors.CanvasGradient)
                 .padding(padding),
         ) {
             Spacer(Modifier.height(10.dp))
@@ -1624,7 +1711,20 @@ private fun OfficersScreen(bundle: AppBundle) {
                                 items(duties.size) { index ->
                                     val duty = duties[index]
                                     FlatSectionCard(title = duty.prayerName) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(15.dp))
+                                                .background(
+                                                    if (currentTab == 0) {
+                                                        AppColors.DutyEmeraldGradient
+                                                    } else {
+                                                        AppColors.DutyGoldGradient
+                                                    },
+                                                )
+                                                .padding(11.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
                                             Avatar(
                                                 initials = initials(
                                                     if (currentTab == 0) duty.imamName else duty.muadzinName,
@@ -1634,19 +1734,19 @@ private fun OfficersScreen(bundle: AppBundle) {
                                             Spacer(Modifier.width(12.dp))
                                             Column(Modifier.weight(1f)) {
                                                 Text(
-                                                    if (currentTab == 0) duty.imamName else duty.muadzinName,
+                                                    text = if (currentTab == 0) duty.imamName else duty.muadzinName,
                                                     fontSize = 16.sp,
                                                     color = AppColors.Ink,
                                                     fontWeight = FontWeight.Bold,
                                                 )
-                                                Spacer(Modifier.height(2.dp))
+                                                Spacer(Modifier.height(3.dp))
                                                 Text(
-                                                    if (currentTab == 0) {
+                                                    text = if (currentTab == 0) {
                                                         "Muadzin: ${duty.muadzinName}"
                                                     } else {
                                                         "Imam: ${duty.imamName}"
                                                     },
-                                                    fontSize = 13.sp,
+                                                    fontSize = 12.5.sp,
                                                     color = AppColors.Muted,
                                                 )
                                             }
@@ -1747,68 +1847,91 @@ private fun QiblaScreen(bundle: AppBundle) {
     var sensorReady by remember { mutableStateOf(false) }
     val reportSensor = remember { { ready: Boolean -> sensorReady = ready } }
 
-    Scaffold(topBar = { ScreenTopBar("Arah Kiblat", "Kompas digital presisi Ka'bah") }) { padding ->
+    Scaffold(
+        containerColor = AppColors.Ivory,
+        topBar = { ScreenTopBar("Arah Kiblat", "Kompas digital presisi Ka'bah") },
+    ) { padding ->
         LazyColumn(
             Modifier
                 .fillMaxSize()
-                .background(AppColors.Ivory)
+                .background(AppColors.CanvasGradient)
                 .padding(padding)
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item {
                 Spacer(Modifier.height(10.dp))
-                QiblaCompass(
-                    latitude = lat,
-                    longitude = lon,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp),
-                    onSensorAvailabilityChange = reportSensor,
-                )
-                Spacer(Modifier.height(12.dp))
+                PremiumSurface(
+                    modifier = Modifier.fillMaxWidth(),
+                    gradient = AppColors.HeroGradient,
+                    borderColor = AppColors.Gold.copy(alpha = 0.5f),
+                    elevation = 10.dp,
+                    contentPadding = 12.dp,
+                ) {
+                    ScreenEnter {
+                        QiblaCompass(
+                            latitude = lat,
+                            longitude = lon,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(296.dp),
+                            onSensorAvailabilityChange = reportSensor,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
 
-                // Banner Informasi Sudut Kiblat
+                // Banner sudut kiblat dengan hierarchy yang lebih kuat.
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = AppColors.Ivory2,
-                    border = BorderStroke(1.dp, AppColors.BorderGold),
+                    shape = RoundedCornerShape(22.dp),
+                    color = Color.Transparent,
+                    border = BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.45f)),
+                    shadowElevation = 5.dp,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .background(AppColors.HeroGradient)
+                            .padding(18.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(
-                            "ARAH KIBLAT DARI MASJID",
-                            fontSize = 11.5.sp,
-                            color = AppColors.GoldDeep,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.sp,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            String.format(
-                                Locale.ROOT,
-                                "%.0f° · %s",
-                                bearing,
-                                QiblaCalculator.direction(bearing),
-                            ),
-                            fontSize = 28.sp,
-                            fontFamily = FontFamily.Serif,
-                            fontWeight = FontWeight.Bold,
-                            color = AppColors.Emerald800,
+                        EyebrowText(
+                            text = "ARAH KIBLAT DARI MASJID",
+                            color = AppColors.GoldSoft.copy(alpha = 0.85f),
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            if (sensorReady) {
-                                "Sensor aktif · gerakkan HP seperti angka 8 bila perlu kalibrasi"
+                            text = String.format(
+                                Locale.ROOT,
+                                "%.0f°",
+                                bearing,
+                            ),
+                            fontSize = 36.sp,
+                            fontFamily = FontFamily.Serif,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFCF7EE),
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = QiblaCalculator.direction(bearing),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AppColors.GoldSoft,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        StatusPill(
+                            text = if (sensorReady) {
+                                "Sensor aktif · kalibrasi bila perlu"
                             } else {
-                                "Sensor tidak tersedia · arah dihitung otomatis dari koordinat"
+                                "Sensor tidak tersedia · mode koordinat"
                             },
-                            fontSize = 12.5.sp,
-                            color = if (sensorReady) AppColors.Emerald700 else AppColors.Alert,
-                            textAlign = TextAlign.Center,
+                            color = if (sensorReady) AppColors.Emerald900 else Color(0xFFFFB0A8),
+                            background = if (sensorReady) {
+                                AppColors.GoldSoft.copy(alpha = 0.9f)
+                            } else {
+                                AppColors.Alert.copy(alpha = 0.28f)
+                            },
+                            borderColor = Color.White.copy(alpha = 0.14f),
                         )
                     }
                 }
@@ -1870,57 +1993,89 @@ private fun InfoScreen(
     val now = bundle.now()
     val context = LocalContext.current
 
-    Scaffold(topBar = { ScreenTopBar("Informasi", "Profil masjid & pengaturan") }) { padding ->
+    Scaffold(
+        containerColor = AppColors.Ivory,
+        topBar = { ScreenTopBar("Informasi", "Profil masjid & pengaturan") },
+    ) { padding ->
         LazyColumn(
             Modifier
                 .fillMaxSize()
-                .background(AppColors.Ivory)
+                .background(AppColors.CanvasGradient)
                 .padding(padding)
                 .padding(horizontal = 16.dp),
         ) {
             item {
                 Spacer(Modifier.height(10.dp))
-                // Banner Profil Masjid
+                // Banner profil masjid: identitas utama dengan nuansa luxury.
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    color = AppColors.Ivory2,
-                    border = BorderStroke(1.dp, AppColors.BorderGold),
-                    shadowElevation = 2.dp,
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color.Transparent,
+                    border = BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.5f)),
+                    shadowElevation = 8.dp,
                 ) {
-                    Row(
-                        modifier = Modifier.padding(18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            Modifier
-                                .size(50.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(AppColors.HeroGradient)
-                                .border(BorderStroke(1.dp, AppColors.BorderGold), RoundedCornerShape(16.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            MosqueLogo(
-                                logoUrl = bundle.primary?.mosque?.logoUrl,
-                                modifier = Modifier.size(32.dp),
-                                fallbackTint = AppColors.GoldSoft,
-                                contentDescription = null,
-                            )
+                    Column(Modifier.background(AppColors.HeroGradient).padding(18.dp)) {
+                        ScreenEnter {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(17.dp))
+                                        .background(Color.White.copy(alpha = 0.08f))
+                                        .border(
+                                            BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.6f)),
+                                            RoundedCornerShape(17.dp),
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    MosqueLogo(
+                                        logoUrl = bundle.primary?.mosque?.logoUrl,
+                                        modifier = Modifier.size(34.dp),
+                                        fallbackTint = AppColors.GoldSoft,
+                                        contentDescription = null,
+                                    )
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        text = bundle.primary?.mosque?.name
+                                            ?: "Masjid Pondok Tahfizh Plus Abu Dzar",
+                                        fontSize = 16.5.sp,
+                                        fontFamily = FontFamily.Serif,
+                                        color = Color(0xFFFCF7EE),
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = bundle.primary?.mosque?.address
+                                            ?: "Rumpin, Kab. Bogor, Jawa Barat",
+                                        fontSize = 12.5.sp,
+                                        color = AppColors.WhiteSoft.copy(alpha = 0.78f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                         }
-                        Spacer(Modifier.width(14.dp))
-                        Column {
-                            Text(
-                                bundle.primary?.mosque?.name ?: "Masjid Pondok Tahfizh Plus Abu Dzar",
-                                fontSize = 16.5.sp,
-                                fontFamily = FontFamily.Serif,
-                                color = AppColors.Ink,
-                                fontWeight = FontWeight.Bold,
+                        Spacer(Modifier.height(14.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatusPill(
+                                text = if (bundle.offline) "Mode Offline" else "Terhubung",
+                                color = if (bundle.offline) Color(0xFFFFB0A8) else AppColors.Emerald900,
+                                background = if (bundle.offline) {
+                                    AppColors.Alert.copy(alpha = 0.28f)
+                                } else {
+                                    AppColors.GoldSoft.copy(alpha = 0.9f)
+                                },
+                                borderColor = Color.White.copy(alpha = 0.14f),
                             )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                bundle.primary?.mosque?.address ?: "Rumpin, Kab. Bogor, Jawa Barat",
-                                fontSize = 13.sp,
-                                color = AppColors.Muted,
+                            StatusPill(
+                                text = "Versi ${BuildConfig.VERSION_NAME}",
+                                color = AppColors.GoldSoft,
+                                background = AppColors.Gold.copy(alpha = 0.18f),
+                                borderColor = Color.White.copy(alpha = 0.14f),
                             )
                         }
                     }
@@ -1969,20 +2124,7 @@ private fun InfoScreen(
                 SectionCard(title = "Pengaturan Aplikasi") {
                     // Koreksi Hijriah
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(AppColors.Emerald100),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                Icons.Filled.DateRange,
-                                contentDescription = null,
-                                tint = AppColors.Emerald800,
-                                modifier = Modifier.size(19.dp),
-                            )
-                        }
+                        IconBubble(Icons.Filled.DateRange)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -2027,20 +2169,7 @@ private fun InfoScreen(
 
                     // Notifikasi Permanen
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(AppColors.Emerald100),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                Icons.Filled.Notifications,
-                                contentDescription = null,
-                                tint = AppColors.Emerald800,
-                                modifier = Modifier.size(19.dp),
-                            )
-                        }
+                        IconBubble(Icons.Filled.Notifications)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -2069,20 +2198,7 @@ private fun InfoScreen(
 
                     // Sinkronisasi Data
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(AppColors.Emerald100),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                Icons.Filled.Refresh,
-                                contentDescription = null,
-                                tint = AppColors.Emerald800,
-                                modifier = Modifier.size(19.dp),
-                            )
-                        }
+                        IconBubble(Icons.Filled.Refresh)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -2101,18 +2217,24 @@ private fun InfoScreen(
                                 color = if (bundle.offline) AppColors.Alert else AppColors.Emerald700,
                             )
                         }
+                        val syncPress = rememberPressSource()
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             color = AppColors.Emerald100,
-                            modifier = Modifier.clickable { onRefresh() },
+                            border = BorderStroke(1.dp, AppColors.GoldLine),
+                            modifier = Modifier
+                                .pressScale(syncPress)
+                                .clickable(
+                                    interactionSource = syncPress,
+                                    indication = null,
+                                ) { onRefresh() },
                         ) {
                             Text(
-                                "SINKRONKAN",
+                                text = "Sinkronkan",
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = AppColors.Emerald800,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                letterSpacing = 0.5.sp,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                             )
                         }
                     }
@@ -2221,7 +2343,7 @@ private fun InfoScreen(
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            "Versi ${BuildConfig.VERSION_NAME} · Material 3 Premium Design",
+                            "Versi ${BuildConfig.VERSION_NAME} · Modern Islamic Interface",
                             fontSize = 12.sp,
                             color = AppColors.Muted,
                         )

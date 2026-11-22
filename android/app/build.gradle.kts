@@ -11,8 +11,8 @@ android {
         applicationId = "id.or.id.masjidabudzar"
         minSdk = 24
         targetSdk = 36
-        versionCode = 23
-        versionName = "2.5.1"
+        versionCode = 24
+        versionName = "2.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

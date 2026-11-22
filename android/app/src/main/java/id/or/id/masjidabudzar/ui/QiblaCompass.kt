@@ -224,10 +224,19 @@ fun QiblaCompass(
         val ink = AppColors.Ink
         val muted = AppColors.Muted
 
-        // 1. Shadow & Outer Halo
+        // 1. Shadow, glow, dan outer halo
         drawCircle(
             color = Color(0x120B3B2E),
-            radius = radius + 6.dp.toPx(),
+            radius = radius + 8.dp.toPx(),
+            center = Offset(cx, cy),
+        )
+        drawCircle(
+            color = if (isAligned) {
+                AppColors.Emerald600.copy(alpha = 0.24f)
+            } else {
+                gold.copy(alpha = 0.07f)
+            },
+            radius = radius * 1.07f,
             center = Offset(cx, cy),
         )
 
@@ -242,6 +251,12 @@ fun QiblaCompass(
             radius = radius,
             center = Offset(cx, cy),
             style = Stroke(3.5.dp.toPx()),
+        )
+        drawCircle(
+            color = gold.copy(alpha = 0.28f),
+            radius = radius * 0.965f,
+            center = Offset(cx, cy),
+            style = Stroke(1.dp.toPx()),
         )
 
         // 3. Dial face dalam dengan gradasi lembut
@@ -268,6 +283,12 @@ fun QiblaCompass(
             radius = radius * 0.68f,
             center = Offset(cx, cy),
             style = Stroke(1.5.dp.toPx()),
+        )
+        drawCircle(
+            color = gold.copy(alpha = 0.18f),
+            radius = radius * 0.5f,
+            center = Offset(cx, cy),
+            style = Stroke(1.dp.toPx()),
         )
 
         // 4. Skala Garis Derajat Kompas (Setiap 5° dan 30°)

@@ -51,15 +51,37 @@ object AppColors {
     // Premium Gradients
     val HeroGradient = Brush.verticalGradient(
         listOf(
-            Color(0xFF14543F),
-            Color(0xFF093628),
-            Color(0xFF041913),
+            Color(0xFF17624A),
+            Color(0xFF0B3D2D),
+            Color(0xFF041A13),
+        ),
+    )
+
+    val CanvasGradient = Brush.verticalGradient(
+        listOf(
+            Color(0xFFFBF9F4),
+            Color(0xFFF6F3EC),
+            Color(0xFFF1ECE1),
+        ),
+    )
+
+    val CardGradient = Brush.linearGradient(
+        listOf(
+            Color(0xFFFFFFFF),
+            Color(0xFFFBF8F1),
+        ),
+    )
+
+    val EmeraldGlassGradient = Brush.horizontalGradient(
+        listOf(
+            Color(0xFF155944),
+            Color(0xFF0D3E2F),
         ),
     )
 
     val GoldGradient = Brush.linearGradient(
         listOf(
-            Color(0xFFE8CA7C),
+            Color(0xFFF0DCA8),
             Color(0xFFCCA352),
             Color(0xFFA67F2C),
         ),
@@ -67,10 +89,28 @@ object AppColors {
 
     val ActiveCardGradient = Brush.horizontalGradient(
         listOf(
-            Color(0xFF155944),
-            Color(0xFF0D3E2F),
+            Color(0xFF17624A),
+            Color(0xFF0C4030),
         ),
     )
+
+    val DutyGoldGradient = Brush.linearGradient(
+        listOf(
+            Color(0xFFFBF2DF),
+            Color(0xFFF3E3C2),
+        ),
+    )
+
+    val DutyEmeraldGradient = Brush.linearGradient(
+        listOf(
+            Color(0xFFF1F8F3),
+            Color(0xFFE3F0E8),
+        ),
+    )
+
+    val GlassWhite = Color(0x14FFFFFF)
+    val GoldLine = Color(0x66CCA352)
+    val SoftShadow = Color(0x1A041913)
 }
 
 private val LightColors = lightColorScheme(
@@ -112,6 +152,13 @@ private val DarkColors = darkColorScheme(
 )
 
 private val AppTypography = Typography(
+    displaySmall = TextStyle(
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 34.sp,
+        lineHeight = 40.sp,
+        letterSpacing = (-0.8).sp,
+    ),
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Serif,
         fontWeight = FontWeight.SemiBold,
@@ -126,6 +173,13 @@ private val AppTypography = Typography(
         lineHeight = 30.sp,
         letterSpacing = (-0.3).sp,
     ),
+    headlineSmall = TextStyle(
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 21.sp,
+        lineHeight = 27.sp,
+        letterSpacing = (-0.2).sp,
+    ),
     titleLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
@@ -137,19 +191,32 @@ private val AppTypography = Typography(
         fontSize = 17.sp,
         lineHeight = 22.sp,
     ),
+    bodyLarge = TextStyle(
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+    ),
     bodyMedium = TextStyle(
         fontSize = 14.sp,
         lineHeight = 20.sp,
     ),
+    bodySmall = TextStyle(
+        fontSize = 12.5.sp,
+        lineHeight = 18.sp,
+    ),
     labelLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
-        letterSpacing = 0.5.sp,
+        letterSpacing = 0.4.sp,
     ),
     labelMedium = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
         letterSpacing = 0.5.sp,
+    ),
+    labelSmall = TextStyle(
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 10.5.sp,
+        letterSpacing = 0.6.sp,
     ),
 )
 
