@@ -331,6 +331,16 @@ private fun initials(name: String): String = name
     .joinToString("") { it.firstOrNull()?.uppercase() ?: "" }
     .ifBlank { "-" }
 
+private fun kajianScheduleLabel(startDateTime: String, now: Long): String {
+    val start = ApiParser.instant(startDateTime) ?: return "Jadwal belum tersedia"
+    val day = if (ApiParser.ymd(start) == ApiParser.ymd(now)) {
+        "Hari ini"
+    } else {
+        ApiParser.shortDate(start)
+    }
+    return "$day · ${ApiParser.wallTime(start)}"
+}
+
 @Composable
 private fun HomeScreen(
     bundle: AppBundle,
@@ -450,7 +460,7 @@ private fun HomeScreen(
             item {
                 val kajian = primary?.kajian?.firstOrNull()
                 SectionCard(
-                    title = "Agenda Kajian",
+                    title = "Agenda Kajian Terdekat",
                     titleTextSize = 13,
                     titleColor = AppColors.Emerald800,
                 ) {
@@ -473,9 +483,16 @@ private fun HomeScreen(
                                     fontWeight = FontWeight.Bold,
                                 )
                                 Spacer(Modifier.height(3.dp))
-                                val time = ApiParser.wallTime(ApiParser.instant(kajian.startDateTime) ?: now)
+                                val schedule = kajianScheduleLabel(kajian.startDateTime, now)
+                                val detail = if (kajian.kajianType == "LIBUR") {
+                                    "Tidak ada kajian"
+                                } else {
+                                    listOf(kajian.speakerName, kajian.location)
+                                        .filter { it.isNotBlank() }
+                                        .joinToString(" · ")
+                                }
                                 Text(
-                                    "$time · ${kajian.speakerName} · ${kajian.location}",
+                                    "$schedule · $detail",
                                     fontSize = 14.sp,
                                     color = AppColors.Muted,
                                 )
@@ -1237,6 +1254,7 @@ private fun InfoScreen(
     onNotificationsChange: (Boolean) -> Unit,
     onRefresh: () -> Unit,
 ) {
+    val now = bundle.now()
     val context = LocalContext.current
     Scaffold(topBar = { ScreenTopBar("Informasi", "Masjid & pengaturan") }) { padding ->
         LazyColumn(
@@ -1283,7 +1301,7 @@ private fun InfoScreen(
                 Spacer(Modifier.height(12.dp))
             }
             item {
-                SectionCard(title = "Agenda Kajian") {
+                SectionCard(title = "Agenda Kajian Mendatang") {
                     val kajian = bundle.primary?.kajian.orEmpty()
                     if (kajian.isEmpty()) {
                         Text("Belum ada agenda.", fontSize = 14.sp, color = AppColors.Muted)
@@ -1300,8 +1318,15 @@ private fun InfoScreen(
                                 color = AppColors.Ink,
                                 fontWeight = FontWeight.Bold,
                             )
+                            val detail = if (item.kajianType == "LIBUR") {
+                                "Tidak ada kajian"
+                            } else {
+                                listOf(item.speakerName, item.location)
+                                    .filter { it.isNotBlank() }
+                                    .joinToString(" · ")
+                            }
                             Text(
-                                "${item.speakerName} · ${item.location}",
+                                "${kajianScheduleLabel(item.startDateTime, now)} · $detail",
                                 fontSize = 13.sp,
                                 color = AppColors.Muted,
                             )
