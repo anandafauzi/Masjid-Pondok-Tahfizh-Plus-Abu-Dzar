@@ -6,12 +6,15 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -22,16 +25,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -63,13 +69,13 @@ object QiblaCalculator {
 
 private fun normalizeDegrees(degrees: Float): Float = ((degrees % 360f) + 360f) % 360f
 
-/** Interpolasi sudut yang benar di sekitar batas 0°/360°. */
+/** Interpolasi sudut kontinu di sekitar batas 0°/360°. */
 private fun smoothAngle(current: Float, target: Float, alpha: Float): Float {
     val delta = ((target - current + 540f) % 360f) - 180f
     return normalizeDegrees(current + alpha * delta)
 }
 
-/** 0° derajat layar menghadap ke atas, bukan ke kanan. */
+/** 0° derajat layar menghadap ke atas (arah jarum jam). */
 private fun screenRad(bearing: Float, azimuth: Float): Float =
     Math.toRadians(normalizeDegrees(bearing - azimuth - 90f).toDouble()).toFloat()
 
@@ -86,20 +92,39 @@ fun QiblaCompass(
     val availabilityCallback = rememberUpdatedState(onSensorAvailabilityChange)
 
     var headingTarget by remember { mutableFloatStateOf(0f) }
-    var sensorAvailable by remember { mutableStateOf(true) }
+    var sensorAvailable by remember { mutableStateOf(false) }
+    var hasHeading by remember { mutableStateOf(false) }
 
-    // Nilai sensor bisa melompat di batas 0°/360°. Target disimpan sebagai sudut
-    // kontinu supaya animasi tidak berputar mundur, lalu dianimasikan dengan spring.
+    // Animasi putaran kompas berbasis spring dengan redaman halus
     val azimuth by animateFloatAsState(
         targetValue = headingTarget,
         animationSpec = spring(
-            dampingRatio = 0.82f,
+            dampingRatio = 0.88f,
             stiffness = Spring.StiffnessLow,
         ),
         visibilityThreshold = 0.02f,
+        label = "compassAzimuth",
+    )
+
+    // Deteksi apakah HP tepat mengarah ke kiblat (dalam toleransi ±3.5 derajat).
+    // derivedStateOf mencegah recomposition tiap frame: hanya berubah saat
+    // status sejajar benar-benar berubah.
+    val isAligned by remember(qibla) {
+        derivedStateOf {
+            val angleDiff = ((qibla - (azimuth % 360f) + 540f) % 360f) - 180f
+            hasHeading && sensorAvailable && abs(angleDiff) <= 3.5f
+        }
+    }
+
+    val ringColor by animateColorAsState(
+        targetValue = if (isAligned) AppColors.Emerald700 else AppColors.Gold,
+        animationSpec = tween(300),
+        label = "ringColor",
     )
 
     DisposableEffect(context, latitude, longitude) {
+        hasHeading = false
+        headingTarget = 0f
         val manager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         val rotationVector = manager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         val accelerometer = manager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -117,8 +142,6 @@ fun QiblaCompass(
         var hasSample = false
         var smoothed = 0f
 
-        // Kompas HP membaca utara magnetik, sedangkan arah kiblat dihitung
-        // dari utara geografis. Koreksi deklinasi lokal menjaga selisihnya.
         val declination = GeomagneticField(
             latitude.toFloat(),
             longitude.toFloat(),
@@ -151,6 +174,7 @@ fun QiblaCompass(
                     smoothed = trueHeading
                     headingTarget = trueHeading
                     hasSample = true
+                    hasHeading = true
                 } else {
                     val next = smoothAngle(smoothed, trueHeading, 0.32f)
                     val delta = ((next - smoothed + 540f) % 360f) - 180f
@@ -191,59 +215,168 @@ fun QiblaCompass(
     Canvas(modifier = modifier) {
         val cx = size.width / 2f
         val cy = size.height / 2f
-        val radius = minOf(size.width, size.height) * 0.43f
-        val gold = Color(0xFFC6A15B)
-        val goldSoft = Color(0xFFE7D09A)
-        val emerald = Color(0xFF0B3B2E)
-        val ink = Color(0xFF14231D)
-        val muted = Color(0xFF52645A)
+        val radius = minOf(size.width, size.height) * 0.44f
 
-        drawCircle(color = Color(0xFFFFFDF8), radius = radius, center = Offset(cx, cy))
+        val gold = AppColors.Gold
+        val goldSoft = AppColors.GoldSoft
+        val emerald = AppColors.Emerald900
+        val emeraldLight = AppColors.Emerald800
+        val ink = AppColors.Ink
+        val muted = AppColors.Muted
+
+        // 1. Shadow & Outer Halo
         drawCircle(
-            color = gold,
+            color = Color(0x120B3B2E),
+            radius = radius + 6.dp.toPx(),
+            center = Offset(cx, cy),
+        )
+
+        // 2. Bezel luar bermotif kuningan emas
+        drawCircle(
+            color = Color(0xFFFAF7F0),
             radius = radius,
             center = Offset(cx, cy),
-            style = Stroke(3.dp.toPx()),
         )
-        drawCircle(color = Color(0xFFEDE3D1), radius = radius * 0.72f, center = Offset(cx, cy))
+        drawCircle(
+            color = ringColor,
+            radius = radius,
+            center = Offset(cx, cy),
+            style = Stroke(3.5.dp.toPx()),
+        )
 
-        for (angle in 0..330 step 30) {
+        // 3. Dial face dalam dengan gradasi lembut
+        drawCircle(
+            color = Color(0xFFFDFBF7),
+            radius = radius * 0.92f,
+            center = Offset(cx, cy),
+        )
+        drawCircle(
+            color = goldSoft.copy(alpha = 0.4f),
+            radius = radius * 0.92f,
+            center = Offset(cx, cy),
+            style = Stroke(1.dp.toPx()),
+        )
+
+        // Lingkaran kompas tengah
+        drawCircle(
+            color = Color(0xFFF3ECE0),
+            radius = radius * 0.68f,
+            center = Offset(cx, cy),
+        )
+        drawCircle(
+            color = gold.copy(alpha = 0.35f),
+            radius = radius * 0.68f,
+            center = Offset(cx, cy),
+            style = Stroke(1.5.dp.toPx()),
+        )
+
+        // 4. Skala Garis Derajat Kompas (Setiap 5° dan 30°)
+        for (angle in 0..355 step 5) {
             val rad = screenRad(angle.toFloat(), azimuth)
-            val inner = radius * 0.88f
-            val outer = radius * 0.96f
-            val cardinal = angle % 90 == 0
+            val isMajor = angle % 30 == 0
+            val isCardinal = angle % 90 == 0
+
+            val inner = when {
+                isCardinal -> radius * 0.81f
+                isMajor -> radius * 0.84f
+                else -> radius * 0.88f
+            }
+            val outer = radius * 0.91f
+
+            val stroke = when {
+                isCardinal -> 2.dp.toPx()
+                isMajor -> 1.5.dp.toPx()
+                else -> 0.8.dp.toPx()
+            }
+            val strokeColor = when {
+                isCardinal -> emeraldLight
+                isMajor -> gold
+                else -> muted.copy(alpha = 0.3f)
+            }
+
             drawLine(
-                color = if (cardinal) emerald else muted.copy(alpha = 0.45f),
+                color = strokeColor,
                 start = Offset(cx + cos(rad) * inner, cy + sin(rad) * inner),
                 end = Offset(cx + cos(rad) * outer, cy + sin(rad) * outer),
-                strokeWidth = if (cardinal) 2.dp.toPx() else 1.dp.toPx(),
+                strokeWidth = stroke,
             )
         }
 
-        drawCardinal(measurer, "U", 0f, azimuth, cx, cy, radius, ink)
+        // 5. Huruf Mata Angin (U, T, S, B)
+        drawCardinal(measurer, "U", 0f, azimuth, cx, cy, radius, AppColors.Alert, isNorth = true)
         drawCardinal(measurer, "T", 90f, azimuth, cx, cy, radius, muted)
         drawCardinal(measurer, "S", 180f, azimuth, cx, cy, radius, muted)
         drawCardinal(measurer, "B", 270f, azimuth, cx, cy, radius, muted)
 
+        // 6. Jarum Penunjuk Kiblat Emas & Ka'bah
         val needleRad = screenRad(qibla, azimuth)
-        val tip = Offset(cx + cos(needleRad) * radius * 0.62f, cy + sin(needleRad) * radius * 0.62f)
-        val tail = Offset(cx - cos(needleRad) * radius * 0.34f, cy - sin(needleRad) * radius * 0.34f)
-        drawLine(color = gold, start = tail, end = tip, strokeWidth = 9.dp.toPx())
+        val needleLength = radius * 0.64f
+        val tailLength = radius * 0.32f
+
+        val tip = Offset(cx + cos(needleRad) * needleLength, cy + sin(needleRad) * needleLength)
+        val tail = Offset(cx - cos(needleRad) * tailLength, cy - sin(needleRad) * tailLength)
+
+        // Sisi samping jarum (tapered diamond needle)
+        val perpRad = needleRad + (Math.PI / 2).toFloat()
+        val halfBase = 7.dp.toPx()
+        val leftPoint = Offset(cx + cos(perpRad) * halfBase, cy + sin(perpRad) * halfBase)
+        val rightPoint = Offset(cx - cos(perpRad) * halfBase, cy - sin(perpRad) * halfBase)
+
+        // Gambar jarum depan (emas bercahaya)
+        val needlePathFront = Path().apply {
+            moveTo(tip.x, tip.y)
+            lineTo(leftPoint.x, leftPoint.y)
+            lineTo(cx, cy)
+            close()
+        }
+        drawPath(needlePathFront, color = if (isAligned) AppColors.Emerald700 else gold)
+
+        val needlePathFrontShade = Path().apply {
+            moveTo(tip.x, tip.y)
+            lineTo(rightPoint.x, rightPoint.y)
+            lineTo(cx, cy)
+            close()
+        }
+        drawPath(needlePathFrontShade, color = if (isAligned) AppColors.Emerald800 else AppColors.GoldDeep)
+
+        // Gambar jarum belakang (ekor)
+        val needlePathTail = Path().apply {
+            moveTo(tail.x, tail.y)
+            lineTo(leftPoint.x, leftPoint.y)
+            lineTo(cx, cy)
+            close()
+        }
+        drawPath(needlePathTail, color = Color(0xFFD4C8B2))
+
+        val needlePathTailShade = Path().apply {
+            moveTo(tail.x, tail.y)
+            lineTo(rightPoint.x, rightPoint.y)
+            lineTo(cx, cy)
+            close()
+        }
+        drawPath(needlePathTailShade, color = Color(0xFFBEB09A))
+
+        // 7. Simbol Ka'bah Premium di Ujung Jarum
         drawKaaba(
             center = tip,
-            size = 18.dp.toPx(),
+            size = 20.dp.toPx(),
             gold = gold,
             goldSoft = goldSoft,
             ink = ink,
+            isGlowing = isAligned,
         )
-        drawCircle(color = emerald, radius = 17.dp.toPx(), center = Offset(cx, cy))
-        drawCircle(color = goldSoft, radius = 11.dp.toPx(), center = Offset(cx, cy))
 
+        // 8. Poros Tengah (Center Jewel Pivot)
+        drawCircle(color = emerald, radius = 14.dp.toPx(), center = Offset(cx, cy))
+        drawCircle(color = gold, radius = 9.dp.toPx(), center = Offset(cx, cy))
+        drawCircle(color = Color.White.copy(alpha = 0.85f), radius = 3.dp.toPx(), center = Offset(cx - 2.dp.toPx(), cy - 2.dp.toPx()))
+
+        // Indikator peringatan bila sensor tidak tersedia
         if (!sensorAvailable) {
             drawCircle(
-                color = Color(0xFFC8453B),
-                radius = 5.dp.toPx(),
-                center = Offset(cx + radius * 0.7f, cy - radius * 0.7f),
+                color = AppColors.Alert,
+                radius = 6.dp.toPx(),
+                center = Offset(cx + radius * 0.72f, cy - radius * 0.72f),
             )
         }
     }
@@ -255,29 +388,52 @@ private fun DrawScope.drawKaaba(
     gold: Color,
     goldSoft: Color,
     ink: Color,
+    isGlowing: Boolean,
 ) {
     val half = size / 2f
+
+    // Efek aura cahaya jika sejajar
+    if (isGlowing) {
+        drawCircle(
+            color = AppColors.Emerald700.copy(alpha = 0.25f),
+            radius = size * 1.1f,
+            center = center,
+        )
+        drawCircle(
+            color = gold.copy(alpha = 0.35f),
+            radius = size * 0.8f,
+            center = center,
+        )
+    }
+
+    // Bangunan utama Ka'bah
     drawRect(
         color = ink,
         topLeft = Offset(center.x - half, center.y - half),
         size = Size(size, size),
     )
+
+    // Border halus emas
+    drawRect(
+        color = gold.copy(alpha = 0.5f),
+        topLeft = Offset(center.x - half, center.y - half),
+        size = Size(size, size),
+        style = Stroke(1.dp.toPx()),
+    )
+
+    // Pita Kiswah Emas
     drawLine(
         color = gold,
-        start = Offset(center.x - half, center.y - size * 0.12f),
-        end = Offset(center.x + half, center.y - size * 0.12f),
-        strokeWidth = 2.dp.toPx(),
+        start = Offset(center.x - half, center.y - size * 0.16f),
+        end = Offset(center.x + half, center.y - size * 0.16f),
+        strokeWidth = 2.4.dp.toPx(),
     )
-    drawLine(
-        color = gold,
-        start = Offset(center.x - half, center.y + size * 0.18f),
-        end = Offset(center.x + half, center.y + size * 0.18f),
-        strokeWidth = 1.5.dp.toPx(),
-    )
+
+    // Pintu Ka'bah (Bab al-Ka'bah)
     drawRect(
         color = goldSoft,
-        topLeft = Offset(center.x - size * 0.11f, center.y - size * 0.02f),
-        size = Size(size * 0.22f, size * 0.34f),
+        topLeft = Offset(center.x - size * 0.10f, center.y - size * 0.05f),
+        size = Size(size * 0.24f, size * 0.38f),
     )
 }
 
@@ -290,12 +446,17 @@ private fun DrawScope.drawCardinal(
     cy: Float,
     radius: Float,
     color: Color,
+    isNorth: Boolean = false,
 ) {
     val rad = screenRad(bearing, azimuth)
-    val labelStyle = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    val labelStyle = TextStyle(
+        fontSize = if (isNorth) 17.sp else 15.sp,
+        fontWeight = if (isNorth) FontWeight.ExtraBold else FontWeight.Bold,
+        fontFamily = FontFamily.Serif,
+    )
     val result = measurer.measure(text, style = labelStyle)
-    val x = cx + cos(rad) * radius * 0.79f - result.size.width / 2f
-    val y = cy + sin(rad) * radius * 0.79f - result.size.height / 2f
+    val x = cx + cos(rad) * radius * 0.73f - result.size.width / 2f
+    val y = cy + sin(rad) * radius * 0.73f - result.size.height / 2f
     drawText(
         textMeasurer = measurer,
         text = text,
