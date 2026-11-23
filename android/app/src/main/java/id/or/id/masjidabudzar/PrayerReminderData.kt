@@ -243,6 +243,7 @@ data class TvData(
     val imamToday: List<ImamSchedule> = emptyList(),
     val imamWeek: List<ImamSchedule> = emptyList(),
     val imamTomorrowSubuh: ImamSchedule? = null,
+    val imamTomorrow: List<ImamSchedule> = emptyList(),
     val jumat: Jumat = Jumat(),
     val khatibUpcoming: List<Khatib> = emptyList(),
     val kajian: List<Kajian> = emptyList(),
@@ -250,7 +251,13 @@ data class TvData(
     val runningTexts: List<RunningText> = emptyList(),
     val display: DisplaySettings = DisplaySettings(),
     val khutbah: Khutbah? = null,
-)
+) {
+    /** Returns the effective daily duties list.
+     * After all today's prayers are done (nextPrayer.tomorrow == true),
+     * show tomorrow's full schedule instead of today's empty list. */
+    fun effectiveDailyDuties(): List<ImamSchedule> =
+        if (nextPrayer.tomorrow && imamTomorrow.isNotEmpty()) imamTomorrow else imamToday
+}
 
 object ApiParser {
     private val gson = Gson()

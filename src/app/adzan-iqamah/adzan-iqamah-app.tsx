@@ -5,6 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { TvData } from "@/lib/public-data";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import { CheckCircle2, Home, Maximize2, Minimize2, Sparkles } from "lucide-react";
+import {
+  triggerPrayerAlerts,
+  type FiredPrayerKeys,
+} from "@/lib/adzan-auto-trigger";
 
 function countdown(targetMs: number, nowMs: number) {
   const total = Math.max(0, Math.floor((targetMs - nowMs) / 1000));
@@ -22,6 +26,10 @@ export function AdzanIqamahAppPage() {
   const [mounted, setMounted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const activeFetchRef = useRef<AbortController | null>(null);
+  const firedRef = useRef<FiredPrayerKeys>({
+    adhan: new Set<string>(),
+    iqamah: new Set<string>(),
+  });
 
   const load = useCallback(async () => {
     activeFetchRef.current?.abort();
@@ -103,6 +111,14 @@ export function AdzanIqamahAppPage() {
           new Date(nextEvent.adhanTarget).getTime() <= serverNow,
       }
     : null;
+
+  // Halaman app tidak memakai taskbar publik, jadi adzan tetap dipicu di sini.
+  // Di WebView APK, helper ini berhenti lebih awal karena alarm native yang berjalan.
+  useEffect(() => {
+    if (!mounted || !data) return;
+    triggerPrayerAlerts(visibleEvents, serverNow, firedRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverNow, mounted, data]);
 
   const clock = mounted
     ? new Intl.DateTimeFormat("id-ID", {

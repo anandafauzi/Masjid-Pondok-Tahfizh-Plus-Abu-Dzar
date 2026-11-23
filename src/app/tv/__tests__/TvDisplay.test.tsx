@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { TvDisplay } from "@/app/tv/TvDisplay";
 import type { TvData } from "@/lib/public-data";
 import {
@@ -68,6 +68,7 @@ function makeData(serverNow: number, durationMinutes = 5): TvData {
       },
     ],
     imamTomorrowSubuh: null,
+    imamTomorrow: [],
     imamRoster: [],
     imamWeekly: [],
     kajian: [],
@@ -206,6 +207,48 @@ describe("TvDisplay countdown menuju iqamah", () => {
 
     expect(container.querySelector("header")).toBeNull();
     expect(screen.getByText("WAKTU SHALAT TIBA")).toBeTruthy();
+
+    unmount();
+  });
+});
+
+describe("TvDisplay fallback petugas besok", () => {
+  it("menjaga imamTomorrow saat API sementara mengembalikan array kosong", async () => {
+    const serverNow = IQAMAH_MS - 60_000;
+    vi.spyOn(Date, "now").mockReturnValue(serverNow);
+    const tomorrow = [
+      {
+        id: "tomorrow-maghrib",
+        prayerName: "Maghrib",
+        imamName: "Ustadz Besok",
+        muadzinName: "Muadzin Besok",
+      },
+    ];
+    const initial = {
+      ...makeData(serverNow),
+      imamTomorrow: tomorrow,
+    } as TvData;
+    const emptyResponse = {
+      ...makeData(serverNow),
+      imamTomorrow: [],
+    } as TvData;
+
+    localStorage.clear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve(emptyResponse) }),
+      ),
+    );
+
+    const { unmount } = render(<TvDisplay initialData={initial} />);
+
+    await waitFor(() => {
+      const cached = JSON.parse(
+        localStorage.getItem("masjid_tv_cached_data") ?? "{}",
+      );
+      expect(cached.imamTomorrow).toEqual(tomorrow);
+    });
 
     unmount();
   });

@@ -1709,13 +1709,14 @@ private fun OfficersScreen(bundle: AppBundle) {
                 ) {
                     if (currentTab < 2) {
                         if (currentPeriod == 0) {
-                            val duties = data?.imamToday.orEmpty()
+                            val isTomorrow = data?.nextPrayer?.tomorrow == true
+                            val duties = data?.effectiveDailyDuties().orEmpty()
                             if (duties.isEmpty()) {
                                 item { EmptyState("Jadwal petugas hari ini belum tersedia.") }
                             } else {
                                 items(duties.size) { index ->
                                     val duty = duties[index]
-                                    FlatSectionCard(title = duty.prayerName) {
+                                    FlatSectionCard(title = if (isTomorrow) "Besok · ${duty.prayerName}" else duty.prayerName) {
                                         Row(
                                             Modifier
                                                 .fillMaxWidth()

@@ -175,6 +175,14 @@ export function TvDisplay({
             imamTomorrowSubuh: prev.imamTomorrowSubuh,
           };
         }
+        if (
+          prev?.imamTomorrow &&
+          prev.imamTomorrow.length > 0 &&
+          (!d.imamTomorrow || d.imamTomorrow.length === 0) &&
+          prev.today === d.today
+        ) {
+          nextData = { ...nextData, imamTomorrow: prev.imamTomorrow };
+        }
         try {
           localStorage.setItem("masjid_tv_cached_data", JSON.stringify(nextData));
         } catch {
@@ -423,17 +431,18 @@ export function TvDisplay({
 
   // 5 daily prayers roster so Petugas slide is always structured & symmetrical
   const displayImamList = useMemo(() => {
-    const list = data?.imamToday && data.imamToday.length > 0 ? data.imamToday : [];
+    const isTomorrowMode = Boolean(data?.nextPrayer?.tomorrow);
+    // Setelah Isya selesai (nextPrayer.tomorrow === true), tampilkan seluruh
+    // jadwal petugas besok agar slide Petugas tidak kosong atau hanya Shubuh.
+    const list = isTomorrowMode
+      ? (data?.imamTomorrow && data.imamTomorrow.length > 0 ? data.imamTomorrow : [])
+      : (data?.imamToday && data.imamToday.length > 0 ? data.imamToday : []);
     return ROSTER_PRAYER_KEYS.map((key) => {
       const prayer = PRAYER_LIST.find((item) => item.key === key)!;
       const pName = prayer.label;
-      const isTomorrowSubuh =
-        Boolean(data?.nextPrayer?.tomorrow) && isPrayerName(pName, "fajr");
-      const found = isTomorrowSubuh
-        ? data?.imamTomorrowSubuh ?? undefined
-        : list.find(
-            (item) => normalizePrayerName(item.prayerName) === pName
-          );
+      const found = list.find(
+        (item) => normalizePrayerName(item.prayerName) === pName
+      );
       const base = {
         id: key,
         prayerName: pName,
@@ -476,14 +485,15 @@ export function TvDisplay({
 
   // Petugas (Imam & Muadzin) yang bertugas pada shalat yang akan datang
   const upcomingPetugas = useMemo(() => {
-    const list = data?.imamToday ?? [];
-    const isTomorrowSubuh =
-      Boolean(data?.nextPrayer?.tomorrow) && isPrayerName(upcomingPrayerName, "fajr");
-    const found = isTomorrowSubuh
+    const isTomorrowMode = Boolean(data?.nextPrayer?.tomorrow);
+    const list = isTomorrowMode
+      ? (data?.imamTomorrow && data.imamTomorrow.length > 0 ? data.imamTomorrow : [])
+      : (data?.imamToday ?? []);
+    const found = list.find((item) =>
+      prayerSlotOf(item.prayerName) === prayerSlotOf(upcomingPrayerName)
+    ) ?? (isTomorrowMode && isPrayerName(upcomingPrayerName, "fajr")
       ? data?.imamTomorrowSubuh ?? null
-      : list.find((item) =>
-          prayerSlotOf(item.prayerName) === prayerSlotOf(upcomingPrayerName)
-        );
+      : null);
     return {
       imam:
         found?.imamName?.trim() && found.imamName !== "Belum Ditentukan"
@@ -496,6 +506,7 @@ export function TvDisplay({
     };
   }, [
     data?.imamToday,
+    data?.imamTomorrow,
     data?.imamTomorrowSubuh,
     data?.nextPrayer?.tomorrow,
     upcomingPrayerName,
@@ -1401,7 +1412,9 @@ export function TvDisplay({
               {/* Footer */}
               <div className="shrink-0 flex items-center justify-between text-xs text-[#5a685e] border-t border-[#ded5c4]/60 pt-2 px-1">
                 <span>* Jadwal petugas shalat fardhu berjamaah</span>
-                <span className="font-semibold text-[#1e6149]">Pondok Tahfizh Plus Abu Dzar</span>
+                <span className="font-semibold text-[#1e6149]">
+                  {data.nextPrayer.tomorrow ? "Jadwal Besok · " : ""}Pondok Tahfizh Plus Abu Dzar
+                </span>
               </div>
             </div>
           </div>

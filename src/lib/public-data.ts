@@ -99,6 +99,12 @@ export interface TvData {
     imamName: string;
     muadzinName: string;
   } | null;
+  imamTomorrow: Array<{
+    id: string;
+    prayerName: string;
+    imamName: string;
+    muadzinName: string;
+  }>;
   jumat: {
     fridayDate: string;
     khatibName: string | null;
@@ -578,6 +584,12 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
           muadzinName: imamTomorrowSubuh.muadzinName,
         }
       : null,
+    imamTomorrow: imamTomorrow.map((s) => ({
+      id: s.id,
+      prayerName: normalizePrayerName(s.prayerName),
+      imamName: s.imamName,
+      muadzinName: s.muadzinName,
+    })),
     jumat: {
       fridayDate: dateOnlyToString(friday),
       khatibName: fridaySchedule?.khatibName ?? rollingKhatib?.name ?? null,

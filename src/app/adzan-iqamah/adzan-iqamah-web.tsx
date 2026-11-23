@@ -6,6 +6,10 @@ import { MuadzinSelectorCard } from "@/components/muadzin-selector";
 import type { TvData } from "@/lib/public-data";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import { Timer, Clock, Sparkles, CheckCircle2 } from "lucide-react";
+import {
+  triggerPrayerAlerts,
+  type FiredPrayerKeys,
+} from "@/lib/adzan-auto-trigger";
 
 function countdown(targetMs: number, nowMs: number) {
   const total = Math.max(0, Math.floor((targetMs - nowMs) / 1000));
@@ -22,6 +26,10 @@ export function AdzanIqamahWebPage() {
   const [now, setNow] = useState(Date.now());
   const [mounted, setMounted] = useState(false);
   const activeFetchRef = useRef<AbortController | null>(null);
+  const firedRef = useRef<FiredPrayerKeys>({
+    adhan: new Set<string>(),
+    iqamah: new Set<string>(),
+  });
 
   const load = useCallback(async () => {
     activeFetchRef.current?.abort();
@@ -83,6 +91,16 @@ export function AdzanIqamahWebPage() {
           new Date(nextEvent.adhanTarget).getTime() <= serverNow,
       }
     : null;
+
+  // MobilePrayerTaskbar di PublicShell sudah memicu adzan (termasuk jeda 60 detik
+  // dan guard WebView), jadi halaman ini hanya menambah notifikasi iqamah.
+  useEffect(() => {
+    if (!mounted || !data) return;
+    triggerPrayerAlerts(visibleEvents, serverNow, firedRef.current, {
+      includeAdhan: false,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverNow, mounted, data]);
 
   return (
     <PublicShell
