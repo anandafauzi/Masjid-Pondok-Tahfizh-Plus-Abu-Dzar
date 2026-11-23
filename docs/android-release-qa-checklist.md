@@ -1,13 +1,13 @@
-# Checklist QA Android — v2.6.1 (versionCode 25)
+# Checklist QA Android — v2.6.2 (versionCode 26)
 
 Pakai checklist ini setelah install APK signed dari CI. Tandai setiap item ✅ / ❌.
 Jika ada yang gagal, catat **HP + versi Android + langkah ke-** sebelum dilaporkan.
 
 Build yang diuji:
 
-- Commit: `67a57c6`
-- CI run: `45085739425`, artifact `14779173021`
-- SHA256: `5FD7AAA4AD5B2A6FACA8F1464FD98944E97B479564F2A1DCA99B5BB07EEA1EB9`
+- Commit: `4ca3bd6`
+- CI run: `45091748999`, artifact `14781528414`
+- SHA256: `B1B12BD6F038458ECF96DB9BB701E47EF80AC6D02DE67121CBE08A3C51363FE5`
 
 ## Persiapan
 
@@ -21,9 +21,9 @@ Build yang diuji:
 
 | # | Langkah | Ekspektasi |
 |---|---|---|
-| A1 | Buka Pengaturan › Aplikasi › Masjid Abu Dzar | Versi **`2.6.1`** |
+| A1 | Buka Pengaturan › Aplikasi › Masjid Abu Dzar | Versi **`2.6.2`** |
 | A2 | Buka aplikasi, lalu notifikasi ongoing | Muncul, tidak ada toast/crash "Bad notification" |
-| A3 | Update dari APK lama `2.6.0` (jika ada) | Tidak ada notifikasi lama ganda/berbayang |
+| A3 | Update dari APK lama `2.6.1` (jika ada) | Tidak ada notifikasi lama ganda/berbayang |
 
 ## B. Alarm adzan & iqamah
 
@@ -60,12 +60,13 @@ Build yang diuji:
 | D2 | Lihat teks compact & expanded | Tidak terpotong, tidak tumpang tindih, descender (huruf `g/y`) tidak terpangkas |
 | D3 | Ubah ukuran font sistem ke **200%** | Teks tetap rapi, tinggi card menyesuaikan, tidak saling menimpa |
 | D4 | Gunakan HP dengan bahasa Arab/RTL | Teks tetap `viewStart`, tidak terbalik |
-| D5 | Perhatikan small icon notifikasi | Siluet masjid, **bukan emoji**, tidak berubah jadi kotak putih |
+| D5 | Perhatikan small icon notifikasi | Siluet masjid putih solid di atas lingkaran biru SystemUI, kontras, tidak pucat/transparan |
 | D6 | Bandingkan notifikasi ongoing & adzan | Ikon masjid identik di keduanya |
 | D7 | Cek launcher/home/navigasi/Kiblat | Ikon di luar notifikasi **tidak berubah** |
 
-> Catatan: Android mewarnai small icon secara monokrom mengikuti tema. Aksen gold pada artwork
-> akan tampil sebagai silhouette ivory—ini perilaku platform, bukan bug.
+> Catatan: lingkaran biru berasal dari background small icon SystemUI, bukan dari PNG aplikasi.
+> Artwork `ic_mosque_notification` kini berupa siluet putih solid dengan bounding box lama supaya
+> ikon tetap tajam dan kontras tanpa mengubah warna/theme sistem.
 
 ## E. Nama shalat & data lama
 
