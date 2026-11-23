@@ -121,19 +121,19 @@ object OngoingNotification {
         val palette = notificationPalette(context)
         val countdownColor = if (urgent) palette.urgent else palette.accent
 
+        // SystemUI mengukur custom collapsed view dengan batas tinggi tetap
+        // (~64dp), bukan unbounded. Layout tiga baris membuat baris terbawah
+        // (imam/muadzin) terpotong. Collapsed sengaja satu baris; detail lengkap
+        // ditampilkan lewat custom big content view di bawah.
         val compact = RemoteViews(context.packageName, R.layout.notification_compact).apply {
-            setTextViewText(R.id.notif_line1, line1)
             setTextViewText(R.id.notif_prayer, "$label :")
             setTextViewText(R.id.notif_time, "$time |")
             setTextViewText(R.id.notif_countdown, countdown)
-            setTextViewText(R.id.notif_staff, staff)
             setInt(R.id.notif_compact_root, "setBackgroundColor", Color.TRANSPARENT)
-            setInt(R.id.notif_line1, "setTextColor", palette.secondary)
             setInt(R.id.notif_prayer, "setTextColor", palette.primary)
             setInt(R.id.notif_time, "setTextColor", palette.primary)
             setInt(R.id.notif_countdown, "setTextColor", countdownColor)
             setInt(R.id.notif_countdown, "setBackgroundColor", Color.TRANSPARENT)
-            setInt(R.id.notif_staff, "setTextColor", palette.secondary)
         }
 
         val expanded = RemoteViews(context.packageName, R.layout.notification_expanded).apply {
@@ -164,6 +164,7 @@ object OngoingNotification {
             .setContentIntent(openIntent(context))
             .setCustomContentView(compact)
             .setCustomBigContentView(expanded)
+            .setCustomHeadsUpContentView(compact)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

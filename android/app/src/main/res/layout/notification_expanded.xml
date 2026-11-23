@@ -5,10 +5,12 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:background="@null"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:paddingStart="14dp"
     android:paddingEnd="14dp"
     android:paddingTop="10dp"
-    android:paddingBottom="10dp">
+    android:paddingBottom="12dp">
 
     <TextView
         android:id="@+id/notif_line1"
@@ -26,6 +28,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:orientation="horizontal"
+        android:baselineAligned="true"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:gravity="center_vertical">
 
         <TextView
@@ -86,7 +91,8 @@
         android:lineSpacingMultiplier="1.08"
         android:textAlignment="viewStart"
         android:textColor="@color/notification_text_secondary"
-        android:textSize="12sp" />
+        android:textSize="12sp"
+        android:paddingBottom="2dp" />
 
     <TextView
         android:id="@+id/notif_action_open"
