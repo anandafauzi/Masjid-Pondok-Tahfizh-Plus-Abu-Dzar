@@ -1,13 +1,13 @@
-# Checklist QA Android — v2.6.2 (versionCode 26)
+# Checklist QA Android — v2.6.3 (versionCode 27)
 
 Pakai checklist ini setelah install APK signed dari CI. Tandai setiap item ✅ / ❌.
 Jika ada yang gagal, catat **HP + versi Android + langkah ke-** sebelum dilaporkan.
 
 Build yang diuji:
 
-- Commit: `4ca3bd6`
-- CI run: `45091748999`, artifact `14781528414`
-- SHA256: `B1B12BD6F038458ECF96DB9BB701E47EF80AC6D02DE67121CBE08A3C51363FE5`
+- Commit: `f001af2`
+- CI run: `45093595908`, artifact `14782323058`
+- SHA256: `90AD578E4037FB38BDD0F27BDADD88FF31E31BD365E165E75177E5FB50FBB783`
 
 ## Persiapan
 
@@ -21,9 +21,9 @@ Build yang diuji:
 
 | # | Langkah | Ekspektasi |
 |---|---|---|
-| A1 | Buka Pengaturan › Aplikasi › Masjid Abu Dzar | Versi **`2.6.2`** |
+| A1 | Buka Pengaturan › Aplikasi › Masjid Abu Dzar | Versi **`2.6.3`** |
 | A2 | Buka aplikasi, lalu notifikasi ongoing | Muncul, tidak ada toast/crash "Bad notification" |
-| A3 | Update dari APK lama `2.6.1` (jika ada) | Tidak ada notifikasi lama ganda/berbayang |
+| A3 | Update dari APK lama `2.6.2` (jika ada) | Tidak ada notifikasi lama ganda/berbayang |
 
 ## B. Alarm adzan & iqamah
 
@@ -57,12 +57,16 @@ Build yang diuji:
 | # | Langkah | Ekspektasi |
 |---|---|---|
 | D1 | Buka shade saat adzan | Card tetap transparan/blur, warna teks mengikuti tema (terang/gelap) |
-| D2 | Lihat teks compact & expanded | Tidak terpotong, tidak tumpang tindih, descender (huruf `g/y`) tidak terpangkas |
-| D3 | Ubah ukuran font sistem ke **200%** | Teks tetap rapi, tinggi card menyesuaikan, tidak saling menimpa |
+| D2 | Lihat collapsed, lalu expanded | Collapsed satu baris ringkas; expanded menampilkan imam/muadzin penuh, descender (`g/j/p/q/y`) tidak terpangkas |
+| D3 | Ubah ukuran font sistem ke **200%** | Collapsed tetap muat di batas SystemUI tanpa teks terpotong; tinggi expanded menyesuaikan, tidak saling menimpa |
 | D4 | Gunakan HP dengan bahasa Arab/RTL | Teks tetap `viewStart`, tidak terbalik |
 | D5 | Perhatikan small icon notifikasi | Siluet masjid putih solid di atas lingkaran biru SystemUI, kontras, tidak pucat/transparan |
 | D6 | Bandingkan notifikasi ongoing & adzan | Ikon masjid identik di keduanya |
 | D7 | Cek launcher/home/navigasi/Kiblat | Ikon di luar notifikasi **tidak berubah** |
+
+> Catatan: collapsed sengaja memakai layout satu baris karena SystemUI mengukur custom view
+> collapsed dengan batas tinggi tetap (~64dp). Detail imam/muadzin ditampilkan penuh di expanded
+> supaya tidak ada glyph yang terpotong, termasuk saat font scaling besar.
 
 > Catatan: lingkaran biru berasal dari background small icon SystemUI, bukan dari PNG aplikasi.
 > Artwork `ic_mosque_notification` kini berupa siluet putih solid dengan bounding box lama supaya
