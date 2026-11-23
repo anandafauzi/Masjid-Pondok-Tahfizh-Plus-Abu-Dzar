@@ -90,21 +90,22 @@ object OngoingNotification {
         return PendingIntent.getActivity(context, 21, intent, flags)
     }
 
+    /**
+     * Baris pertama: (Hari), (Tanggal Masehi) • (Tanggal Hijriyah).
+     * `gregorian` sudah berformat "Senin, 23 November 2026" dan `hijri`
+     * berformat "12 Rajab 1448 H", jadi keduanya dipakai utuh (tanpa singkatan).
+     */
     private fun dateLine(state: CountdownState?): String {
         if (state == null) return "Menyiapkan data…"
-        val parts = state.gregorian.split(", ")
-        val weekday = parts.getOrNull(0).orEmpty()
-        val dayMonth = parts.getOrNull(1)
-            ?.split(" ")
-            ?.take(2)
-            ?.joinToString(" ") { if (it.length > 3) it.take(3) else it }
-            .orEmpty()
-        val shortDate = listOf(weekday, dayMonth)
+        return listOf(state.gregorian, state.hijri)
             .filter { it.isNotBlank() }
-            .joinToString(", ")
-        return listOf(shortDate, state.hijri)
-            .filter { it.isNotBlank() }
-            .joinToString(" · ")
+            .joinToString(" • ")
+    }
+
+    /** Baris ketiga: Imam : (Nama Imam) | Muadzin (Nama Muadzin). */
+    private fun staffLine(state: CountdownState?): String {
+        if (state == null) return "Imam : - | Muadzin -"
+        return "Imam : ${state.imamName} | Muadzin ${state.muadzinName}"
     }
 
     fun build(context: Context, state: CountdownState?): Notification {
@@ -112,28 +113,31 @@ object OngoingNotification {
         val label = state?.prayerLabel ?: "Jadwal"
         val time = state?.displayTime ?: "--:--"
         val countdown = state?.countdown ?: "--:--:--"
-        val staff = if (state == null) {
-            "Imam: - | Muadzin: -"
-        } else {
-            "Imam: ${state.imamName} | Muadzin: ${state.muadzinName}"
-        }
+        val staff = staffLine(state)
+        val prayerLine = "$label : $time | $countdown"
         val urgent = state?.isUrgent == true
         val palette = notificationPalette(context)
         val countdownColor = if (urgent) palette.urgent else palette.accent
+        val openLabel = context.getString(R.string.notif_action_open)
+        val fullText = listOf(line1, prayerLine, staff, openLabel).joinToString("\n")
 
-        // SystemUI mengukur custom collapsed view dengan batas tinggi tetap
-        // (~64dp), bukan unbounded. Layout tiga baris membuat baris terbawah
-        // (imam/muadzin) terpotong. Collapsed sengaja satu baris; detail lengkap
-        // ditampilkan lewat custom big content view di bawah.
+        // Collapsed = tepat 3 baris info, tanpa tombol. Tombol "Buka Aplikasi"
+        // hanya dipasang di custom expanded view (muncul setelah expand).
+        // BigTextStyle memberi fallback expanded standar untuk OEM yang tidak
+        // memakai custom big content view.
         val compact = RemoteViews(context.packageName, R.layout.notification_compact).apply {
+            setTextViewText(R.id.notif_line1, line1)
             setTextViewText(R.id.notif_prayer, "$label :")
             setTextViewText(R.id.notif_time, "$time |")
             setTextViewText(R.id.notif_countdown, countdown)
+            setTextViewText(R.id.notif_staff, staff)
             setInt(R.id.notif_compact_root, "setBackgroundColor", Color.TRANSPARENT)
+            setInt(R.id.notif_line1, "setTextColor", palette.secondary)
             setInt(R.id.notif_prayer, "setTextColor", palette.primary)
             setInt(R.id.notif_time, "setTextColor", palette.primary)
             setInt(R.id.notif_countdown, "setTextColor", countdownColor)
             setInt(R.id.notif_countdown, "setBackgroundColor", Color.TRANSPARENT)
+            setInt(R.id.notif_staff, "setTextColor", palette.secondary)
         }
 
         val expanded = RemoteViews(context.packageName, R.layout.notification_expanded).apply {
@@ -149,7 +153,7 @@ object OngoingNotification {
             setInt(R.id.notif_countdown, "setTextColor", countdownColor)
             setInt(R.id.notif_countdown, "setBackgroundColor", Color.TRANSPARENT)
             setInt(R.id.notif_staff, "setTextColor", palette.secondary)
-            setTextViewText(R.id.notif_action_open, context.getString(R.string.notif_action_open))
+            setTextViewText(R.id.notif_action_open, openLabel)
             setInt(R.id.notif_action_open, "setTextColor", palette.primary)
             setInt(R.id.notif_action_open, "setBackgroundColor", Color.TRANSPARENT)
             setOnClickPendingIntent(R.id.notif_action_open, openIntent(context))
@@ -159,6 +163,7 @@ object OngoingNotification {
             .setSmallIcon(R.drawable.ic_mosque_notification)
             .setContentTitle("Jadwal Shalat")
             .setContentText(state?.infoLine ?: "Menyiapkan jadwal shalat")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(fullText))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(openIntent(context))

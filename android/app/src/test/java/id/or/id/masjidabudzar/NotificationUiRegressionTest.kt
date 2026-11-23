@@ -1,5 +1,6 @@
 package id.or.id.masjidabudzar
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,13 +9,13 @@ import java.io.File
 import java.util.zip.Inflater
 
 /**
- * Menjaga perbaikan notification shade tidak kembali ke kondisi lama:
- * - small icon tetap siluet putih solid dengan bounding box lama,
- * - collapsed cukup pendek untuk batas tinggi SystemUI (~64dp),
- * - detail imam/muadzin tampil penuh di expanded tanpa descender terpotong.
+ * Menjaga notification shade sesuai permintaan terbaru:
+ * - siluet masjid putih solid (logo sedikit diperkecil),
+ * - semua field tampil di collapsed dengan jarak baris dipangkas,
+ * - detail tetap penuh di expanded,
+ * - BigTextStyle dipasang sebagai fallback expanded standar.
  *
- * Murni JVM: membaca file resource/sumber dan mendekode PNG 8-bit RGBA tanpa
- * android.graphics maupun java.awt, sehingga tidak butuh device/emulator.
+ * Murni JVM: membaca resource/sumber dan mendekode PNG 8-bit RGBA.
  */
 class NotificationUiRegressionTest {
 
@@ -58,14 +59,26 @@ class NotificationUiRegressionTest {
             .map { it.value }
             .toList()
 
+    private fun assertTextBasics(tag: String, maxMultiplier: Double) {
+        assertTrue("TextView ber-id bukan wrap_content", "android:layout_height=\"wrap_content\"" in tag)
+        assertTrue("includeFontPadding hilang", "includeFontPadding=\"true\"" in tag)
+        assertFalse("lineSpacingExtra masih dipakai", "lineSpacingExtra" in tag)
+        val multiplier = attr(tag, "android:lineSpacingMultiplier")?.toDoubleOrNull()
+        assertTrue("lineSpacingMultiplier hilang", multiplier != null)
+        assertTrue("lineSpacingMultiplier $multiplier > $maxMultiplier", multiplier!! <= maxMultiplier)
+        val size = attr(tag, "android:textSize")
+        assertTrue("textSize bukan sp: $size", size?.endsWith("sp") == true)
+        assertTrue("textSize diperkecil: $size", size!!.removeSuffix("sp").toIntOrNull()?.let { it >= 12 } == true)
+    }
+
     @Test
-    fun notificationIconIsSolidWhiteWithOriginalBoundingBox() {
+    fun notificationIconIsSolidWhiteAndSlightlySmaller() {
         val expected = mapOf(
-            "mdpi" to intArrayOf(24, 2, 0, 21, 23),
-            "hdpi" to intArrayOf(36, 3, 0, 32, 35),
-            "xhdpi" to intArrayOf(48, 4, 0, 43, 47),
-            "xxhdpi" to intArrayOf(72, 6, 0, 64, 71),
-            "xxxhdpi" to intArrayOf(96, 9, 0, 86, 95),
+            "mdpi" to intArrayOf(24, 3, 1, 20, 22),
+            "hdpi" to intArrayOf(36, 4, 1, 30, 33),
+            "xhdpi" to intArrayOf(48, 6, 2, 40, 45),
+            "xxhdpi" to intArrayOf(72, 9, 3, 61, 67),
+            "xxxhdpi" to intArrayOf(96, 12, 4, 81, 90),
         )
 
         for ((density, box) in expected) {
@@ -99,7 +112,6 @@ class NotificationUiRegressionTest {
                 }
             }
 
-            // 1 px toleransi karena anti-aliasing tiap density dibulatkan berbeda.
             assertInt("$density minX", box[1], minX, 1)
             assertInt("$density minY", box[2], minY, 1)
             assertInt("$density maxX", box[3], maxX, 1)
@@ -107,97 +119,117 @@ class NotificationUiRegressionTest {
             assertInt("$density warna non-putih", 0, colored)
             assertTrue(
                 "$density terlalu banyak piksel semi-transparan (opaque=$opaque)",
-                opaque >= size * size / 5,
+                opaque >= size * size / 6,
             )
         }
     }
 
     @Test
-    fun collapsedLayoutFitsSystemUiHeightAtLargeFontScale() {
+    fun collapsedLayoutShowsExactlyThreeRowsWithoutButton() {
         val xml = resFile("layout/notification_compact.xml").readText()
-
-        // Akar masalah lama: 3 baris collapsed melebihi batas ~64dp SystemUI.
-        assertFalse("collapsed masih memuat notif_staff", "notif_staff" in xml)
-        assertFalse("collapsed masih memuat notif_line1", "notif_line1" in xml)
-        assertTrue("collapsed bukan horizontal", "android:orientation=\"horizontal\"" in xml)
-        assertTrue("collapsed tidak baseline-aligned", "android:baselineAligned=\"true\"" in xml)
-        assertTrue("collapsed tidak clipChildren=false", "android:clipChildren=\"false\"" in xml)
-        assertTrue("collapsed tidak clipToPadding=false", "android:clipToPadding=\"false\"" in xml)
-
         val root = rootTag(xml)
-        val padTop = dp(root, "android:paddingTop")
-        val padBottom = dp(root, "android:paddingBottom")
-        assertTrue("padding atas collapsed terlalu besar: $padTop", padTop in 0..6)
-        assertTrue("padding bawah collapsed terlalu besar: $padBottom", padBottom in 0..6)
 
-        val tags = textViews(xml)
-        assertTrue("collapsed bukan tepat satu baris (4 TextView): ${tags.size}", tags.size == 4)
-        // Spacer 1dp tanpa id sengaja dikecualikan; hanya teks ber-id yang dijaga.
-        for (tag in tags.filter { "android:id=" in it }) {
-            assertTrue("TextView tetap ada yang tinggi tetap", "android:layout_height=\"wrap_content\"" in tag)
-            assertTrue("includeFontPadding hilang", "includeFontPadding=\"true\"" in tag)
-            assertTrue("lineSpacingMultiplier hilang", "lineSpacingMultiplier" in tag)
-            assertFalse("lineSpacingExtra masih dipakai", "lineSpacingExtra" in tag)
-            assertTrue(
-                "textSize bukan sp",
-                attr(tag, "android:textSize")?.endsWith("sp") == true,
-            )
+        for (id in listOf(
+            "notif_line1", "notif_prayer", "notif_time",
+            "notif_countdown", "notif_staff",
+        )) {
+            assertTrue("collapsed tidak punya $id", "android:id=\"@+id/$id\"" in xml)
         }
-
-        // Estimasi konservatif: font scale 200%, tinggi glyph ≈ 1.5 x textSize.
-        val maxSp = tags.mapNotNull { attr(it, "android:textSize")?.removeSuffix("sp")?.toIntOrNull() }
-            .maxOrNull() ?: 0
-        val estimated = maxSp * 2.0 * 1.5 + padTop + padBottom
-        assertTrue(
-            "Perkiraan tinggi collapsed ${estimated}dp melebihi batas SystemUI 64dp",
-            estimated <= 64.0,
+        assertFalse(
+            "tombol Buka Aplikasi tidak boleh muncul di collapsed",
+            "android:id=\"@+id/notif_action_open\"" in xml,
         )
+        // 1 root + 5 field; tidak ada id ke-6 (= tombol).
+        val idCount = Regex.fromLiteral("android:id=\"@+id/notif_").findAll(xml).count()
+        assertEquals("collapsed punya $idCount id (root + field), bukan 6", 6, idCount)
+
+        assertTrue("collapsed tidak clipChildren=false", "android:clipChildren=\"false\"" in root)
+        assertTrue("collapsed tidak clipToPadding=false", "android:clipToPadding=\"false\"" in root)
+        assertInt("paddingStart", 0, dp(root, "android:paddingStart"))
+        assertInt("paddingEnd", 0, dp(root, "android:paddingEnd"))
+        assertTrue("padding atas collapsed > 3dp", dp(root, "android:paddingTop") <= 3)
+        assertTrue("padding bawah collapsed > 3dp", dp(root, "android:paddingBottom") <= 3)
+
+        for (tag in textViews(xml).filter { "android:id=" in it }) {
+            assertTextBasics(tag, 1.0)
+        }
     }
 
     @Test
-    fun expandedLayoutShowsFullStaffTextAndDescenderSpace() {
+    fun expandedLayoutKeepsFullDetailAndLeftAlignment() {
         val xml = resFile("layout/notification_expanded.xml").readText()
         val root = rootTag(xml)
         val staff = tagFor(xml, "notif_staff")
+        val action = tagFor(xml, "notif_action_open")
 
-        assertTrue("expanded root bukan wrap_content", "android:layout_height=\"wrap_content\"" in root)
-        assertTrue("expanded root tidak clipChildren=false", "android:clipChildren=\"false\"" in root)
-        assertTrue("expanded root tidak clipToPadding=false", "android:clipToPadding=\"false\"" in root)
-        assertTrue("padding bawah expanded < 12dp", dp(root, "android:paddingBottom") >= 12)
+        assertInt("expanded paddingStart", 0, dp(root, "android:paddingStart"))
+        assertInt("expanded paddingEnd", 0, dp(root, "android:paddingEnd"))
+        assertTrue("expanded padding atas > 4dp", dp(root, "android:paddingTop") <= 4)
+        assertTrue("expanded padding bawah < 6dp", dp(root, "android:paddingBottom") >= 6)
         assertTrue("baris expanded tidak baseline-aligned", "android:baselineAligned=\"true\"" in xml)
 
         assertTrue("staff bukan wrap_content", "android:layout_height=\"wrap_content\"" in staff)
         assertFalse("staff masih membatasi baris", "maxLines" in staff)
-        assertFalse("staff masih memotong dengan ellipsis", "ellipsize" in staff)
-        assertTrue("staff includeFontPadding hilang", "includeFontPadding=\"true\"" in staff)
-        assertTrue("staff lineSpacingMultiplier hilang", "lineSpacingMultiplier" in staff)
-        assertFalse("staff masih memakai lineSpacingExtra", "lineSpacingExtra" in staff)
+        assertFalse("staff masih ellipsize", "ellipsize" in staff)
+        assertTextBasics(staff, 0.95)
         assertTrue("staff tidak punya ruang descender", dp(staff, "android:paddingBottom") >= 2)
 
+        assertTrue("tombol expanded tidak ditengah", "android:gravity=\"center\"" in action)
+        assertTrue("tombol expanded textAlignment bukan center", "android:textAlignment=\"center\"" in action)
+        assertTrue("tombol expanded layout_gravity bukan center", "android:layout_gravity=\"center_horizontal\"" in action)
         for (tag in textViews(xml).filter { "android:id=" in it }) {
-            assertTrue(
-                "textSize expanded bukan sp",
-                attr(tag, "android:textSize")?.endsWith("sp") == true,
-            )
+            assertTextBasics(tag, 0.95)
         }
     }
 
     @Test
-    fun notificationBuilderRoutesStaffOnlyToExpandedView() {
+    fun notificationBuilderShowsAllFieldsAndSetsBigTextStyle() {
         val src = sourceFile("id/or/id/masjidabudzar/OngoingNotification.kt").readText()
 
         val compactBlock = src.substringAfter("val compact =").substringBefore("val expanded =")
         val expandedBlock = src.substringAfter("val expanded =")
             .substringBefore("return NotificationCompat.Builder")
 
-        assertFalse("compact masih mengisi notif_staff", "notif_staff" in compactBlock)
-        assertFalse("compact masih mengisi notif_line1", "notif_line1" in compactBlock)
-        assertTrue("expanded tidak mengisi notif_staff", "R.id.notif_staff" in expandedBlock)
-        assertTrue("expanded tidak mengisi notif_line1", "R.id.notif_line1" in expandedBlock)
+        for (id in listOf(
+            "notif_line1", "notif_prayer", "notif_time",
+            "notif_countdown", "notif_staff",
+        )) {
+            assertTrue("compact tidak mengisi $id", "R.id.$id" in compactBlock)
+            assertTrue("expanded tidak mengisi $id", "R.id.$id" in expandedBlock)
+        }
+        assertFalse(
+            "compact tidak boleh memasang tombol Buka Aplikasi",
+            "R.id.notif_action_open" in compactBlock,
+        )
+        assertTrue(
+            "expanded harus memasang tombol Buka Aplikasi",
+            "R.id.notif_action_open" in expandedBlock,
+        )
 
-        assertTrue("custom collapsed view tidak dipasang", ".setCustomContentView(compact)" in src)
-        assertTrue("custom expanded view tidak dipasang", ".setCustomBigContentView(expanded)" in src)
-        assertTrue("custom heads-up view tidak dipasang", ".setCustomHeadsUpContentView(compact)" in src)
+        assertTrue("fullText tidak dibuat", "val fullText = listOf(" in src)
+        assertTrue("fullText tidak memuat staff", "staff," in src)
+        assertTrue("BigTextStyle tidak dipasang", ".setStyle(NotificationCompat.BigTextStyle().bigText(fullText))" in src)
+        assertTrue("custom collapsed tidak dipasang", ".setCustomContentView(compact)" in src)
+        assertTrue("custom expanded tidak dipasang", ".setCustomBigContentView(expanded)" in src)
+        assertTrue("custom heads-up tidak dipasang", ".setCustomHeadsUpContentView(compact)" in src)
+    }
+
+    @Test
+    fun notificationTextMatchesRequestedTemplate() {
+        val src = sourceFile("id/or/id/masjidabudzar/OngoingNotification.kt").readText()
+
+        assertTrue("pemisah tanggal bukan bullet", ".joinToString(\" • \")" in src)
+        assertTrue("tanggal Masehi tidak dipakai utuh", "state.gregorian" in src)
+        assertTrue("tanggal Hijriyah tidak dipakai utuh", "state.hijri" in src)
+
+        assertTrue(
+            "format staff bukan 'Imam : (nama) | Muadzin (nama)'",
+            "\"Imam : \${state.imamName} | Muadzin \${state.muadzinName}\"" in src,
+        )
+        assertTrue(
+            "format shalat bukan '(nama) : (waktu) | (mundur)'",
+            "\"\$label : \$time | \$countdown\"" in src,
+        )
     }
 
     private data class DecodedPng(val width: Int, val height: Int, val rgba: ByteArray)

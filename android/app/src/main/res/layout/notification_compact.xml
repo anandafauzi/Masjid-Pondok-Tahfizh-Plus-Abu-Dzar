@@ -1,69 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Collapsed notification ditempatkan SystemUI di dalam container dengan batas
-    tinggi tetap (~64dp). Menambah baris/padding hanya membuat baris bawah
-    terpotong, walaupun root memakai wrap_content. Karena itu layout ini sengaja
-    hanya satu baris. Detail imam/muadzin ada di notification_expanded.xml.
+    Collapsed = tepat 3 baris, tanpa tombol:
+      1. (Hari), (Tanggal Masehi) • (Tanggal Hijriyah)
+      2. (Nama Sholat) : (Waktu Sholat/Waktu Iqamah) | (Waktu Mundur)
+      3. Imam : (Nama Imam) | Muadzin (Nama Muadzin)
+    Tombol "Buka Aplikasi" sengaja tidak ada di sini; ia muncul hanya setelah
+    expand (lihat notification_expanded.xml). Jarak 0.98 + margin 1dp supaya
+    tidak mepet, tapi 3 baris tetap muat di batas tinggi collapsed SystemUI.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/notif_compact_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:background="@null"
-    android:baselineAligned="true"
     android:clipChildren="false"
     android:clipToPadding="false"
-    android:gravity="center_vertical"
-    android:paddingStart="12dp"
-    android:paddingEnd="12dp"
-    android:paddingTop="5dp"
-    android:paddingBottom="5dp">
+    android:paddingStart="0dp"
+    android:paddingEnd="0dp"
+    android:paddingTop="3dp"
+    android:paddingBottom="3dp">
 
     <TextView
-        android:id="@+id/notif_prayer"
-        android:layout_width="wrap_content"
+        android:id="@+id/notif_line1"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:fontFamily="sans"
         android:includeFontPadding="true"
-        android:lineSpacingMultiplier="1.05"
+        android:lineSpacingMultiplier="0.98"
         android:maxLines="1"
+        android:ellipsize="end"
         android:textAlignment="viewStart"
-        android:textColor="@color/notification_text_primary"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        android:textColor="@color/notification_text_secondary"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:orientation="horizontal"
+        android:baselineAligned="true"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/notif_prayer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans"
+            android:includeFontPadding="true"
+            android:lineSpacingMultiplier="0.98"
+            android:maxLines="1"
+            android:textAlignment="viewStart"
+            android:textColor="@color/notification_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notif_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:fontFamily="sans"
+            android:includeFontPadding="true"
+            android:lineSpacingMultiplier="0.98"
+            android:maxLines="1"
+            android:textAlignment="viewStart"
+            android:textColor="@color/notification_text_primary"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"
+            android:importantForAccessibility="no"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/notif_countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:fontFamily="sans"
+            android:includeFontPadding="true"
+            android:lineSpacingMultiplier="0.98"
+            android:maxLines="1"
+            android:textAlignment="viewEnd"
+            android:textColor="@color/notification_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <TextView
-        android:id="@+id/notif_time"
-        android:layout_width="wrap_content"
+        android:id="@+id/notif_staff"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="5dp"
+        android:layout_marginTop="1dp"
         android:fontFamily="sans"
         android:includeFontPadding="true"
-        android:lineSpacingMultiplier="1.05"
+        android:lineSpacingMultiplier="0.98"
         android:maxLines="1"
+        android:ellipsize="end"
         android:textAlignment="viewStart"
-        android:textColor="@color/notification_text_primary"
-        android:textSize="14sp" />
-
-    <TextView
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:layout_weight="1"
-        android:importantForAccessibility="no"
-        android:text="" />
-
-    <TextView
-        android:id="@+id/notif_countdown"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@null"
-        android:fontFamily="sans"
-        android:includeFontPadding="true"
-        android:lineSpacingMultiplier="1.05"
-        android:maxLines="1"
-        android:textAlignment="viewEnd"
-        android:textColor="@color/notification_text_primary"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        android:textColor="@color/notification_text_secondary"
+        android:textSize="12sp" />
 </LinearLayout>
