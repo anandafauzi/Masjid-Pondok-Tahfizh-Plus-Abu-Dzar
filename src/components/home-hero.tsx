@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PRAYER_NAMES_ARABIC } from "@/utils/constants";
 import type { PrayerTimesStrings } from "@/lib/prayer-times";
 import { Clock, Calendar, Tv, ArrowRight, Sparkles } from "lucide-react";
+import { formatHijriDate } from "@/lib/hijri";
 
 interface HomeHeroProps {
   prayerTimes: PrayerTimesStrings;
@@ -101,17 +102,7 @@ export function HomeHero({
     timeZone: "Asia/Jakarta",
   }).format(new Date(currentMs));
 
-  let hijriString = "";
-  try {
-    hijriString = new Intl.DateTimeFormat("id-ID-u-ca-islamic-umalqura", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      timeZone: "Asia/Jakarta",
-    }).format(new Date(currentMs));
-  } catch {
-    hijriString = "";
-  }
+  const hijriString = formatHijriDate(currentMs);
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-white p-6 text-slate-800 shadow-[0_4px_30px_rgba(0,0,0,0.03)] border border-slate-100 sm:p-10 lg:p-12">
@@ -171,7 +162,7 @@ export function HomeHero({
                   suppressHydrationWarning
                   className="font-semibold text-[#466553]"
                 >
-                  {mounted ? `${hijriString} H` : ""}
+                  {mounted ? hijriString : ""}
                 </span>
               </>
             )}

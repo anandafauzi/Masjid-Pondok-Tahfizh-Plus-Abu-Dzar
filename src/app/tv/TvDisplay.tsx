@@ -19,6 +19,7 @@ import {
   unlockTvAudio,
 } from "@/lib/tv-audio";
 import { normalizeShalatScreenDurationMinutes } from "@/lib/tv-display-settings";
+import { formatHijriDate } from "@/lib/hijri";
 import {
   Clock,
   WifiOff,
@@ -51,16 +52,7 @@ function dateString(ms: number) {
 }
 
 function hijriString(ms: number) {
-  try {
-    return new Intl.DateTimeFormat("id-ID-u-ca-islamic-umalqura", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      timeZone: "Asia/Jakarta",
-    }).format(new Date(ms));
-  } catch {
-    return "";
-  }
+  return formatHijriDate(ms);
 }
 
 function countdown(targetMs: number, nowMs: number) {
@@ -997,7 +989,7 @@ export function TvDisplay({
             {data.display.showHijriDate && (
               <div suppressHydrationWarning className="flex items-center justify-end gap-1 text-[11px] font-semibold text-[#8a6820] sm:text-xs">
                 <span>🌙</span>
-                <span suppressHydrationWarning>{hijriString(serverNow)} H</span>
+                <span suppressHydrationWarning>{hijriString(serverNow)}</span>
               </div>
             )}
             <div suppressHydrationWarning className="text-[11px] text-[#5a685e] font-medium sm:text-xs">

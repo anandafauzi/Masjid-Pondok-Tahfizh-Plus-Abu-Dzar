@@ -156,7 +156,7 @@ export function HomeHero({
             <div className="hidden items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3.5 py-2 backdrop-blur lg:flex">
               <CalendarDays className="h-4 w-4 text-emerald-300" />
               <span suppressHydrationWarning className="text-xs font-semibold text-emerald-50">
-                {mounted ? `${dateString} · ${hijriString} H` : "Memuat tanggal..."}
+                {mounted ? (hijriString ? `${dateString} · ${hijriString}` : dateString) : "Memuat tanggal..."}
               </span>
             </div>
           </div>
@@ -226,7 +226,7 @@ export function HomeHero({
                 {mounted ? countdownText : "--:--:--"}
               </span>
               <span className="mt-1 block text-[10px] font-semibold text-emerald-100/60">
-                {mounted ? hijriString : "..."} H
+                {mounted ? hijriString || "..." : "..."}
               </span>
             </div>
           </div>
