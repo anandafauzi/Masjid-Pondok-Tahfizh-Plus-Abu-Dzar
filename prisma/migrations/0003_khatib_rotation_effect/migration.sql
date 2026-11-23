@@ -1,4 +1,4 @@
-﻿-- Pengaruh jadwal khatib manual terhadap rotasi rolling.
+-- Pengaruh jadwal khatib manual terhadap rotasi rolling.
 -- SKIP     = perilaku lama: rotasi tetap maju, petugas terlewat.
 -- POSTPONE = rotasi berhenti pada pekan ini, petugas mundur ke Jumat berikutnya.
 DO $$ BEGIN
