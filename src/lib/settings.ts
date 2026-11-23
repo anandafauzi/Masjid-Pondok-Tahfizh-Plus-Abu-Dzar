@@ -32,8 +32,8 @@ export interface TvThemeSettings {
   weatherCity?: string;
   activePrayerGlow?: boolean;
   /**
-   * Total durasi layar shalat sejak iqamah (menit). 60 detik pertama terang,
-   * setelah itu meredup bertahap sampai durasi ini berakhir.
+   * Total durasi layar shalat sejak iqamah (menit). Selama durasi ini layar
+   * memakai tampilan terang yang sama; setelah habis, TV kembali ke slide normal.
    */
   shalatScreenDurationMinutes?: number;
   specialAnnouncement?: SpecialAnnouncement;

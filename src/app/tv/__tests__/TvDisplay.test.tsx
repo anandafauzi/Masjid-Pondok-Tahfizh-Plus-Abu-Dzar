@@ -118,7 +118,7 @@ describe("TvDisplay layar shalat", () => {
     unmount();
   });
 
-  it("meredup bertahap pada layar shalat yang sama", () => {
+  it("tetap terang pada layar shalat yang sama sampai durasi berakhir", () => {
     const serverNow = IQAMAH_MS + 180_000;
     vi.spyOn(Date, "now").mockReturnValue(serverNow);
     const data = makeData(serverNow, 5);
@@ -129,10 +129,8 @@ describe("TvDisplay layar shalat", () => {
 
     const { container, unmount } = render(<TvDisplay initialData={data} />);
 
-    // Durasi 5 menit => 4 menit fase redup. Pada menit ke-3, redup 50%.
-    const veil = container.querySelector('div[aria-hidden="true"].bg-black');
-    expect(veil).not.toBeNull();
-    expect(Number((veil as HTMLElement).style.opacity)).toBeCloseTo(0.475, 3);
+    // Tidak ada lapisan hitam / peredupan lagi; tampilan sama seperti fase terang.
+    expect(container.querySelector('div[aria-hidden="true"].bg-black')).toBeNull();
 
     expect(
       screen.getByText("SHALAT BERJAMAAH SEDANG BERLANGSUNG"),
@@ -171,6 +169,43 @@ describe("TvDisplay layar shalat", () => {
     expect(
       screen.queryByText("Selesai Shalat / Kembali ke Slide Normal"),
     ).toBeNull();
+
+    unmount();
+  });
+});
+
+describe("TvDisplay countdown menuju iqamah", () => {
+  it("memakai satu layar penuh tanpa header logo, nama masjid, cuaca, dan jam", () => {
+    const serverNow = IQAMAH_MS - 60_000;
+    vi.spyOn(Date, "now").mockReturnValue(serverNow);
+    const data = makeData(serverNow);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(data) })),
+    );
+
+    const { container, unmount } = render(<TvDisplay initialData={data} />);
+
+    expect(container.querySelector("header")).toBeNull();
+    expect(screen.getByText("MENUJU IQAMAH")).toBeTruthy();
+    expect(screen.getByText("Sisa Waktu Menuju Iqamah")).toBeTruthy();
+
+    unmount();
+  });
+
+  it("juga menyembunyikan header pada 10 detik pertama masuk waktu shalat", () => {
+    const serverNow = IQAMAH_MS - 5 * 60_000 + 3_000;
+    vi.spyOn(Date, "now").mockReturnValue(serverNow);
+    const data = makeData(serverNow);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(data) })),
+    );
+
+    const { container, unmount } = render(<TvDisplay initialData={data} />);
+
+    expect(container.querySelector("header")).toBeNull();
+    expect(screen.getByText("WAKTU SHALAT TIBA")).toBeTruthy();
 
     unmount();
   });

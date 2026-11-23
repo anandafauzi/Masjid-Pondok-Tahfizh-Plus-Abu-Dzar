@@ -18,10 +18,7 @@ import {
   playIqamahChime,
   unlockTvAudio,
 } from "@/lib/tv-audio";
-import {
-  getShalatScreenDimProgress,
-  normalizeShalatScreenDurationMinutes,
-} from "@/lib/tv-display-settings";
+import { normalizeShalatScreenDurationMinutes } from "@/lib/tv-display-settings";
 import {
   Clock,
   WifiOff,
@@ -645,7 +642,7 @@ export function TvDisplay({
     }
   }, [iqamahActive, prayerTimeReached, serverNow, audioMuted, khutbahVisible, isFriday]);
 
-  // 4. Shalat Mode Computation (satu layar: terang 60s lalu meredup bertahap)
+  // 4. Shalat Mode Computation (satu layar terang sejak iqamah sampai durasi habis)
   const activeShalatMode = useMemo(() => {
     if (khutbahVisible || !data?.iqamahEvents) return null;
 
@@ -670,7 +667,6 @@ export function TvDisplay({
           label: ev.label,
           durationMinutes,
           isAligningShaf: elapsedMs < 60_000,
-          dimProgress: getShalatScreenDimProgress(elapsedMs, durationMinutes),
           imamName: imamInfo?.imamName ?? "Asatidz Pondok Tahfizh Abu Dzar",
           muadzinName: imamInfo?.muadzinName ?? null,
         };
@@ -869,14 +865,9 @@ export function TvDisplay({
     );
   }
 
-  // MODE SHALAT BERLANGSUNG — satu layar sejak iqamah, terang 60 detik lalu
-  // meredup bertahap sampai durasi pengaturan admin berakhir.
+  // MODE SHALAT BERLANGSUNG — satu layar terang yang sama sejak iqamah sampai
+  // durasi pengaturan admin berakhir. Tidak ada peredupan bertahap lagi.
   if (activeShalatMode) {
-    const dim = activeShalatMode.dimProgress;
-    const contentOpacity = 1 - dim * 0.88;
-    const veilOpacity = dim * 0.95;
-    const secondaryOpacity = Math.max(0.16, 1 - dim * 0.82);
-
     return (
       <div
         suppressHydrationWarning
@@ -885,19 +876,10 @@ export function TvDisplay({
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/20 via-transparent to-transparent transition-opacity duration-1000"
-          style={{ opacity: secondaryOpacity }}
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-black transition-opacity duration-1000"
-          style={{ opacity: veilOpacity }}
+          className="pointer-events-none absolute inset-0 bg-radial-gradient from-[#2d946e]/20 via-transparent to-transparent"
         />
 
-        <div
-          className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-2.5 text-center transition-opacity duration-1000 sm:gap-4"
-          style={{ opacity: contentOpacity }}
-        >
+        <div className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-2.5 text-center sm:gap-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-sm">
             <span>🕌</span>
             <span>
@@ -937,10 +919,7 @@ export function TvDisplay({
           )}
         </div>
 
-        <div
-          className="absolute bottom-4 right-6 z-10 font-mono text-xs text-[#c1d1c7]"
-          style={{ opacity: secondaryOpacity }}
-        >
+        <div className="absolute bottom-4 right-6 z-10 font-mono text-xs text-[#c1d1c7]">
           {clockString(serverNow, false)} WIB
         </div>
 
@@ -960,8 +939,11 @@ export function TvDisplay({
       <div className="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-[#3eb489]/15 blur-[120px]" />
       <div className="pointer-events-none absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-[#c5a059]/10 blur-[120px]" />
 
-      {/* Top Header Bar */}
-      <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-[#ded5c4] bg-[#fbf9f4] px-3 py-1.5 sm:px-6 sm:py-2 lg:px-8 lg:py-2.5">
+      {/* Top Header Bar — disembunyikan saat countdown menuju iqamah supaya
+          halaman benar-benar satu layar penuh: tanpa logo, nama masjid,
+          cuaca, dan jam. */}
+      {!isPrayerOverlayVisible && (
+        <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-[#ded5c4] bg-[#fbf9f4] px-3 py-1.5 sm:px-6 sm:py-2 lg:px-8 lg:py-2.5">
         {/* Left: Mosque branding */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1024,7 +1006,8 @@ export function TvDisplay({
             </div>
           </div>
         </div>
-      </header>
+        </header>
+      )}
 
       {/* Main Presentation Stage */}
       <main className="relative z-10 min-h-0 flex-1 overflow-hidden p-2 sm:p-3 md:p-4 lg:p-5 flex flex-col justify-center">
@@ -1051,10 +1034,6 @@ export function TvDisplay({
 
                 <div className="relative z-10 flex h-full flex-col items-center justify-center p-4 sm:p-8">
                   <div className="flex w-full max-w-4xl flex-col items-center">
-                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#2d946e]/20 border-2 border-[#2d946e]/40 text-4xl shadow-2xl animate-pulse">
-                      🕌
-                    </div>
-
                     <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/50 bg-amber-400/10 px-5 py-2 text-xs font-bold uppercase tracking-widest text-amber-300 sm:text-base animate-pulse">
                       <span>WAKTU SHALAT TIBA</span>
                     </div>
@@ -1062,10 +1041,6 @@ export function TvDisplay({
                     <h1 className="text-4xl font-black text-white sm:text-6xl md:text-7xl tracking-tight">
                       Telah masuk waktu sholat {activeEv.label}...
                     </h1>
-
-                    <p className="mt-4 text-base text-[#b8ccc0] sm:text-2xl font-medium">
-                      Pondok Tahfizh Plus Abu Dzar
-                    </p>
                   </div>
                 </div>
               </div>

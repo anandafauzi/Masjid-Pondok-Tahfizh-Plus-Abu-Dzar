@@ -344,17 +344,17 @@ export default function AdminTvPage() {
                     }
                   />
                   <p className="mt-1 text-xs text-slate-500">
-                    Total dihitung sejak detik iqamah. 1 menit pertama layar
-                    tetap terang, kemudian meredup bertahap sampai durasi ini
-                    selesai.
+                    Total dihitung sejak detik iqamah. Selama durasi ini layar
+                    tetap terang dengan tampilan yang sama. Setelah selesai, TV
+                    kembali ke slide normal otomatis.
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-sage-200/70 bg-sage-50/60 px-4 py-3 text-xs leading-relaxed text-sage-800">
                   <strong className="font-bold">Ringkas:</strong> cukup satu
-                  layar shalat. Tidak ada lagi perpindahan ke layar redup
-                  terpisah. Setelah durasi berakhir, TV kembali ke slide normal
-                  otomatis.
+                  layar shalat terang. Tidak ada lagi layar redup atau
+                  perpindahan tampilan saat shalat berlangsung. Setelah durasi
+                  berakhir, TV kembali ke slide normal otomatis.
                 </div>
               </div>
             </Card>
