@@ -273,6 +273,40 @@ export default function AdminKhatibPage() {
     }
   }
 
+  /** Simpan cepat status Masjid Libur untuk tanggal yang sedang dipilih. */
+  async function saveHoliday() {
+    if (!fridayValid) return toast.error("Tanggal harus berupa hari Jumat");
+    const existing = schedules.find((s) => toYmd(s.fridayDate) === date);
+    setSaving(true);
+    try {
+      const res = await fetch(
+        existing
+          ? `/api/khatib-schedules/${existing.id}`
+          : "/api/khatib-schedules",
+        {
+          method: existing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fridayDate: date,
+            khatibName: "Libur",
+            isHoliday: true,
+            sermonTopic: null,
+            backupKhatibName: null,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan");
+      toast.success("Masjid Libur tersimpan");
+      resetScheduleForm();
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function delSchedule(id: string) {
     if (!confirm("Hapus jadwal khatib ini?")) return;
     try {
@@ -495,6 +529,15 @@ export default function AdminKhatibPage() {
                 Centang jika Jumat ini masjid libur. Rolling khatib berhenti dan
                 akan lanjut dari jadwal terakhir setelah aktif lagi.
               </p>
+              {holiday && (
+                <Button
+                  className="mt-2 w-full"
+                  onClick={saveHoliday}
+                  disabled={saving || !fridayValid}
+                >
+                  <CalendarOff className="h-4 w-4" /> Simpan Masjid Libur
+                </Button>
+              )}
             </div>
             <div className="min-w-0">
               <Label htmlFor="khatib">Nama Khatib</Label>
@@ -546,7 +589,11 @@ export default function AdminKhatibPage() {
               onClick={submitSchedule}
               disabled={saving || !fridayValid || isExistingDifferent}
             >
-              {editingId ? (
+              {holiday ? (
+                <>
+                  <CalendarOff className="h-4 w-4" /> Simpan Jadwal Libur
+                </>
+              ) : editingId ? (
                 <>
                   <Pencil className="h-4 w-4" /> Simpan Perubahan
                 </>
