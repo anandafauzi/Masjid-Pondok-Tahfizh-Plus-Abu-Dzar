@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, ok, serverError, unauthorized } from "@/lib/api";
 
@@ -6,6 +7,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return unauthorized();
+  if (user.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
+  }
   try {
     const logs = await prisma.auditLog.findMany({
       orderBy: { createdAt: "desc" },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 import { Card, LoadingState, PageHeader, SectionHeading, Badge } from "@/components/ui";
 import { ScrollText, ShieldCheck } from "lucide-react";
@@ -25,23 +26,51 @@ function actionColor(action: string): "green" | "red" | "blue" | "amber" | "slat
 }
 
 export default function AdminAuditPage() {
+  const { data: session, status } = useSession();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isSuper = session?.user?.role === "SUPER_ADMIN";
+
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/audit-logs", { cache: "no-store" });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Gagal memuat log");
-        setLogs(data);
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Gagal memuat log");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    if (status === "authenticated" && isSuper) {
+      (async () => {
+        try {
+          const res = await fetch("/api/audit-logs", { cache: "no-store" });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error || "Gagal memuat log");
+          setLogs(data);
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Gagal memuat log");
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+    if (status === "authenticated" && !isSuper) setLoading(false);
+  }, [status, isSuper]);
+
+  if (status === "loading") {
+    return (
+      <Card>
+        <LoadingState label="Memeriksa sesi..." />
+      </Card>
+    );
+  }
+
+  if (!isSuper) {
+    return (
+      <Card>
+        <div className="py-8 text-center">
+          <ShieldCheck className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+          <p className="text-sm font-bold text-slate-800">Akses Terbatas</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Halaman ini hanya dapat diakses oleh Super Admin.
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div>
