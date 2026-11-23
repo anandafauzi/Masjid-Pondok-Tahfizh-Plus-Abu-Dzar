@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import type { TvData } from "@/lib/public-data";
-import { prayerSlotOf } from "@/utils/constants";
+import { pickImamForSlot } from "@/utils/constants";
 import { useDialogA11y } from "@/lib/use-dialog-a11y";
 import {
   MUADZIN_OPTIONS,
@@ -266,12 +266,8 @@ export function MobilePrayerTaskbar() {
       };
     }
 
-    // Pakai prayerKey, bukan label tampilan: pada Jumat labelnya "Jumat"
-    // sehingga prayerSlotOf("Jumat") null dan bisa mencocokkan petugas salah.
-    const targetSlot = prayerSlotOf(prayerState.prayerKey);
-    const match = targetSlot
-      ? data.imamToday.find((s) => prayerSlotOf(s.prayerName) === targetSlot)
-      : undefined;
+    // Pakai prayerKey: label "Jumat" tidak punya slot dan bisa salah mencocokkan.
+    const match = pickImamForSlot(data.imamToday, prayerState.prayerKey);
 
     if (match) {
       return {
@@ -658,12 +654,8 @@ export function MobilePrayerTaskbar() {
                     const isBetween = serverNow >= adhanMs && serverNow < iqamahMs;
                     const isCurrent = prayerState.prayerKey === item.key;
 
-                    // Match Imam for this prayer
-                    const itemSlot = prayerSlotOf(item.label);
-                    const imamInfo = data.imamToday.find(
-                      (s) =>
-                        itemSlot !== null && prayerSlotOf(s.prayerName) === itemSlot
-                    );
+                    // Match Imam for this prayer via stabil prayerKey.
+                    const imamInfo = pickImamForSlot(data.imamToday, item.key);
 
                     return (
                       <div

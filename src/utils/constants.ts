@@ -90,3 +90,19 @@ export function getPrayerArabicName(name: string): string {
   const slot = prayerSlotOf(name);
   return slot ? PRAYER_NAMES_ARABIC[slot] : "";
 }
+
+/**
+ * Cari baris petugas (imam/muadzin) memakai prayerKey, bukan label tampilan.
+ *
+ * Label tampilan bisa berupa "Jumat" (dzuhur) atau label lama ("Zuhur"), jadi
+ * mencocokkannya lewat prayerSlotOf(label) berisiko menghasilkan null dan
+ * memilih baris yang salah. Key internal (fajr/dhuhr/...) selalu stabil.
+ */
+export function pickImamForSlot<T extends { prayerName?: string | null }>(
+  rows: readonly T[] | null | undefined,
+  prayerKey: string | null | undefined,
+): T | undefined {
+  const slot = prayerSlotOf(prayerKey);
+  if (!slot) return undefined;
+  return rows?.find((row) => prayerSlotOf(row.prayerName) === slot);
+}

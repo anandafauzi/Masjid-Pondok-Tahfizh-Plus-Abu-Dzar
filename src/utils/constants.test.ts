@@ -3,6 +3,7 @@ import {
   getPrayerArabicName,
   isPrayerName,
   normalizePrayerName,
+  pickImamForSlot,
   prayerSlotOf,
 } from "@/utils/constants";
 
@@ -43,5 +44,33 @@ describe("nama shalat", () => {
     expect(normalizePrayerName(null)).toBe("");
     expect(prayerSlotOf({} as unknown as string)).toBeNull();
     expect(isPrayerName(5 as unknown as string, "fajr")).toBe(false);
+  });
+});
+
+describe("pencocokan petugas shalat", () => {
+  const rows = [
+    { prayerName: "Subuh", imamName: "Imam Lama" },
+    { prayerName: "Dzuhur", imamName: "Imam Dzuhur" },
+    { prayerName: 5 as unknown as string, imamName: "Baris Rusak" },
+  ];
+
+  it("memakai prayerKey walaupun label tampilan bukan nama shalat", () => {
+    // Label taskbar Jumat adalah "Jumat", bukan "Dzuhur".
+    expect(pickImamForSlot(rows, "dhuhr")?.imamName).toBe("Imam Dzuhur");
+  });
+
+  it("menerima label lama pada baris petugas", () => {
+    expect(pickImamForSlot(rows, "fajr")?.imamName).toBe("Imam Lama");
+  });
+
+  it("tidak pernah memilih baris dengan prayerName non-string", () => {
+    const badOnly = [{ prayerName: 5 as unknown as string, imamName: "Baris Rusak" }];
+    expect(pickImamForSlot(badOnly, "fajr")).toBeUndefined();
+  });
+
+  it("mengembalikan undefined untuk label non-slot atau data kosong", () => {
+    expect(pickImamForSlot(rows, "Jumat")).toBeUndefined();
+    expect(pickImamForSlot(rows, null)).toBeUndefined();
+    expect(pickImamForSlot(undefined, "dhuhr")).toBeUndefined();
   });
 });

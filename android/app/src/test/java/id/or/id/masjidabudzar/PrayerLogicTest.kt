@@ -206,4 +206,66 @@ class PrayerLogicTest {
         assertEquals("Dzuhur", dzuhur.label)
         assertEquals("Ust. Umar", dzuhur.imamName)
     }
+
+    @Test
+    fun adhanAndIqamahScheduledIdsNeverCollide() {
+        val trigger = 1_795_171_320_000L
+        val adhan = PrayerReminderScheduler.scheduledId("A", "dhuhr", trigger)
+        val iqamah = PrayerReminderScheduler.scheduledId("I", "dhuhr", trigger)
+
+        assertNotEquals(adhan, iqamah)
+        assertEquals("A", PrayerReminderScheduler.parseScheduledId(adhan)?.kind)
+        assertEquals("I", PrayerReminderScheduler.parseScheduledId(iqamah)?.kind)
+        assertEquals("dhuhr", PrayerReminderScheduler.parseScheduledId(iqamah)?.key)
+    }
+
+    @Test
+    fun scheduledIdKeepsClockSkewAndOverflowSafeTriggers() {
+        // Waktu perangkat bisa lebih lambat/lebih cepat dari server, atau
+        // berada di sekitar epoch. Pemulihan alarm mengandalkan angka ini.
+        val triggers = listOf(-86_400_000L, 0L, 4_102_444_800_000L)
+        for (trigger in triggers) {
+            val parsed = PrayerReminderScheduler.parseScheduledId(
+                PrayerReminderScheduler.scheduledId("I", "isha", trigger)
+            )
+            assertEquals(trigger, parsed?.trigger)
+            assertEquals("isha", parsed?.key)
+        }
+
+        assertEquals(null, PrayerReminderScheduler.parseScheduledId("A|fajr|"))
+        assertEquals(null, PrayerReminderScheduler.parseScheduledId("A|fajr|999999999999999999999999"))
+        assertEquals(null, PrayerReminderScheduler.parseScheduledId("A|fajr"))
+        assertEquals(null, PrayerReminderScheduler.parseScheduledId(""))
+    }
+
+    @Test
+    fun dismissCancelsEveryEarlierAudioGeneration() {
+        val guard = AudioGenerationGuard()
+        val preparing = guard.beginPlayback()
+        val newer = guard.beginPlayback()
+
+        assertFalse(guard.isCurrent(preparing))
+        assertTrue(guard.isCurrent(newer))
+
+        guard.dismiss()
+        assertFalse(guard.isCurrent(newer))
+        assertFalse(guard.isCurrent(preparing))
+
+        val afterDismiss = guard.beginPlayback()
+        assertTrue(guard.isCurrent(afterDismiss))
+    }
+
+    @Test
+    fun samePrayerAcceptsLegacyLabelsWithoutMixingDifferentPrayers() {
+        assertTrue(PrayerEngine.samePrayer("Subuh", "Shubuh"))
+        assertTrue(PrayerEngine.samePrayer("Zuhur", "Dzuhur"))
+        assertTrue(PrayerEngine.samePrayer(" Ashar ", "ashar"))
+        assertTrue(PrayerEngine.samePrayer("magrib", "Maghrib"))
+
+        assertFalse(PrayerEngine.samePrayer("fajr", "Isya"))
+        assertFalse(PrayerEngine.samePrayer("Jumat", "Dzuhur"))
+
+        // Label di luar daftar shalat tetap dibandingkan apa adanya.
+        assertTrue(PrayerEngine.samePrayer("Tarawih", " tarawih "))
+    }
 }
