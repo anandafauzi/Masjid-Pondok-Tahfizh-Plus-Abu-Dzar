@@ -2337,8 +2337,16 @@ private fun InfoScreen(
                                 .clickable {
                                     runCatching {
                                         context.startActivity(
-                                            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM),
+                                            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                                .setData(Uri.parse("package:${context.packageName}")),
                                         )
+                                    }.onFailure {
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                                    .setData(Uri.parse("package:${context.packageName}")),
+                                            )
+                                        }
                                     }
                                 },
                         ) {
@@ -2380,6 +2388,12 @@ private fun InfoScreen(
                                             Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                                                 .setData(Uri.parse("package:${context.packageName}")),
                                         )
+                                    }.onFailure {
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+                                            )
+                                        }
                                     }
                                 },
                         ) {
