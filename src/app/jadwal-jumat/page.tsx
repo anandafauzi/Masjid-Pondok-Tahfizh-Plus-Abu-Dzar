@@ -48,9 +48,14 @@ export default async function JadwalJumatPage() {
     : // Web: rentang seperti semula, 6 Jumat ke depan.
       Array.from({ length: 6 }, (_, i) => addDaysUTC(firstFriday, i * 7));
 
+  const holidayDates = schedules
+    .filter((s) => s.isHoliday)
+    .map((s) => dateOnlyToString(s.fridayDate));
+
   const rows = fridays.map((friday) => {
     const key = dateOnlyToString(friday);
     const schedule = schedules.find((s) => dateOnlyToString(s.fridayDate) === key);
+    const isHoliday = holidayDates.includes(key);
 
     const khatib = resolveRolling(
       rollingKhatib.map((r) => ({
@@ -62,7 +67,8 @@ export default async function JadwalJumatPage() {
         isActive: r.isActive,
         createdAt: r.createdAt,
       })),
-      friday
+      friday,
+      holidayDates
     );
 
     const imam = resolveRolling(
@@ -80,7 +86,10 @@ export default async function JadwalJumatPage() {
 
     return {
       friday,
-      khatibName: schedule?.khatibName ?? khatib?.name ?? "Belum Ditentukan",
+      isHoliday,
+      khatibName: isHoliday
+        ? "Masjid Libur"
+        : (schedule?.khatibName ?? khatib?.name ?? "Belum Ditentukan"),
       sermonTopic: schedule?.sermonTopic ?? null,
       imamSubuh: imam?.name ?? "Belum Ditentukan",
     };
@@ -145,7 +154,12 @@ export default async function JadwalJumatPage() {
                 >
                   {isClosest ? "Jumat Pekan Ini" : `Jumat Ke-${index + 1}`}
                 </span>
-                <span className="text-xs font-medium text-slate-500">
+                <span className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                  {row.isHoliday && (
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                      Masjid Libur
+                    </span>
+                  )}
                   {formatDateOnlyLong(row.friday)}
                 </span>
               </div>
@@ -162,6 +176,10 @@ export default async function JadwalJumatPage() {
                   <p className="mt-2 rounded-xl bg-[#f8faf9] border border-slate-200/80 p-3 text-xs leading-relaxed text-slate-700">
                     <span className="font-semibold text-slate-900">Tema Khutbah: </span>
                     “{row.sermonTopic}”
+                  </p>
+                ) : row.isHoliday ? (
+                  <p className="mt-2 text-xs italic text-amber-700">
+                    Tidak ada khutbah. Rotasi khatib lanjut dari jadwal terakhir.
                   </p>
                 ) : (
                   <p className="mt-2 text-xs italic text-slate-400">

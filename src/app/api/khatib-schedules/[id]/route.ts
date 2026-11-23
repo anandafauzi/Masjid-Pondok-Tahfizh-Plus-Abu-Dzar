@@ -28,6 +28,9 @@ export async function PUT(
     const body = await readJsonBody(request);
     if (!body) return badRequest("Format data tidak valid");
 
+    const existing = await prisma.khatibSchedule.findUnique({ where: { id } });
+    if (!existing) return notFound("Jadwal khatib tidak ditemukan");
+
     let fridayDate: Date | undefined;
     if (body.fridayDate !== undefined) {
       const parsed = parseDateOnly(body.fridayDate);
@@ -38,9 +41,13 @@ export async function PUT(
       fridayDate = parsed;
     }
 
+    const isHoliday =
+      body.isHoliday !== undefined ? body.isHoliday === true : existing.isHoliday;
     const khatibName =
-      body.khatibName !== undefined ? String(body.khatibName).trim() : undefined;
-    if (khatibName !== undefined && !khatibName) {
+      body.khatibName !== undefined
+        ? String(body.khatibName).trim()
+        : existing.khatibName;
+    if (!isHoliday && !khatibName) {
       return badRequest("Nama khatib wajib diisi");
     }
 
@@ -48,7 +55,8 @@ export async function PUT(
       where: { id },
       data: {
         fridayDate,
-        khatibName,
+        khatibName: isHoliday ? "Libur" : khatibName,
+        isHoliday,
         sermonTopic:
           body.sermonTopic === null
             ? null

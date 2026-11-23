@@ -16,6 +16,7 @@ import {
   ArrowDown,
   ArrowUp,
   BookOpen,
+  CalendarOff,
   Pencil,
   Plus,
   Trash2,
@@ -49,6 +50,7 @@ interface Schedule {
   khatibName: string;
   sermonTopic: string | null;
   backupKhatibName: string | null;
+  isHoliday: boolean;
 }
 
 const toYmd = (iso: string) => dateOnlyToString(new Date(iso));
@@ -87,6 +89,7 @@ export default function AdminKhatibPage() {
   const [khatib, setKhatib] = useState("");
   const [topic, setTopic] = useState("");
   const [backup, setBackup] = useState("");
+  const [holiday, setHoliday] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const fridayValid = isFridayYmd(date);
@@ -95,8 +98,12 @@ export default function AdminKhatibPage() {
   const isExistingDifferent = Boolean(
     existingForDate && existingForDate.id !== editingId
   );
+  const holidayDates = schedules
+    .filter((s) => s.isHoliday)
+    .map((s) => toYmd(s.fridayDate));
+  const isHolidayForDate = holidayDates.includes(date);
   const rollingForDate = fridayValid
-    ? resolveRolling(rolling, dateOnlyToUTC(date))
+    ? resolveRolling(rolling, dateOnlyToUTC(date), holidayDates)
     : null;
 
   async function load() {
@@ -213,20 +220,24 @@ export default function AdminKhatibPage() {
     setKhatib("");
     setTopic("");
     setBackup("");
+    setHoliday(false);
     setEditingId(null);
   }
 
   function beginEdit(s: Schedule) {
     setDate(toYmd(s.fridayDate));
-    setKhatib(s.khatibName);
+    setKhatib(s.isHoliday ? "" : s.khatibName);
     setTopic(s.sermonTopic ?? "");
     setBackup(s.backupKhatibName ?? "");
+    setHoliday(s.isHoliday);
     setEditingId(s.id);
   }
 
   async function submitSchedule() {
     if (!fridayValid) return toast.error("Tanggal harus berupa hari Jumat");
-    if (!khatib.trim()) return toast.error("Nama khatib wajib diisi");
+    if (!holiday && !khatib.trim()) {
+      return toast.error("Nama khatib wajib diisi");
+    }
     if (isExistingDifferent) {
       return toast.error(
         "Jadwal untuk tanggal ini sudah ada. Klik Edit Jadwal Ini."
@@ -241,9 +252,10 @@ export default function AdminKhatibPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             fridayDate: date,
-            khatibName: khatib,
+            khatibName: holiday ? "Libur" : khatib,
             sermonTopic: topic || null,
             backupKhatibName: backup || null,
+            isHoliday: holiday,
           }),
         }
       );
@@ -457,11 +469,32 @@ export default function AdminKhatibPage() {
                 <p className="mt-1 text-[11px] text-slate-500">
                   Rotasi:{" "}
                   <span className="font-semibold text-slate-700">
-                    {rollingForDate?.name ?? "Belum ada"}
+                    {isHolidayForDate
+                      ? "Masjid Libur (rolling berhenti)"
+                      : (rollingForDate?.name ?? "Belum ada")}
                   </span>
-                  {existingForDate ? " • ada jadwal manual" : ""}
+                  {existingForDate && !isHolidayForDate
+                    ? " • ada jadwal manual"
+                    : ""}
                 </p>
               )}
+            </div>
+            <div className="min-w-0 sm:col-span-2">
+              <label className="flex w-full cursor-pointer items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2.5 text-xs font-bold text-amber-900">
+                <input
+                  id="masjidLibur"
+                  type="checkbox"
+                  checked={holiday}
+                  onChange={(e) => setHoliday(e.target.checked)}
+                  className="h-4 w-4 shrink-0 rounded border-amber-300 accent-amber-600"
+                />
+                <CalendarOff className="h-4 w-4 shrink-0" />
+                <span>Masjid Libur</span>
+              </label>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                Centang jika Jumat ini masjid libur. Rolling khatib berhenti dan
+                akan lanjut dari jadwal terakhir setelah aktif lagi.
+              </p>
             </div>
             <div className="min-w-0">
               <Label htmlFor="khatib">Nama Khatib</Label>
@@ -558,7 +591,13 @@ export default function AdminKhatibPage() {
                         {formatDateOnlyShort(new Date(s.fridayDate))}
                       </td>
                       <td className="break-words px-3 py-2.5 font-semibold text-slate-800">
-                        {s.khatibName}
+                        {s.isHoliday ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-800">
+                            <CalendarOff className="h-3 w-3" /> Masjid Libur
+                          </span>
+                        ) : (
+                          s.khatibName
+                        )}
                       </td>
                       <td className="break-words px-3 py-2.5 text-slate-500">
                         {s.backupKhatibName ?? "-"}

@@ -131,7 +131,12 @@ export async function buildReminderPlan(dateOnly: Date): Promise<ReminderPlan> {
     }
   }
 
-  if (isFriday && khatib?.khatibName && !isPlaceholderName(khatib.khatibName)) {
+  if (
+    isFriday &&
+    khatib?.khatibName &&
+    !khatib.isHoliday &&
+    !isPlaceholderName(khatib.khatibName)
+  ) {
     assignments.push({ role: "KHATIB", prayerName: null, personName: khatib.khatibName });
   }
 

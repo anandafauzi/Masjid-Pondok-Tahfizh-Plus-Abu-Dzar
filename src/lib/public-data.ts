@@ -19,6 +19,7 @@ import {
   getImamRollingActive,
   getImamSchedulesBetween,
   getKajianSafe,
+  getKhatibHolidayDates,
   getKhatibRollingActive,
   getKhatibScheduleForDate,
   getRunningTextsSafe,
@@ -154,6 +155,7 @@ export type PublicBundle = {
   kajian: Awaited<ReturnType<typeof getKajianSafe>>;
   khutbah: Awaited<ReturnType<typeof getActiveKhutbah>> | null;
   khatibUpcoming: Awaited<ReturnType<typeof getUpcomingKhatibSchedules>>;
+  khatibHolidays: string[];
   khatibRolling: Awaited<ReturnType<typeof getKhatibRollingActive>>;
   imamRolling: Awaited<ReturnType<typeof getImamRollingActive>>;
   weeklyImam: Awaited<ReturnType<typeof getWeeklyImamSettings>>;
@@ -254,6 +256,7 @@ async function loadPublicBundle(
     kajian,
     khutbah,
     khatibUpcoming,
+    khatibHolidays,
     khatibRolling,
     imamRolling,
     weeklyImam,
@@ -266,6 +269,7 @@ async function loadPublicBundle(
     getKajianSafe(now, 40),
     getActiveKhutbah(now).catch(() => null),
     getUpcomingKhatibSchedules(addDaysUTC(friday, 1), 4),
+    getKhatibHolidayDates(),
     getKhatibRollingActive(),
     getImamRollingActive(),
     getWeeklyImamSettings().catch(() => []),
@@ -285,7 +289,7 @@ async function loadPublicBundle(
         weeklyRules: weeklyImam,
         rollingImams: imamRolling,
       }),
-      getKhatibScheduleForDate(friday, khatibRolling),
+      getKhatibScheduleForDate(friday, khatibRolling, khatibHolidays),
       getTarawihSchedulesBetween(today, today),
     ]);
 
@@ -324,6 +328,7 @@ async function loadPublicBundle(
     kajian,
     khutbah,
     khatibUpcoming,
+    khatibHolidays,
     khatibRolling,
     imamRolling,
     weeklyImam,
@@ -370,6 +375,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
     kajian,
     khutbah,
     khatibUpcoming,
+    khatibHolidays,
     khatibRolling,
     imamRolling,
     imamToday,
@@ -415,19 +421,32 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
     isActive: r.isActive,
     createdAt: r.createdAt,
   }));
-  const rollingKhatib = resolveRolling(rollingKhatibSettings, friday);
+  const rollingKhatib = resolveRolling(
+    rollingKhatibSettings,
+    friday,
+    khatibHolidays
+  );
 
   // Jadwal khatib eksplisit sering hanya terisi sampai Jumat berjalan.
   // Untuk 4 Jumat ke depan, lengkapi dari pola rolling agar nama tetap tampil.
   const explicitKhatibByDate = new Map(
     khatibUpcoming.map((k) => [dateOnlyToString(k.fridayDate), k] as const)
   );
+  const holidaySet = new Set(khatibHolidays);
   const resolvedKhatibUpcoming = Array.from({ length: 4 }, (_, index) => {
     const date = addDaysUTC(friday, (index + 1) * 7);
     const ymd = dateOnlyToString(date);
     const explicit = explicitKhatibByDate.get(ymd);
+    if (holidaySet.has(ymd) || explicit?.isHoliday) {
+      return {
+        id: explicit?.id ?? `holiday-${ymd}`,
+        fridayDate: date,
+        khatibName: "Libur",
+        sermonTopic: null,
+      };
+    }
     if (explicit && explicit.khatibName?.trim()) return explicit;
-    const rolling = resolveRolling(rollingKhatibSettings, date);
+    const rolling = resolveRolling(rollingKhatibSettings, date, khatibHolidays);
     return {
       id: `rolling-${ymd}`,
       fridayDate: date,
@@ -462,6 +481,7 @@ export async function buildTvData(date?: string | null): Promise<TvData> {
   let resolvedKhutbah = khutbah;
   if (
     !resolvedKhutbah &&
+    !fridaySchedule?.isHoliday &&
     isFridayToday &&
     referenceNow >= dhuhrStart &&
     referenceNow < dhuhrEnd

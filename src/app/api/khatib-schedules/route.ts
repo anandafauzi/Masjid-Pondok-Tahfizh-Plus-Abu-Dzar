@@ -44,7 +44,9 @@ export async function POST(request: NextRequest) {
     if (fridayDate.getUTCDay() !== 5) {
       return badRequest("Jadwal khatib hanya untuk hari Jumat");
     }
-    if (!body.khatibName || !String(body.khatibName).trim()) {
+    const isHoliday = body.isHoliday === true;
+    const khatibName = body.khatibName ? String(body.khatibName).trim() : "";
+    if (!isHoliday && !khatibName) {
       return badRequest("Nama khatib wajib diisi");
     }
 
@@ -58,7 +60,8 @@ export async function POST(request: NextRequest) {
     const item = await prisma.khatibSchedule.create({
       data: {
         fridayDate,
-        khatibName: String(body.khatibName).trim(),
+        khatibName: isHoliday ? "Libur" : khatibName,
+        isHoliday,
         sermonTopic:
           body.sermonTopic != null ? String(body.sermonTopic) : null,
         backupKhatibName:

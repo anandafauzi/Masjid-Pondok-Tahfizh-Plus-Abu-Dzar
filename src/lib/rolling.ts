@@ -43,6 +43,30 @@ function asUTCDate(value: Date | string): Date {
   return new Date(`${ymd}T00:00:00.000Z`);
 }
 
+/**
+ * Hitung jumlah Jumat libur yang jatuh antara anchor dan tanggal target
+ * (inklusif). Setiap Jumat libur tidak menggeser giliran, jadi jumlah ini
+ * dikurangkan dari jumlah minggu yang sudah berlalu.
+ */
+function countHolidayWeeks(
+  holidayDates: Iterable<Date | string> | undefined,
+  anchorMs: number,
+  targetMs: number
+): number {
+  if (!holidayDates) return 0;
+  const seen = new Set<string>();
+  let count = 0;
+  for (const value of holidayDates) {
+    const ymd =
+      typeof value === "string" ? value.slice(0, 10) : dateOnlyToString(value);
+    if (seen.has(ymd)) continue;
+    seen.add(ymd);
+    const ms = new Date(`${ymd}T00:00:00.000Z`).getTime();
+    if (Number.isFinite(ms) && ms >= anchorMs && ms <= targetMs) count += 1;
+  }
+  return count;
+}
+
 export interface RollingResult {
   name: string;
   index: number;
@@ -53,10 +77,13 @@ export interface RollingResult {
  * Resolve which person is scheduled on a given date using a date-based
  * rolling cycle. The cycle starts at the earliest effectiveFrom date and
  * follows the configured order; reordering changes past and future results.
+ * Tanggal dalam `holidayDates` (Jumat libur) tidak mengonsumsi giliran, sehingga
+ * rotasi berhenti saat libur dan lanjut dari giliran terakhir saat aktif lagi.
  */
 export function resolveRolling(
   settings: RollingSettingLike[],
-  date: Date
+  date: Date,
+  holidayDates?: Iterable<Date | string>
 ): RollingResult | null {
   const target = asUTCDate(date);
 
@@ -96,7 +123,12 @@ export function resolveRolling(
 
   const diffDays = Math.round((target.getTime() - anchorMs) / (24 * 60 * 60 * 1000));
   const weeksElapsed = Math.floor(diffDays / 7);
-  const index = ((weeksElapsed % active.length) + active.length) % active.length;
+  // Jumat libur tidak mengonsumsi giliran. Kurangi minggu yang terlewat agar
+  // rotasi lanjut dari khatib terakhir yang benar-benar bertugas.
+  const holidayWeeks = countHolidayWeeks(holidayDates, anchorMs, target.getTime());
+  const effectiveWeeks =
+    holidayWeeks > 0 ? Math.max(0, weeksElapsed - holidayWeeks) : weeksElapsed;
+  const index = ((effectiveWeeks % active.length) + active.length) % active.length;
   const selected = active[index];
 
   return {

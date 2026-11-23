@@ -261,15 +261,56 @@ export async function getAdminKajianData() {
   return { items: rows, occurrences };
 }
 
+/** Semua Jumat yang ditandai "Masjid Libur" (format YYYY-MM-DD). */
+export async function getKhatibHolidayDates() {
+  try {
+    const rows = await prisma.khatibSchedule.findMany({
+      where: { isHoliday: true },
+      select: { fridayDate: true },
+      orderBy: { fridayDate: "asc" },
+    });
+    return rows.map((row) => dateOnlyToString(row.fridayDate));
+  } catch {
+    return [];
+  }
+}
+
 export async function getKhatibScheduleForDate(
   fridayDate: Date,
-  preloadedRolling?: Awaited<ReturnType<typeof getKhatibRollingActive>>
+  preloadedRolling?: Awaited<ReturnType<typeof getKhatibRollingActive>>,
+  preloadedHolidays?: string[]
 ) {
   try {
+    const ymd = dateOnlyToString(fridayDate);
+    const holidays = preloadedHolidays ?? (await getKhatibHolidayDates());
+    const isHoliday = holidays.includes(ymd);
+
     const manual = await prisma.khatibSchedule.findFirst({ where: { fridayDate } });
     if (manual) {
+      const holiday = isHoliday || manual.isHoliday;
       return {
         ...manual,
+        khatibName: holiday ? "Libur" : manual.khatibName,
+        isHoliday: holiday,
+        isRolling: false,
+        sequenceNumber: undefined as number | undefined,
+        totalRolling: undefined as number | undefined,
+      };
+    }
+
+    // Jika penanda libur belum punya baris jadwal, tetap tampilkan sebagai libur.
+    if (isHoliday) {
+      return {
+        id: `holiday-${ymd}`,
+        fridayDate,
+        khatibName: "Libur",
+        sermonTopic: null,
+        backupKhatibName: null,
+        recurrenceRuleId: null,
+        notes: null,
+        isHoliday: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         isRolling: false,
         sequenceNumber: undefined as number | undefined,
         totalRolling: undefined as number | undefined,
@@ -288,7 +329,8 @@ export async function getKhatibScheduleForDate(
           isActive: r.isActive,
           createdAt: r.createdAt,
         })),
-        fridayDate
+        fridayDate,
+        holidays
       );
 
       if (resolved && resolved.name) {
@@ -303,6 +345,7 @@ export async function getKhatibScheduleForDate(
           createdAt: new Date(),
           updatedAt: new Date(),
           isRolling: true,
+          isHoliday: false,
           sequenceNumber: resolved.index + 1,
           totalRolling: resolved.total,
         };
