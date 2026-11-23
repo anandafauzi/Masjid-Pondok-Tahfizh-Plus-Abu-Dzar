@@ -76,4 +76,20 @@ describe("rolling imam/khatib", () => {
     expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-02"), holidays)?.name).toBe("Ust. A");
     expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-09"), holidays)?.name).toBe("Ust. B");
   });
+
+  it("POSTPONE: jadwal manual mundur membuat rotasi berhenti pada pekan itu", () => {
+    // 2026-01-09 ada khatib manual dengan efek POSTPONE, jadi Ust. B tidak kehilangan giliran.
+    const pauseDates = ["2026-01-09"];
+    expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-02"), pauseDates)?.name).toBe("Ust. A");
+    expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-09"), pauseDates)?.name).toBe("Ust. A");
+    expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-16"), pauseDates)?.name).toBe("Ust. B");
+    expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-23"), pauseDates)?.name).toBe("Ust. C");
+  });
+
+  it("SKIP: jadwal manual tanpa pause date membuat rotasi tetap maju", () => {
+    // 2026-01-09 ada khatib manual SKIP (tidak ada di pauseDates), rotasi maju normal.
+    expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-02"))?.name).toBe("Ust. A");
+    expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-09"))?.name).toBe("Ust. B");
+    expect(resolveRolling(khatibSettings, dateOnlyToUTC("2026-01-16"))?.name).toBe("Ust. C");
+  });
 });

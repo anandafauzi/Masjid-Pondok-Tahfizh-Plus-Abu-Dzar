@@ -50,6 +50,14 @@ export async function PUT(
     if (!isHoliday && !khatibName) {
       return badRequest("Nama khatib wajib diisi");
     }
+    const rotationEffectRaw =
+      body.rotationEffect !== undefined
+        ? String(body.rotationEffect).toUpperCase()
+        : existing.rotationEffect;
+    if (rotationEffectRaw !== "SKIP" && rotationEffectRaw !== "POSTPONE") {
+      return badRequest("rotationEffect tidak valid");
+    }
+    const rotationEffect = isHoliday ? "SKIP" : rotationEffectRaw;
 
     const item = await prisma.khatibSchedule.update({
       where: { id },
@@ -57,6 +65,7 @@ export async function PUT(
         fridayDate,
         khatibName: isHoliday ? "Libur" : khatibName,
         isHoliday,
+        rotationEffect,
         sermonTopic:
           body.sermonTopic === null
             ? null

@@ -275,14 +275,37 @@ export async function getKhatibHolidayDates() {
   }
 }
 
+/**
+ * Tanggal yang membuat rotasi khatib berhenti (tidak mengonsumsi giliran):
+ * - Masjid Libur, atau
+ * - Jadwal khatib manual dengan rotationEffect=POSTPONE (mundur ke Jumat berikutnya).
+ * Berbeda dari SKIP (default), yang mempertahankan perilaku lama: rotasi tetap maju.
+ */
+export async function getKhatibRotationPauseDates() {
+  try {
+    const rows = await prisma.khatibSchedule.findMany({
+      where: {
+        OR: [{ isHoliday: true }, { rotationEffect: "POSTPONE" }],
+      },
+      select: { fridayDate: true },
+      orderBy: { fridayDate: "asc" },
+    });
+    return rows.map((row) => dateOnlyToString(row.fridayDate));
+  } catch {
+    return [];
+  }
+}
+
 export async function getKhatibScheduleForDate(
   fridayDate: Date,
   preloadedRolling?: Awaited<ReturnType<typeof getKhatibRollingActive>>,
-  preloadedHolidays?: string[]
+  preloadedHolidays?: string[],
+  preloadedPauseDates?: string[]
 ) {
   try {
     const ymd = dateOnlyToString(fridayDate);
     const holidays = preloadedHolidays ?? (await getKhatibHolidayDates());
+    const pauseDates = preloadedPauseDates ?? (await getKhatibRotationPauseDates());
     const isHoliday = holidays.includes(ymd);
 
     const manual = await prisma.khatibSchedule.findFirst({ where: { fridayDate } });
@@ -292,6 +315,7 @@ export async function getKhatibScheduleForDate(
         ...manual,
         khatibName: holiday ? "Libur" : manual.khatibName,
         isHoliday: holiday,
+        rotationEffect: manual.rotationEffect ?? "SKIP",
         isRolling: false,
         sequenceNumber: undefined as number | undefined,
         totalRolling: undefined as number | undefined,
@@ -309,6 +333,7 @@ export async function getKhatibScheduleForDate(
         recurrenceRuleId: null,
         notes: null,
         isHoliday: true,
+        rotationEffect: "SKIP" as const,
         createdAt: new Date(),
         updatedAt: new Date(),
         isRolling: false,
@@ -330,7 +355,7 @@ export async function getKhatibScheduleForDate(
           createdAt: r.createdAt,
         })),
         fridayDate,
-        holidays
+        pauseDates
       );
 
       if (resolved && resolved.name) {
@@ -346,6 +371,7 @@ export async function getKhatibScheduleForDate(
           updatedAt: new Date(),
           isRolling: true,
           isHoliday: false,
+          rotationEffect: "SKIP" as const,
           sequenceNumber: resolved.index + 1,
           totalRolling: resolved.total,
         };

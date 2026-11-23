@@ -49,6 +49,11 @@ export async function POST(request: NextRequest) {
     if (!isHoliday && !khatibName) {
       return badRequest("Nama khatib wajib diisi");
     }
+    const rotationEffectRaw = String(body.rotationEffect ?? "SKIP").toUpperCase();
+    if (rotationEffectRaw !== "SKIP" && rotationEffectRaw !== "POSTPONE") {
+      return badRequest("rotationEffect tidak valid");
+    }
+    const rotationEffect = isHoliday ? "SKIP" : rotationEffectRaw;
 
     const existing = await prisma.khatibSchedule.findFirst({
       where: { fridayDate },
@@ -62,6 +67,7 @@ export async function POST(request: NextRequest) {
         fridayDate,
         khatibName: isHoliday ? "Libur" : khatibName,
         isHoliday,
+        rotationEffect,
         sermonTopic:
           body.sermonTopic != null ? String(body.sermonTopic) : null,
         backupKhatibName:

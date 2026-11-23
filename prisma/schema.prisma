@@ -187,18 +187,24 @@ model KhatibRollingSetting {
   @@map("khatib_rolling_settings")
 }
 
+enum KhatibRotationEffect {
+  SKIP
+  POSTPONE
+}
+
 // Khatib schedules for Friday
 model KhatibSchedule {
-  id               String    @id @default(cuid())
-  fridayDate       DateTime  @db.Date
+  id               String               @id @default(cuid())
+  fridayDate       DateTime             @db.Date
   khatibName       String
   sermonTopic      String?
   backupKhatibName String?
   recurrenceRuleId String?
   notes            String?
-  isHoliday        Boolean   @default(false)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  isHoliday        Boolean              @default(false)
+  rotationEffect   KhatibRotationEffect @default(SKIP)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
   
   recurrenceRule   RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id])
   

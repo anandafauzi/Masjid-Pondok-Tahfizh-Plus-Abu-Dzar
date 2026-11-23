@@ -44,6 +44,8 @@ interface Rolling {
   isActive: boolean;
 }
 
+type RotationEffect = "SKIP" | "POSTPONE";
+
 interface Schedule {
   id: string;
   fridayDate: string;
@@ -51,6 +53,7 @@ interface Schedule {
   sermonTopic: string | null;
   backupKhatibName: string | null;
   isHoliday: boolean;
+  rotationEffect?: RotationEffect;
 }
 
 const toYmd = (iso: string) => dateOnlyToString(new Date(iso));
@@ -90,6 +93,7 @@ export default function AdminKhatibPage() {
   const [topic, setTopic] = useState("");
   const [backup, setBackup] = useState("");
   const [holiday, setHoliday] = useState(false);
+  const [rotationEffect, setRotationEffect] = useState<RotationEffect>("SKIP");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const fridayValid = isFridayYmd(date);
@@ -101,9 +105,20 @@ export default function AdminKhatibPage() {
   const holidayDates = schedules
     .filter((s) => s.isHoliday)
     .map((s) => toYmd(s.fridayDate));
+  const pauseDates = schedules
+    .filter((s) => s.isHoliday || s.rotationEffect === "POSTPONE")
+    .map((s) => toYmd(s.fridayDate));
+  // Preview mengikuti form aktif agar admin melihat dampak sebelum simpan.
+  const previewPauseDates = (() => {
+    if (!fridayValid) return pauseDates;
+    const next = pauseDates.filter((d) => d !== date);
+    const formPausesRotation = holiday || (!holiday && rotationEffect === "POSTPONE");
+    if (formPausesRotation) next.push(date);
+    return next;
+  })();
   const isHolidayForDate = holidayDates.includes(date);
   const rollingForDate = fridayValid
-    ? resolveRolling(rolling, dateOnlyToUTC(date), holidayDates)
+    ? resolveRolling(rolling, dateOnlyToUTC(date), previewPauseDates)
     : null;
 
   async function load() {
@@ -221,6 +236,7 @@ export default function AdminKhatibPage() {
     setTopic("");
     setBackup("");
     setHoliday(false);
+    setRotationEffect("SKIP");
     setEditingId(null);
   }
 
@@ -230,6 +246,7 @@ export default function AdminKhatibPage() {
     setTopic(s.sermonTopic ?? "");
     setBackup(s.backupKhatibName ?? "");
     setHoliday(s.isHoliday);
+    setRotationEffect(s.rotationEffect ?? "SKIP");
     setEditingId(s.id);
   }
 
@@ -256,6 +273,7 @@ export default function AdminKhatibPage() {
             sermonTopic: topic || null,
             backupKhatibName: backup || null,
             isHoliday: holiday,
+            rotationEffect: holiday ? "SKIP" : rotationEffect,
           }),
         }
       );
@@ -292,6 +310,7 @@ export default function AdminKhatibPage() {
             isHoliday: true,
             sermonTopic: null,
             backupKhatibName: null,
+            rotationEffect: "SKIP",
           }),
         }
       );
@@ -508,7 +527,9 @@ export default function AdminKhatibPage() {
                       : (rollingForDate?.name ?? "Belum ada")}
                   </span>
                   {existingForDate && !isHolidayForDate
-                    ? " • ada jadwal manual"
+                    ? existingForDate.rotationEffect === "POSTPONE"
+                      ? " • manual (rotasi mundur)"
+                      : " • manual (rotasi terlewat)"
                     : ""}
                 </p>
               )}
@@ -539,6 +560,48 @@ export default function AdminKhatibPage() {
                 </Button>
               )}
             </div>
+            {!holiday && (
+              <div className="min-w-0 sm:col-span-2">
+                <Label>Dampak ke Rotasi Khatib</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-xs ${rotationEffect === "POSTPONE" ? "border-emerald-300 bg-emerald-50/70 text-emerald-900" : "border-slate-200 bg-white text-slate-700"}`}>
+                    <input
+                      type="radio"
+                      name="rotationEffect"
+                      value="POSTPONE"
+                      checked={rotationEffect === "POSTPONE"}
+                      onChange={() => setRotationEffect("POSTPONE")}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600"
+                    />
+                    <span>
+                      <span className="font-bold">Mundur ke Jumat berikutnya</span>
+                      <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-slate-500">
+                        Petugas rotasi yang seharusnya bertugas pekan ini digeser ke Jumat berikutnya yang tersedia.
+                      </span>
+                    </span>
+                  </label>
+                  <label className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 text-xs ${rotationEffect === "SKIP" ? "border-amber-300 bg-amber-50/70 text-amber-900" : "border-slate-200 bg-white text-slate-700"}`}>
+                    <input
+                      type="radio"
+                      name="rotationEffect"
+                      value="SKIP"
+                      checked={rotationEffect === "SKIP"}
+                      onChange={() => setRotationEffect("SKIP")}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-amber-600"
+                    />
+                    <span>
+                      <span className="font-bold">Langsung terlewat (skip)</span>
+                      <span className="mt-0.5 block text-[11px] font-normal leading-relaxed text-slate-500">
+                        Rotasi tetap maju; petugas rotasi pekan ini tidak mendapat giliran pengganti.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                  Berlaku saat Anda menyimpan jadwal khatib manual untuk pekan ini.
+                </p>
+              </div>
+            )}
             <div className="min-w-0">
               <Label htmlFor="khatib">Nama Khatib</Label>
               <PetugasSelect
@@ -643,7 +706,14 @@ export default function AdminKhatibPage() {
                             <CalendarOff className="h-3 w-3" /> Masjid Libur
                           </span>
                         ) : (
-                          s.khatibName
+                          <div>
+                            <div>{s.khatibName}</div>
+                            <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              {s.rotationEffect === "POSTPONE"
+                                ? "Rotasi mundur"
+                                : "Rotasi terlewat"}
+                            </div>
+                          </div>
                         )}
                       </td>
                       <td className="break-words px-3 py-2.5 text-slate-500">

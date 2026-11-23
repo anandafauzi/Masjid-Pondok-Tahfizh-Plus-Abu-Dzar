@@ -20,6 +20,7 @@ import {
   todayDateOnly,
 } from "@/lib/datetime";
 import { resolveRolling } from "@/lib/rolling";
+import { getKhatibRotationPauseDates } from "@/lib/schedule-data";
 import { writeAudit } from "@/lib/audit";
 import { revalidateAllAppPaths } from "@/lib/revalidate";
 
@@ -29,11 +30,14 @@ async function resolveKhatibName(fridayDate: Date): Promise<string> {
   const schedule = await prisma.khatibSchedule.findFirst({
     where: { fridayDate },
   });
-  if (schedule?.khatibName) return schedule.khatibName;
+  if (schedule?.khatibName && !schedule.isHoliday) return schedule.khatibName;
 
-  const rolling = await prisma.khatibRollingSetting.findMany({
-    where: { isActive: true },
-  });
+  const [rolling, pauseDates] = await Promise.all([
+    prisma.khatibRollingSetting.findMany({
+      where: { isActive: true },
+    }),
+    getKhatibRotationPauseDates(),
+  ]);
   const resolved = resolveRolling(
     rolling.map((r) => ({
       id: r.id,
@@ -44,7 +48,8 @@ async function resolveKhatibName(fridayDate: Date): Promise<string> {
       isActive: r.isActive,
       createdAt: r.createdAt,
     })),
-    fridayDate
+    fridayDate,
+    pauseDates
   );
 
   return resolved?.name ?? "Khatib";

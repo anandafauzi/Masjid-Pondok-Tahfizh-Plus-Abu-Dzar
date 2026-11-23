@@ -3,6 +3,7 @@ import { isAppWebView } from "@/lib/app-mode";
 import {
   getImamRollingActive,
   getKhatibRollingActive,
+  getKhatibRotationPauseDates,
   getUpcomingKhatibSchedules,
   nextFriday,
 } from "@/lib/schedule-data";
@@ -24,12 +25,14 @@ export default async function JadwalJumatPage() {
   const today = todayDateOnly();
   const firstFriday = nextFriday(today);
 
-  const [rollingKhatib, rollingImam, schedules, mosque] = await Promise.all([
-    getKhatibRollingActive(),
-    getImamRollingActive(),
-    getUpcomingKhatibSchedules(firstFriday, 12),
-    getMosqueSettings(),
-  ]);
+  const [rollingKhatib, rollingImam, schedules, pauseDates, mosque] =
+    await Promise.all([
+      getKhatibRollingActive(),
+      getImamRollingActive(),
+      getUpcomingKhatibSchedules(firstFriday, 12),
+      getKhatibRotationPauseDates(),
+      getMosqueSettings(),
+    ]);
 
   const fridays: Date[] = appMode
     ? (() => {
@@ -68,7 +71,7 @@ export default async function JadwalJumatPage() {
         createdAt: r.createdAt,
       })),
       friday,
-      holidayDates
+      pauseDates
     );
 
     const imam = resolveRolling(
