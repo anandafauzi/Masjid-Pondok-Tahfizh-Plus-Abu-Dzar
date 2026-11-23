@@ -19,8 +19,8 @@ import okhttp3.Request
 object LogoLoader {
     private const val CACHE_KILOBYTES = 4 * 1024
 
-    /** Batasi payload agar data URL/respons besar tidak dialokasikan utuh. */
-    private const val MAX_DATA_URL_LENGTH = 1_000_000
+    /** Sama dengan batas QR/logo data URL di admin: 4 juta karakter. */
+    private const val MAX_DATA_URL_LENGTH = 4_000_000
     private const val MAX_REMOTE_BYTES = 8 * 1024 * 1024
     private const val TARGET_SIZE_PX = 512
     private const val READ_CHUNK_BYTES = 8 * 1024

@@ -268,4 +268,36 @@ class PrayerLogicTest {
         // Label di luar daftar shalat tetap dibandingkan apa adanya.
         assertTrue(PrayerEngine.samePrayer("Tarawih", " tarawih "))
     }
+
+    @Test
+    fun parsesDonationInfoFromItsOwnEndpoint() {
+        val json = """
+            {
+              "title":"Donasi Masjid",
+              "notes":"Transfer atau QRIS",
+              "qrImageUrl":"https://example.com/qris.png",
+              "isActive":true,
+              "accounts":[{
+                "id":"acc-1","bankName":"BSI",
+                "accountNumber":"123 456","accountName":"Masjid Abu Dzar"
+              }]
+            }
+        """.trimIndent()
+
+        val donation = ApiParser.parseDonation(json)
+
+        assertTrue(donation.isActive)
+        assertEquals("Donasi Masjid", donation.title)
+        assertEquals(1, donation.accounts.size)
+        assertEquals("123 456", donation.accounts[0].accountNumber)
+        assertEquals("https://example.com/qris.png", donation.qrImageUrl)
+    }
+
+    @Test
+    fun malformedDonationResponseFallsBackToInactiveInfo() {
+        val donation = ApiParser.parseDonation("{")
+
+        assertTrue(!donation.isActive)
+        assertTrue(donation.accounts.isEmpty())
+    }
 }

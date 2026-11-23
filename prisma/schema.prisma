@@ -51,6 +51,36 @@ model MosqueSettings {
   @@map("mosque_settings")
 }
 
+// Info donasi untuk web publik dan aplikasi Android (bukan TV).
+model DonationSetting {
+  id          String   @id @default(cuid())
+  title       String   @default("Donasi Masjid")
+  notes       String?  @db.Text
+  qrImageUrl  String?  @db.Text
+  isActive    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  accounts    DonationAccount[]
+
+  @@map("donation_settings")
+}
+
+model DonationAccount {
+  id            String   @id @default(cuid())
+  settingId     String
+  bankName      String
+  accountNumber String
+  accountName   String
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  setting       DonationSetting @relation(fields: [settingId], references: [id], onDelete: Cascade)
+
+  @@index([settingId, displayOrder])
+  @@map("donation_accounts")
+}
+
 // Prayer times cache
 model PrayerTime {
   id          String   @id @default(cuid())

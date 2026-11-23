@@ -28,6 +28,7 @@ import {
   Share2,
   CheckCircle2,
   BellRing,
+  HandCoins,
 } from "lucide-react";
 
 interface NavItem {
@@ -51,6 +52,7 @@ const NAV: NavItem[] = [
   { href: "/admin/tv", label: "Tampilan TV", icon: MonitorPlay },
   { href: "/admin/khutbah", label: "Khutbah Jumat", icon: Radio },
   { href: "/admin/masjid", label: "Pengaturan Masjid", icon: Building2 },
+  { href: "/admin/donasi", label: "Info Donasi", icon: HandCoins },
   { href: "/admin/users", label: "Pengguna", icon: ShieldCheck, superOnly: true },
   { href: "/admin/audit", label: "Log Aktivitas", icon: ScrollText },
 ];

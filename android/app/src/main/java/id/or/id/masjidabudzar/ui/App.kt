@@ -96,6 +96,7 @@ import id.or.id.masjidabudzar.ApiParser
 import id.or.id.masjidabudzar.BuildConfig
 import id.or.id.masjidabudzar.AppBundle
 import id.or.id.masjidabudzar.CountdownState
+import id.or.id.masjidabudzar.DonationInfo
 import id.or.id.masjidabudzar.HijriUtil
 import id.or.id.masjidabudzar.Kajian
 import id.or.id.masjidabudzar.PrayerDay
@@ -1982,6 +1983,78 @@ private fun InfoLine(label: String, value: String) {
     }
 }
 
+@Composable
+private fun DonationCard(donation: DonationInfo) {
+    val accounts = donation.accounts.filter {
+        it.bankName.isNotBlank() && it.accountNumber.isNotBlank()
+    }
+    val hasQr = !donation.qrImageUrl.isNullOrBlank()
+
+    if (accounts.isNotEmpty() || hasQr) {
+        SectionCard(title = donation.title.ifBlank { "Info Donasi" }) {
+            donation.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+                Text(
+                    text = notes,
+                    fontSize = 12.5.sp,
+                    color = AppColors.Muted,
+                    lineHeight = 18.sp,
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+
+            accounts.forEachIndexed { index, account ->
+                if (index > 0) {
+                    GoldRule()
+                    Spacer(Modifier.height(10.dp))
+                }
+                Text(
+                    text = "${account.bankName} · ${account.accountNumber}",
+                    fontSize = 14.sp,
+                    color = AppColors.Ink,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (account.accountName.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "a.n. ${account.accountName}",
+                        fontSize = 12.sp,
+                        color = AppColors.Muted,
+                    )
+                }
+            }
+
+            if (hasQr) {
+                Spacer(Modifier.height(14.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.White)
+                        .border(BorderStroke(1.dp, AppColors.GoldLine))
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    MosqueLogo(
+                        logoUrl = donation.qrImageUrl,
+                        modifier = Modifier.size(200.dp),
+                        fallbackTint = AppColors.Emerald800,
+                        contentDescription = "QR donasi masjid",
+                        showFallback = false,
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Pindai QR untuk donasi",
+                    fontSize = 11.5.sp,
+                    color = AppColors.Muted,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
 /**
  * Layar Informasi Masjid & Pengaturan Aplikasi.
  */
@@ -2084,6 +2157,13 @@ private fun InfoScreen(
                     }
                 }
                 Spacer(Modifier.height(14.dp))
+            }
+
+            bundle.donation?.takeIf { it.isActive }?.let { donation ->
+                item {
+                    DonationCard(donation)
+                    Spacer(Modifier.height(14.dp))
+                }
             }
 
             item {

@@ -13,6 +13,7 @@ import {
   BookMarked,
   Timer,
   ExternalLink,
+  HandCoins,
 } from "lucide-react";
 
 const LINKS = [
@@ -22,6 +23,7 @@ const LINKS = [
   { href: "/kiblat", label: "Arah Kiblat", icon: Compass },
   { href: "/jadwal-jumat", label: "Khatib Jumat", icon: BookOpen },
   { href: "/kajian", label: "Kajian", icon: BookMarked },
+  { href: "/donasi", label: "Donasi", icon: HandCoins },
   { href: "/adzan-iqamah", label: "Adzan–Iqamah", icon: Timer },
 ];
 
@@ -213,6 +215,11 @@ export function PublicShell({
                 <li>
                   <Link href="/kajian" className="hover:text-[#557a64] transition-colors">
                     • Agenda Kajian Rutin &amp; Tabligh Akbar
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/donasi" className="hover:text-[#557a64] transition-colors">
+                    • Informasi Donasi &amp; QRIS Masjid
                   </Link>
                 </li>
                 {!appMode && (

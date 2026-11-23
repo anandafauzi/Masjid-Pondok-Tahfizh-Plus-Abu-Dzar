@@ -15,6 +15,8 @@ export function revalidateAllAppPaths() {
     revalidatePath("/jadwal-jumat", "page");
     revalidatePath("/jadwal-shalat", "page");
     revalidatePath("/kajian", "page");
+    revalidatePath("/donasi", "page");
+    revalidatePath("/api/public/donation-info");
     revalidatePath("/tv", "page");
     revalidatePath("/admin", "layout");
   } catch (error) {

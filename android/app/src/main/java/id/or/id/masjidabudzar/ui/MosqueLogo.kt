@@ -23,6 +23,7 @@ fun MosqueLogo(
     modifier: Modifier = Modifier,
     fallbackTint: Color = AppColors.GoldSoft,
     contentDescription: String? = "Logo Masjid Abu Dzar",
+    showFallback: Boolean = true,
 ) {
     var bitmap by remember(logoUrl) { mutableStateOf<Bitmap?>(null) }
 
@@ -38,7 +39,7 @@ fun MosqueLogo(
             modifier = modifier,
             contentScale = ContentScale.Fit,
         )
-    } else {
+    } else if (showFallback) {
         Icon(
             painter = painterResource(R.drawable.ic_prayer_notification),
             contentDescription = contentDescription,

@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
 
 data class AppBundle(
     val snapshots: List<TvData> = emptyList(),
+    val donation: DonationInfo? = null,
     val fetchedAt: Long = 0L,
     val clockOffset: Long = 0L,
     val hijriCorrection: Int = 0,
@@ -55,6 +56,11 @@ class PrayerRepository(context: Context) {
         val snapshots = listOfNotNull(today, tomorrow)
         AppBundle(
             snapshots = snapshots,
+            donation = if (p.donationJson.isBlank()) {
+                null
+            } else {
+                ApiParser.parseDonation(p.donationJson)
+            },
             fetchedAt = p.fetchedAt,
             clockOffset = p.clockOffset,
             hijriCorrection = p.hijriCorrection,
@@ -90,9 +96,18 @@ class PrayerRepository(context: Context) {
                     previous.tomorrowJson
                 }
 
+                // Donasi memakai endpoint terpisah. Kegagalan endpoint ini
+                // tidak boleh membuat refresh jadwal shalat ikut gagal.
+                val donationJson = try {
+                    fetchDonation()
+                } catch (_: Exception) {
+                    previous.donationJson
+                }
+
                 val fetchedAt = System.currentTimeMillis()
                 val offset = PrayerEngine.clockOffset(todayData, fetchedAt)
                 settings.saveSnapshot(todayJson, tomorrowJson, fetchedAt, offset)
+                settings.saveDonationSnapshot(donationJson)
                 fetchedAt
             }
         }
@@ -101,6 +116,18 @@ class PrayerRepository(context: Context) {
     private fun fetch(ymd: String): String {
         val request = Request.Builder()
             .url("${ReminderConfig.TV_DATA_URL}?date=$ymd")
+            .get()
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IllegalStateException("HTTP ${response.code}")
+            return response.body?.string().takeUnless { it.isNullOrBlank() }
+                ?: throw IllegalStateException("Respons kosong")
+        }
+    }
+
+    private fun fetchDonation(): String {
+        val request = Request.Builder()
+            .url(ReminderConfig.DONATION_INFO_URL)
             .get()
             .build()
         client.newCall(request).execute().use { response ->

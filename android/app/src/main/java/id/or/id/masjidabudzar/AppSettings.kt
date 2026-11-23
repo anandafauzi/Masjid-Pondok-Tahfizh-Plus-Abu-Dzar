@@ -19,6 +19,7 @@ data class AppPrefs(
     val notificationsEnabled: Boolean = true,
     val todayJson: String = "",
     val tomorrowJson: String = "",
+    val donationJson: String = "",
     val fetchedAt: Long = 0L,
     val clockOffset: Long = 0L,
     val adhanSoundEnabled: Boolean = true,
@@ -32,6 +33,7 @@ class AppSettings(private val context: Context) {
         private val KEY_NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
         private val KEY_TODAY = stringPreferencesKey("today_json")
         private val KEY_TOMORROW = stringPreferencesKey("tomorrow_json")
+        private val KEY_DONATION = stringPreferencesKey("donation_json")
         private val KEY_FETCHED = longPreferencesKey("fetched_at")
         private val KEY_OFFSET = longPreferencesKey("clock_offset")
         private val KEY_ADZAN_SOUND = booleanPreferencesKey("adzan_sound_enabled")
@@ -46,6 +48,7 @@ class AppSettings(private val context: Context) {
             notificationsEnabled = p[KEY_NOTIFICATIONS] ?: true,
             todayJson = p[KEY_TODAY] ?: "",
             tomorrowJson = p[KEY_TOMORROW] ?: "",
+            donationJson = p[KEY_DONATION] ?: "",
             fetchedAt = p[KEY_FETCHED] ?: 0L,
             clockOffset = p[KEY_OFFSET] ?: 0L,
             adhanSoundEnabled = p[KEY_ADZAN_SOUND] ?: true,
@@ -111,5 +114,10 @@ class AppSettings(private val context: Context) {
             p[KEY_FETCHED] = fetchedAt
             p[KEY_OFFSET] = clockOffset
         }
+    }
+
+    /** Donasi punya endpoint sendiri; gagal fetch tidak boleh menghapus snapshot lama. */
+    suspend fun saveDonationSnapshot(donationJson: String) {
+        context.abuDzarDataStore.edit { it[KEY_DONATION] = donationJson }
     }
 }

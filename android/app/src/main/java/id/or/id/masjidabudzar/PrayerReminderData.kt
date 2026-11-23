@@ -16,6 +16,9 @@ import java.util.TimeZone
 object ReminderConfig {
     const val APP_URL = "https://masjid-pondok-tahfizh-plus-abu-dzar.vercel.app"
     const val TV_DATA_URL = "$APP_URL/api/public/tv-data"
+    // Endpoint donasi sengaja dipisah dari TV_DATA_URL agar layar TV tidak
+    // pernah menerima data rekening/QR.
+    const val DONATION_INFO_URL = "$APP_URL/api/public/donation-info"
     const val AUDIO_BASE_URL = "$APP_URL/audio/adzan/"
 
     const val ACTION_ADHAN_ALARM = "id.or.id.masjidabudzar.ADHAN_ALARM"
@@ -209,6 +212,22 @@ data class Khutbah(
     val startedAt: String = "",
 )
 
+data class DonationAccount(
+    val id: String = "",
+    val bankName: String = "",
+    val accountNumber: String = "",
+    val accountName: String = "",
+    val displayOrder: Int = 0,
+)
+
+data class DonationInfo(
+    val title: String = "Donasi Masjid",
+    val notes: String? = null,
+    val qrImageUrl: String? = null,
+    val isActive: Boolean = false,
+    val accounts: List<DonationAccount> = emptyList(),
+)
+
 data class TvData(
     val serverTime: String = "",
     val mosque: Mosque = Mosque(),
@@ -244,6 +263,14 @@ object ApiParser {
     }
 
     fun toJson(data: TvData): String = gson.toJson(data)
+
+    fun parseDonation(json: String): DonationInfo = try {
+        gson.fromJson(json, DonationInfo::class.java) ?: DonationInfo()
+    } catch (_: Exception) {
+        DonationInfo()
+    }
+
+    fun toDonationJson(data: DonationInfo): String = gson.toJson(data)
 
     fun instant(iso: String?): Long? = try {
         if (iso.isNullOrBlank()) null else Instant.parse(iso).toEpochMilli()

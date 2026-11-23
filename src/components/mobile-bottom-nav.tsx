@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Compass,
   Ellipsis,
+  HandCoins,
   Home,
   Timer,
   Users,
@@ -25,6 +26,7 @@ const TABS = [
 const MORE_LINKS = [
   { href: "/kiblat", label: "Arah Kiblat", icon: Compass, desc: "Kompas menuju Ka'bah" },
   { href: "/kajian", label: "Kajian", icon: BookMarked, desc: "Agenda kajian masjid" },
+  { href: "/donasi", label: "Donasi", icon: HandCoins, desc: "Transfer & QR donasi masjid" },
   { href: "/adzan-iqamah", label: "Adzan–Iqamah", icon: Timer, desc: "Hitung mundur iqamah" },
 ] as const;
 
