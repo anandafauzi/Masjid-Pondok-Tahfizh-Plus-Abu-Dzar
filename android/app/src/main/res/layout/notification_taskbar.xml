@@ -7,7 +7,7 @@
     android:paddingStart="12dp"
     android:paddingTop="5dp"
     android:paddingEnd="8dp"
-    android:paddingBottom="5dp">
+    android:paddingBottom="6dp">
 
     <TextView
         android:id="@+id/taskbar_line1"
@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="sans"
         android:includeFontPadding="true"
-        android:lineSpacingExtra="1dp"
+        android:lineSpacingMultiplier="1.05"
         android:maxLines="1"
         android:ellipsize="end"
         android:textAlignment="viewStart"
@@ -29,7 +29,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="sans"
         android:includeFontPadding="true"
-        android:lineSpacingExtra="1dp"
+        android:lineSpacingMultiplier="1.05"
         android:maxLines="1"
         android:ellipsize="end"
         android:textAlignment="viewStart"
@@ -43,7 +43,7 @@
         android:layout_height="wrap_content"
         android:fontFamily="sans"
         android:includeFontPadding="true"
-        android:lineSpacingExtra="1dp"
+        android:lineSpacingMultiplier="1.05"
         android:maxLines="1"
         android:ellipsize="end"
         android:textAlignment="viewStart"
