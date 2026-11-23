@@ -7,9 +7,8 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Logo admin sekarang transparan dengan warna asli gelap. Di container hijau
- * tua (top bar dan banner info) warna itu harus diganti, tetapi QR donasi
- * harus tetap memakai warna aslinya supaya bisa dipindai.
+ * Logo admin memakai warna aslinya (tanpa tint) di top bar dan banner info.
+ * QR donasi juga tetap memakai warna aslinya supaya bisa dipindai.
  */
 class LogoContrastRegressionTest {
 
@@ -34,25 +33,26 @@ class LogoContrastRegressionTest {
     }
 
     @Test
-    fun darkContainersTintLogoButDonationQrKeepsNativeColors() {
+    fun logoUsesOriginalColorsAndDonationQrKeepsNativeColors() {
         val src = source("id/or/id/masjidabudzar/ui/App.kt")
         val calls = Regex("""MosqueLogo\([\s\S]*?\n\s*\)""").findAll(src).map { it.value }.toList()
 
         assertEquals("Jumlah pemakaian MosqueLogo berubah", 3, calls.size)
-        assertTrue(
-            "logo top bar tidak di-tint",
-            calls.any { "logoUrl = logoUrl" in it && "tint = AppColors.GoldSoft" in it },
+        assertFalse(
+            "logo top bar harus memakai warna asli",
+            calls.first { "logoUrl = logoUrl" in it }.contains("tint ="),
         )
-        assertTrue(
-            "logo banner info tidak di-tint",
-            calls.any {
-                "bundle.primary?.mosque?.logoUrl" in it &&
-                    "tint = AppColors.GoldSoft" in it
-            },
+        assertFalse(
+            "logo banner info harus memakai warna asli",
+            calls.first { "bundle.primary?.mosque?.logoUrl" in it }.contains("tint ="),
         )
         assertFalse(
             "QR donasi tidak boleh di-tint",
             calls.first { "donation.qrImageUrl" in it }.contains("tint ="),
+        )
+        assertTrue(
+            "logo perlu latar terang agar warna aslinya tetap terlihat",
+            src.contains("background(Color.White)"),
         )
     }
 }

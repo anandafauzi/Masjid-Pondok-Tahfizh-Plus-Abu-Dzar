@@ -401,6 +401,7 @@ private fun ScreenTopBar(
                                     listOf(AppColors.Emerald900, AppColors.Emerald700),
                                 ),
                             )
+                            .background(Color.White)
                             .border(
                                 BorderStroke(1.2.dp, AppColors.Gold.copy(alpha = 0.65f)),
                                 RoundedCornerShape(13.dp),
@@ -413,7 +414,6 @@ private fun ScreenTopBar(
                             modifier = Modifier.size(29.dp),
                             fallbackTint = AppColors.GoldSoft,
                             contentDescription = null,
-                            tint = AppColors.GoldSoft,
                         )
                     }
                     Spacer(Modifier.width(11.dp))
@@ -2099,7 +2099,7 @@ private fun InfoScreen(
                                     Modifier
                                         .size(52.dp)
                                         .clip(RoundedCornerShape(17.dp))
-                                        .background(Color.White.copy(alpha = 0.08f))
+                                        .background(Color.White)
                                         .border(
                                             BorderStroke(1.dp, AppColors.Gold.copy(alpha = 0.6f)),
                                             RoundedCornerShape(17.dp),
@@ -2111,7 +2111,6 @@ private fun InfoScreen(
                                         modifier = Modifier.size(34.dp),
                                         fallbackTint = AppColors.GoldSoft,
                                         contentDescription = null,
-                                        tint = AppColors.GoldSoft,
                                     )
                                 }
                                 Spacer(Modifier.width(14.dp))

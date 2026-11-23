@@ -1,9 +1,9 @@
 /**
- * Generates Android launcher icons from the logo uploaded in the admin panel.
+ * Generates Android launcher icons from the fixed launcher artwork committed
+ * in assets/branding/android-launcher.png (derived from "Buat Android App.png").
  *
- * The logo is stored as a data URL in mosque_settings.logoUrl. When a database
- * is unavailable (or has no logo), the bundled public/logo-masjid-solid.png is
- * used instead, so APK builds never fail because of icons.
+ * Admin-uploaded logo and public/logo-masjid-solid.png remain as fallbacks only,
+ * so APK builds never fail when the branding asset is missing.
  */
 const path = require("path");
 const fs = require("fs");
@@ -11,6 +11,12 @@ const sharp = require("sharp");
 
 const ROOT = path.join(__dirname, "..");
 const RES_DIR = path.join(ROOT, "android", "app", "src", "main", "res");
+const LAUNCHER_LOGO = path.join(
+  ROOT,
+  "assets",
+  "branding",
+  "android-launcher.png",
+);
 const FALLBACK_LOGO = path.join(ROOT, "public", "logo-masjid-solid.png");
 
 const MIPMAPS = [
@@ -115,6 +121,12 @@ async function buildIcons(source) {
 }
 
 async function main() {
+  if (fs.existsSync(LAUNCHER_LOGO)) {
+    console.log("✓ Sumber ikon: aset launcher bawaan (Buat Android App.png)");
+    await buildIcons(fs.readFileSync(LAUNCHER_LOGO));
+    return;
+  }
+
   const uploaded = await readUploadedLogo();
   if (uploaded) {
     console.log("✓ Sumber ikon: logo yang diunggah di panel admin");

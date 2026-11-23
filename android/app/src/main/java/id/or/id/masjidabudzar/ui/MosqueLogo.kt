@@ -27,10 +27,8 @@ fun MosqueLogo(
     contentDescription: String? = "Logo Masjid Abu Dzar",
     showFallback: Boolean = true,
     /**
-     * Logo unggahan admin sekarang transparan dengan warna asli gelap.
-     * Untuk container hijau tua, warna aslinya perlu diganti agar tidak
-     * "tabrak" dengan latar. QR donasi sengaja memakai null agar warna
-     * hitam-putih QR tidak berubah.
+     * Null mempertahankan warna asli logo. QR donasi juga memakai null agar
+     * warna hitam-putih QR tidak berubah.
      */
     tint: Color? = null,
 ) {
