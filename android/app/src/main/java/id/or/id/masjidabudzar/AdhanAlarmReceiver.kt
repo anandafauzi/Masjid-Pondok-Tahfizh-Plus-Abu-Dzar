@@ -101,7 +101,6 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
         scheduledTriggerDevice: Long?,
     ) {
         OngoingNotification.createChannels(context)
-        PrayerReminderService.start(context)
 
         val isAdhan = action == ReminderConfig.ACTION_ADHAN_ALARM
         val label = moment.label.takeIf { it.isNotBlank() } ?: "Shalat"
@@ -126,7 +125,11 @@ class AdhanAlarmReceiver : BroadcastReceiver() {
         } else {
             "Segera berdiri untuk shalat berjamaah"
         }
+        // Tampilkan alert lebih dulu. Start service bisa memakan waktu dan
+        // dilarang di latar pada beberapa versi Android; jangan sampai itu
+        // menunda notifikasi yang sudah jatuh tepat pada waktunya.
         showAlert(context, title, text, timeout, alertId)
+        PrayerReminderService.start(context)
 
         if (isAdhan) {
             val lateness = scheduledTriggerDevice?.let { System.currentTimeMillis() - it } ?: 0L

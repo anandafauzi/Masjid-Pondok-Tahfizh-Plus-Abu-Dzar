@@ -22,6 +22,13 @@ object PrayerReminderScheduler {
     private const val CATCH_UP_WINDOW_MS = 15 * 60 * 1000L
     private const val FIRE_SETTLE_MS = 5_000L
 
+    /**
+     * Saat daftar alarm disusun ulang, alarm yang sangat dekat tidak boleh
+     * hilang hanya karena filter "masa depan" dievaluasi beberapa detik lebih
+     * lambat dari waktu fire-nya.
+     */
+    private const val RESCHEDULE_GUARD_MS = 30_000L
+
     private const val KIND_ADHAN = "A"
     private const val KIND_IQAMAH = "I"
 
@@ -87,11 +94,33 @@ object PrayerReminderScheduler {
         return ScheduledId(raw, kind, parts[1], trigger)
     }
 
+    /**
+     * Alarm yang masih terdaftar dan akan fire dalam [RESCHEDULE_GUARD_MS]
+     * tetap dipasang ulang walaupun waktunya sudah lewat beberapa detik saat
+     * scheduleNext dijalankan. Alarm yang sudah dipulihkan watchdog tidak
+     * berada di [protectedTriggers] lagi, jadi tidak akan dobel.
+     */
+    internal fun shouldScheduleAfterReschedule(
+        targetDevice: Long,
+        nowDevice: Long,
+        protectedTriggers: Set<Long>,
+    ): Boolean {
+        if (targetDevice > nowDevice) return true
+        return targetDevice in protectedTriggers &&
+            nowDevice - targetDevice <= RESCHEDULE_GUARD_MS
+    }
+
     suspend fun scheduleNext(context: Context, repository: PrayerRepository) = mutex.withLock {
         // Pulihkan alarm yang terlewat SEBELUM daftar ID ditulis ulang.
         // Boot, sync, service restart, dan pembukaan aplikasi bisa terjadi lebih
         // cepat dari watchdog berikutnya; tanpa ini ID lama hilang sia-sia.
         recoverMissedLocked(context, repository)
+        // Baca lagi setelah recovery: ID yang sudah dipulihkan sudah dihapus,
+        // sehingga tidak ikut dipasang ulang sebagai notifikasi dobel.
+        val protectedTriggers = ReminderSettings.getScheduledEventIds(context)
+            .mapNotNull(::parseScheduledId)
+            .map { it.trigger }
+            .toSet()
         val prefs = repository.settings.prefsAfterMigration()
         val snapshots = listOfNotNull(
             prefs.todayJson.takeIf { it.isNotBlank() }?.let { ApiParser.parse(it) },
@@ -103,18 +132,32 @@ object PrayerReminderScheduler {
             .sortedBy { it.adhanTarget }
 
         // clockOffset = waktu server - waktu perangkat saat data diambil.
-        // Momen dari API memakai waktu server, jadi bandingkan dengan "now"
-        // server dan konversi ke waktu perangkat hanya saat memanggil AlarmManager.
+        // Target momen memakai waktu server; AlarmManager memakai waktu perangkat.
+        // Konversi di sini supaya alarm dan hitung mundur (device + offset)
+        // berada pada sumbu waktu yang sama.
         val offset = prefs.clockOffset
-        val nowServer = System.currentTimeMillis() + offset
-        val upcoming = moments.filter { it.iqamahTarget > nowServer }.take(MAX_EVENTS)
+        val nowDevice = System.currentTimeMillis()
+        val upcoming = moments
+            .filter { moment ->
+                shouldScheduleAfterReschedule(
+                    moment.adhanTarget - offset,
+                    nowDevice,
+                    protectedTriggers,
+                ) || shouldScheduleAfterReschedule(
+                    moment.iqamahTarget - offset,
+                    nowDevice,
+                    protectedTriggers,
+                )
+            }
+            .sortedBy { it.adhanTarget }
+            .take(MAX_EVENTS)
 
         val manager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
             ?: return@withLock
 
         // Watchdog dijadwalkan ulang tiap siklus. Sengaja memakai alarm inexact
-        // yang masih izin saat idle: tidak memakai kuota exact alarm dan tidak
-        // menyalakan ikon jam permanen seperti setAlarmClock.
+        // yang masih izin saat idle: tidak memakai kuota exact alarm. Alarm
+        // adzan/iqamah tetap memakai setAlarmClock agar tidak bisa digeser.
         scheduleWatchdog(manager, context)
 
         // Batalkan jadwal lama pada rentang request code yang sama, lalu pasang
@@ -132,8 +175,9 @@ object PrayerReminderScheduler {
             var adhanIndex = 0
             var iqamahIndex = 0
             upcoming.forEach { moment ->
-                if (moment.adhanTarget > nowServer) {
-                    val atDevice = moment.adhanTarget - offset
+                val adhanDevice = moment.adhanTarget - offset
+                if (shouldScheduleAfterReschedule(adhanDevice, nowDevice, protectedTriggers)) {
+                    val atDevice = adhanDevice
                     val id = scheduledId(KIND_ADHAN, moment.key, atDevice)
                     setAlarm(
                         manager,
@@ -150,8 +194,9 @@ object PrayerReminderScheduler {
                     scheduledIds += id
                     adhanIndex++
                 }
-                if (moment.iqamahTarget > nowServer) {
-                    val atDevice = moment.iqamahTarget - offset
+                val iqamahDevice = moment.iqamahTarget - offset
+                if (shouldScheduleAfterReschedule(iqamahDevice, nowDevice, protectedTriggers)) {
+                    val atDevice = iqamahDevice
                     val id = scheduledId(KIND_IQAMAH, moment.key, atDevice)
                     setAlarm(
                         manager,
@@ -256,8 +301,14 @@ object PrayerReminderScheduler {
     }
 
     /**
-     * Exact alarm dipakai untuk adzan/iqamah. Bila izin exact belum diberikan,
-     * setAlarmClock tetap tepat dan tetap berjalan saat idle.
+     * Adzan/iqamah memakai setAlarmClock karena sistem tidak pernah menggeser
+     * alarm ini dan keluar dari Doze menjelang alarm. Ini yang membuat
+     * notifikasi jatuh tepat saat detik hitung mundur berakhir.
+     *
+     * setExactAndAllowWhileIdle sengaja bukan pilihan utama: dokumentasi
+     * Android memperingatkan bahwa alarm jenis ini boleh dijadwal ulang sistem,
+     * terutama saat idle. Ia tetap dipakai sebagai fallback bila izin alarm
+     * presisi tidak tersedia.
      */
     private fun setAlarm(
         manager: AlarmManager,
@@ -270,29 +321,25 @@ object PrayerReminderScheduler {
         } else {
             true
         }
-        try {
-            if (exactAllowed) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atDevice, operation)
-                } else {
-                    manager.setExact(AlarmManager.RTC_WAKEUP, atDevice, operation)
-                }
-            } else {
+        if (exactAllowed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
                 manager.setAlarmClock(AlarmManager.AlarmClockInfo(atDevice, showIntent), operation)
+                return
+            } catch (_: SecurityException) {
+                // Izin bisa dicabut antara pengecekan dan pemanggilan.
+            }
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atDevice, operation)
+            } else {
+                manager.setExact(AlarmManager.RTC_WAKEUP, atDevice, operation)
             }
         } catch (_: SecurityException) {
             try {
-                manager.setAlarmClock(AlarmManager.AlarmClockInfo(atDevice, showIntent), operation)
+                manager.setWindow(AlarmManager.RTC_WAKEUP, atDevice, 60_000L, operation)
             } catch (_: SecurityException) {
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atDevice, operation)
-                    } else {
-                        manager.set(AlarmManager.RTC_WAKEUP, atDevice, operation)
-                    }
-                } catch (_: SecurityException) {
-                    manager.setWindow(AlarmManager.RTC_WAKEUP, atDevice, 60_000L, operation)
-                }
+                // Izin notifikasi/alarm dicabut saat aplikasi berjalan.
             }
         }
     }

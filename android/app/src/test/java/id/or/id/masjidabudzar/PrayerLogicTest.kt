@@ -239,6 +239,39 @@ class PrayerLogicTest {
     }
 
     @Test
+    fun imminentAlarmSurvivesRescheduleButRecoveredAlarmDoesNotRepeat() {
+        val now = 1_795_171_320_000L
+        val future = now + 3_000L
+        val justPassed = now - 2_000L
+        val recoveredLongAgo = now - 60_000L
+
+        assertTrue(
+            PrayerReminderScheduler.shouldScheduleAfterReschedule(future, now, emptySet()),
+        )
+        assertTrue(
+            PrayerReminderScheduler.shouldScheduleAfterReschedule(
+                justPassed,
+                now,
+                setOf(justPassed),
+            ),
+        )
+        assertFalse(
+            PrayerReminderScheduler.shouldScheduleAfterReschedule(
+                justPassed,
+                now,
+                emptySet(),
+            ),
+        )
+        assertFalse(
+            PrayerReminderScheduler.shouldScheduleAfterReschedule(
+                recoveredLongAgo,
+                now,
+                setOf(recoveredLongAgo),
+            ),
+        )
+    }
+
+    @Test
     fun dismissCancelsEveryEarlierAudioGeneration() {
         val guard = AudioGenerationGuard()
         val preparing = guard.beginPlayback()

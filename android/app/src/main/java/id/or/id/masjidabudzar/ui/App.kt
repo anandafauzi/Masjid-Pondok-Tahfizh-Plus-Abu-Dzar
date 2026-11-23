@@ -413,6 +413,7 @@ private fun ScreenTopBar(
                             modifier = Modifier.size(29.dp),
                             fallbackTint = AppColors.GoldSoft,
                             contentDescription = null,
+                            tint = AppColors.GoldSoft,
                         )
                     }
                     Spacer(Modifier.width(11.dp))
@@ -2109,6 +2110,7 @@ private fun InfoScreen(
                                         modifier = Modifier.size(34.dp),
                                         fallbackTint = AppColors.GoldSoft,
                                         contentDescription = null,
+                                        tint = AppColors.GoldSoft,
                                     )
                                 }
                                 Spacer(Modifier.width(14.dp))
